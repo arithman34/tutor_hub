@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv(".env.test", override=True)
+load_dotenv(".env.test")
 
 import asyncpg
 import pytest
