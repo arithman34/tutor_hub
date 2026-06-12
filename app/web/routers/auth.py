@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.models.user import User
 
 router = APIRouter(tags=["Web Auth"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/login", response_class=HTMLResponse)

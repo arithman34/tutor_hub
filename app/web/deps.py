@@ -1,5 +1,4 @@
 from fastapi import Cookie, Depends
-from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

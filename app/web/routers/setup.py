@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.models.user import User, UserRole
 
 router = APIRouter(tags=["Setup"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
 
 
 async def _has_users(db: AsyncSession) -> bool:
@@ -32,12 +32,12 @@ async def setup_submit(
     email: str = Form(...),
     first_name: str = Form(...),
     last_name: str = Form(...),
+    password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
     if await _has_users(db):
         return RedirectResponse(url="/login", status_code=303)
 
-    password = secrets.token_urlsafe(16)
     user = User(
         email=email,
         hashed_password=hash_password(password),
@@ -49,4 +49,4 @@ async def setup_submit(
     db.add(user)
     await db.commit()
 
-    return templates.TemplateResponse(request, "setup/complete.html", {"password": password, "email": email})
+    return RedirectResponse(url="/login", status_code=303)

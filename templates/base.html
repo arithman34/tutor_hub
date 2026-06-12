@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}TutorHub{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<script>
+    function togglePassword(fieldId) {
+        const input = document.getElementById(fieldId);
+        const eye = document.getElementById(fieldId + '_eye');
+        const eyeSlash = document.getElementById(fieldId + '_eye_slash');
+        if (input.type === 'password') {
+            input.type = 'text';
+            eye.classList.add('hidden');
+            eyeSlash.classList.remove('hidden');
+        } else {
+            input.type = 'password';
+            eye.classList.remove('hidden');
+            eyeSlash.classList.add('hidden');
+        }
+    }
+</script>
+<body class="bg-gray-50 text-gray-900">
+    {% block content %}{% endblock %}
+</body>
+</html>

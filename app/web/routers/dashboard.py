@@ -12,7 +12,7 @@ from app.models.user import User
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(tags=["Web Dashboard"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

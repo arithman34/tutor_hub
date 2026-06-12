@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Uuid
+from sqlalchemy import Boolean, DateTime, Enum, Index, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -35,3 +35,5 @@ class User(Base):
     payees = relationship("Payee", back_populates="user")
     sessions = relationship("Session", back_populates="user")
     payments = relationship("Payment", back_populates="user")
+
+    __table_args__ = (Index("one_admin", "role", unique=True, postgresql_where=(role == UserRole.admin)),)

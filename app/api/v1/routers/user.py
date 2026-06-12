@@ -1,13 +1,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, hash_password
 from app.core.database import get_db
 from app.models.user import User, UserRole
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -17,6 +17,11 @@ async def create_user(user_create: UserCreate, db: AsyncSession = Depends(get_db
     """Create a new user."""
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can create users")
+
+    result = await db.execute(select(func.count()).select_from(User).where(User.role == UserRole.admin))
+    existing_admin = result.scalar()
+    if existing_admin is not None and existing_admin > 0 and user_create.role == UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An admin user already exists")
 
     result = await db.execute(select(User).where(User.email == user_create.email))
     existing_user = result.scalar_one_or_none()
