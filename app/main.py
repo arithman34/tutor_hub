@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 
 from app.api.v1 import router as v1_router
+from app.web import router as web_router
+from app.web.deps import NotAuthenticatedException
 
 app = FastAPI(
     title="Tutor Hub API",
@@ -9,7 +12,13 @@ app = FastAPI(
 )
 
 
+@app.exception_handler(NotAuthenticatedException)
+async def not_authenticated_handler(request: Request, exc: NotAuthenticatedException):
+    return RedirectResponse(url="/login")
+
+
 app.include_router(v1_router)
+app.include_router(web_router)
 
 
 @app.get("/health", tags=["Health Check"])

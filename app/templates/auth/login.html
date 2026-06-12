@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Login — TutorHub{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-xl shadow w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">TutorHub</h1>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/login" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Email</label>
+                <input
+                    type="email"
+                    name="email"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            <button
+                type="submit"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+            >
+                Sign in
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

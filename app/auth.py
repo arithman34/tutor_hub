@@ -30,6 +30,14 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
+def decode_access_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
 async def get_user(db: AsyncSession, email: str) -> User | None:
     result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
@@ -54,8 +62,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     )
 
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        email: str = payload.get("sub")
+        email = decode_access_token(token)
         if email is None:
             raise credentials_exception
 
