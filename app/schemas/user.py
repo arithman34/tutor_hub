@@ -32,4 +32,4 @@ class UserResponse(BaseModel):
     created_at: datetime = Field(..., description="Timestamp when the user was created")
     updated_at: datetime = Field(..., description="Timestamp when the user was last updated")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "use_enum_values": True}

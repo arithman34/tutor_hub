@@ -19,7 +19,7 @@ async def create_subject(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can create subjects")
 
     subject = Subject(name=subject_in.name)
@@ -44,7 +44,7 @@ async def delete_subject(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can delete subjects")
 
     result = await db.execute(select(Subject).where(Subject.id == subject_id))

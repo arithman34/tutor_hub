@@ -22,10 +22,14 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     first_name: Mapped[str] = mapped_column(String, nullable=False)
     last_name: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(Enum(UserRole, values_callable=lambda x: [e.value for e in x], name="userrole"), nullable=False)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, values_callable=lambda x: [e.value for e in x], name="userrole"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == UserRole.admin
 
     students = relationship("Student", back_populates="user")
     payees = relationship("Payee", back_populates="user")

@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: db_container
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -18,7 +19,8 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  api:
+    container_name: api_container
     build: .
     env_file:
       - .env

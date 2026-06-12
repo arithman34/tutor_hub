@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.auth import hash_password
 from app.core.config import settings
 from app.models import User
+from app.models.user import UserRole
 
-ADMIN_EMAIL = "admin@tutorhub.com"
+ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "admin"
 ADMIN_FIRST_NAME = "admin"
 ADMIN_LAST_NAME = "admin"
@@ -30,16 +31,16 @@ async def seed():
             hashed_password=hash_password(ADMIN_PASSWORD),
             first_name=ADMIN_FIRST_NAME,
             last_name=ADMIN_LAST_NAME,
-            role="admin",
+            role=UserRole.admin,
             is_active=True,
         )
         db.add(admin)
         await db.commit()
 
         print("Admin created successfully.")
-        print(f"  Email:    {ADMIN_EMAIL}")
-        print(f"  Password: {ADMIN_PASSWORD}")
-        print("  ** Change this password immediately after first login **")
+        print(f"Email: {ADMIN_EMAIL}")
+        print(f"Password: {ADMIN_PASSWORD}")
+        print("Please change the password after logging in for security reasons.")
 
     await engine.dispose()
 

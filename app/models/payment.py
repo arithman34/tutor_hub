@@ -24,7 +24,9 @@ class Payment(Base):
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    status: Mapped[str] = mapped_column(Enum(PaymentStatus, values_callable=lambda x: [e.value for e in x], name="paymentstatus"), nullable=False)
+    status: Mapped[PaymentStatus] = mapped_column(
+        Enum(PaymentStatus, values_callable=lambda x: [e.value for e in x], name="paymentstatus"), nullable=False
+    )
     payment_reference: Mapped[str | None] = mapped_column(String, nullable=True)
     truelayer_transaction_id: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
