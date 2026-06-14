@@ -11,9 +11,7 @@ async def _create_payment(client, headers, payee_id, **overrides):
     payload = {
         "payee_id": payee_id,
         "amount": 50.00,
-        "payment_date": "2024-01-15T00:00:00Z",
-        "due_date": "2024-01-01T00:00:00Z",
-        "status": "pending",
+        "payment_date": "2026-01-01T00:00:00Z",
         **overrides,
     }
     resp = await client.post("/api/v1/payments/", json=payload, headers=headers)
@@ -27,16 +25,13 @@ async def test_create_payment(client, tutor_headers):
         json={
             "payee_id": payee["id"],
             "amount": 50.00,
-            "payment_date": "2024-01-15T00:00:00Z",
-            "due_date": "2024-01-01T00:00:00Z",
-            "status": "pending",
+            "payment_date": "2026-01-01T00:00:00Z",
         },
         headers=tutor_headers,
     )
     assert response.status_code == 201
     data = response.json()
     assert data["amount"] == 50.0
-    assert data["status"] == "pending"
 
 
 async def test_get_payments(client, tutor_headers):
@@ -69,16 +64,16 @@ async def test_get_nonexistent_payment(client, tutor_headers):
     assert response.status_code == 404
 
 
-async def test_update_payment_status(client, tutor_headers):
+async def test_update_payment_amount(client, tutor_headers):
     payee = await _create_payee(client, tutor_headers)
     payment = await _create_payment(client, tutor_headers, payee["id"])
     response = await client.patch(
         f"/api/v1/payments/{payment['id']}",
-        json={"status": "completed"},
+        json={"amount": 75.00},
         headers=tutor_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "completed"
+    assert response.json()["amount"] == 75.0
 
 
 async def test_delete_payment(client, tutor_headers):
@@ -121,7 +116,7 @@ async def test_cannot_access_other_tutors_payment(client, admin_headers, tutor_h
 async def test_update_nonexistent_payment(client, tutor_headers):
     response = await client.patch(
         "/api/v1/payments/00000000-0000-0000-0000-000000000000",
-        json={"status": "completed"},
+        json={"amount": 75.00},
         headers=tutor_headers,
     )
     assert response.status_code == 404

@@ -13,7 +13,6 @@ async def _create_session(client, headers, student_id, **overrides):
         "session_date": "2024-01-15T00:00:00Z",
         "session_start_time": "2024-01-15T09:00:00Z",
         "session_end_time": "2024-01-15T10:00:00Z",
-        "planned_minutes": 60,
         **overrides,
     }
     resp = await client.post("/api/v1/sessions/", json=payload, headers=headers)
@@ -29,14 +28,30 @@ async def test_create_session(client, tutor_headers):
             "session_date": "2024-01-15T00:00:00Z",
             "session_start_time": "2024-01-15T09:00:00Z",
             "session_end_time": "2024-01-15T10:00:00Z",
-            "planned_minutes": 60,
         },
         headers=tutor_headers,
     )
     assert response.status_code == 201
     data = response.json()
-    assert data["planned_minutes"] == 60
-    assert data["is_paid"] is False
+    assert data["minutes"] == 60
+    assert data["is_no_show"] is False
+
+
+async def test_create_no_show_session(client, tutor_headers):
+    student = await _create_student(client, tutor_headers)
+    response = await client.post(
+        "/api/v1/sessions/",
+        json={
+            "student_id": student["id"],
+            "session_date": "2024-01-15T00:00:00Z",
+            "session_start_time": "2024-01-15T09:00:00Z",
+            "session_end_time": "2024-01-15T10:00:00Z",
+            "is_no_show": True,
+        },
+        headers=tutor_headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["is_no_show"] is True
 
 
 async def test_get_sessions(client, tutor_headers):
@@ -74,12 +89,12 @@ async def test_update_session(client, tutor_headers):
     session = await _create_session(client, tutor_headers, student["id"])
     response = await client.patch(
         f"/api/v1/sessions/{session['id']}",
-        json={"actual_minutes": 55, "is_paid": True},
+        json={"work_covered": "Quadratic equations", "is_no_show": False},
         headers=tutor_headers,
     )
     assert response.status_code == 200
-    assert response.json()["actual_minutes"] == 55
-    assert response.json()["is_paid"] is True
+    assert response.json()["work_covered"] == "Quadratic equations"
+    assert response.json()["is_no_show"] is False
 
 
 async def test_delete_session(client, tutor_headers):
@@ -122,7 +137,7 @@ async def test_cannot_access_other_tutors_session(client, admin_headers, tutor_h
 async def test_update_nonexistent_session(client, tutor_headers):
     response = await client.patch(
         "/api/v1/sessions/00000000-0000-0000-0000-000000000000",
-        json={"actual_minutes": 55},
+        json={"work_covered": "Quadratic equations"},
         headers=tutor_headers,
     )
     assert response.status_code == 404

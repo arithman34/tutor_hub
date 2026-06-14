@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 seed.py
 old_backend.xlsx
+.coverage
+htmlcov/
