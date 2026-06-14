@@ -5,3 +5,4 @@ seed.py
 old_backend.xlsx
 .coverage
 htmlcov/
+tutorhub_export_*.json

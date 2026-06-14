@@ -41,7 +41,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
             .where(Session.user_id == user.id, Session.session_date >= now, Session.session_date <= week_from_now)
         )
         total_minutes = float(await db.scalar(
-            select(func.sum(_mins)).where(Session.user_id == user.id, Session.is_no_show == False)
+            select(func.sum(_mins)).where(Session.user_id == user.id)
         ) or 0)
         amount_owed = round((total_minutes / 60) * (user.payout_hourly_rate or 0), 2)
         upcoming_result = await db.execute(
@@ -98,7 +98,6 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
             User.role == UserRole.tutor,
             User.payout_type == PayoutType.hourly,
             Session.session_date >= this_month_start,
-            Session.is_no_show == False,
         )
         .group_by(User.id, User.payout_hourly_rate)
     )).all()
@@ -119,21 +118,21 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
 
     sessions_this_month = await db.scalar(
         select(func.count()).select_from(Session)
-        .where(Session.session_date >= this_month_start, Session.session_date <= now, Session.is_no_show == False)
+        .where(Session.session_date >= this_month_start, Session.session_date <= now)
     ) or 0
     sessions_last_month = await db.scalar(
         select(func.count()).select_from(Session)
-        .where(Session.session_date >= last_month_start, Session.session_date < last_month_end, Session.is_no_show == False)
+        .where(Session.session_date >= last_month_start, Session.session_date < last_month_end)
     ) or 0
     sessions_pct_change = _pct_change(sessions_this_month, sessions_last_month)
 
     hours_this_month_raw = float(await db.scalar(
         select(func.sum(_mins))
-        .where(Session.session_date >= this_month_start, Session.session_date <= now, Session.is_no_show == False)
+        .where(Session.session_date >= this_month_start, Session.session_date <= now)
     ) or 0) / 60
     hours_last_month_raw = float(await db.scalar(
         select(func.sum(_mins))
-        .where(Session.session_date >= last_month_start, Session.session_date < last_month_end, Session.is_no_show == False)
+        .where(Session.session_date >= last_month_start, Session.session_date < last_month_end)
     ) or 0) / 60
     hours_pct_change = _pct_change(hours_this_month_raw, hours_last_month_raw)
 
@@ -148,7 +147,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
         for r in (await db.execute(
             select(User.first_name, User.last_name, func.sum(_mins).label("mins"))
             .join(Session, Session.user_id == User.id)
-            .where(User.role == UserRole.tutor, Session.is_no_show == False)
+            .where(User.role == UserRole.tutor)
             .group_by(User.id, User.first_name, User.last_name)
             .order_by(func.sum(_mins).desc())
             .limit(5)
@@ -165,14 +164,14 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
             .select_from(User)
             .join(Session, Session.user_id == User.id)
             .join(Student, Session.student_id == Student.id)
-            .where(User.role == UserRole.tutor, Student.hourly_rate.isnot(None), Session.is_no_show == False)
+            .where(User.role == UserRole.tutor, Student.hourly_rate.isnot(None))
             .group_by(User.id, User.first_name, User.last_name)
             .order_by(func.sum(_mins / 60.0 * Student.hourly_rate).desc())
             .limit(5)
         )).all()
     ]
 
-    tutors_with_recent = select(Session.user_id).where(Session.session_date >= four_weeks_ago, Session.is_no_show == False).distinct()
+    tutors_with_recent = select(Session.user_id).where(Session.session_date >= four_weeks_ago).distinct()
     inactive_tutors = (await db.execute(
         select(User).where(User.role == UserRole.tutor, User.is_active == True, ~User.id.in_(tutors_with_recent))
     )).scalars().all()
@@ -190,14 +189,14 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
                 func.sum(_mins).label("mins"),
             )
             .join(Session, Session.user_id == User.id)
-            .where(User.role == UserRole.tutor, Session.is_no_show == False)
+            .where(User.role == UserRole.tutor)
             .group_by(User.id, User.first_name, User.last_name, User.payout_type, User.payout_hourly_rate)
             .having(func.sum(_mins) > 0)
         )).all()
     ]
 
     # ── STUDENT HEALTH ───────────────────────────────────────────────────────────
-    students_with_recent = select(Session.student_id).where(Session.session_date >= four_weeks_ago, Session.is_no_show == False).distinct()
+    students_with_recent = select(Session.student_id).where(Session.session_date >= four_weeks_ago).distinct()
     at_risk_students = (await db.execute(
         select(Student).options(joinedload(Student.user))
         .where(Student.is_active == True, ~Student.id.in_(students_with_recent))
@@ -221,7 +220,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
     cost_rows = (await db.execute(
         select(Student.payee_id, func.sum(_s_hours * Student.hourly_rate).label("cost"))
         .join(Session, Session.student_id == Student.id)
-        .where(Student.payee_id.isnot(None), Student.hourly_rate.isnot(None), Session.is_no_show == False)
+        .where(Student.payee_id.isnot(None), Student.hourly_rate.isnot(None))
         .group_by(Student.payee_id)
     )).all()
     paid_rows = (await db.execute(

@@ -40,7 +40,7 @@ async def _balances(db: AsyncSession, payee_ids: list[uuid.UUID]) -> dict[str, f
     cost_rows = (await db.execute(
         select(Student.payee_id, func.sum(_session_hours * Student.hourly_rate).label("total"))
         .join(Session, Session.student_id == Student.id)
-        .where(Student.payee_id.in_(payee_ids), Student.hourly_rate.isnot(None), Session.is_no_show == False)
+        .where(Student.payee_id.in_(payee_ids), Student.hourly_rate.isnot(None))
         .group_by(Student.payee_id)
     )).all()
 
