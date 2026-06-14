@@ -1,0 +1,135 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}{{ payee.first_name }} {{ payee.last_name }} — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="/payees" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </a>
+    <h1 class="text-2xl font-bold">{{ payee.first_name }} {{ payee.last_name }}</h1>
+</div>
+
+<!-- Balance banner -->
+<div class="mb-6 bg-white rounded-xl border {% if balance < 0 %}border-red-200{% elif balance > 0 %}border-green-200{% else %}border-gray-200{% endif %} p-5 flex items-center justify-between">
+    <div>
+        <p class="text-sm text-gray-500">Current Balance</p>
+        <p class="text-3xl font-bold mt-0.5 {% if balance < 0 %}text-red-600{% elif balance > 0 %}text-green-600{% else %}text-gray-700{% endif %}">
+            {% if balance >= 0 %}+{% endif %}£{{ "%.2f"|format(balance) }}
+        </p>
+    </div>
+    <p class="text-sm text-gray-400 max-w-xs text-right">
+        {% if balance > 0 %}Payee has credit — they have paid more than sessions billed.
+        {% elif balance < 0 %}Payee owes money — sessions billed exceed payments received.
+        {% else %}Fully settled.{% endif %}
+    </p>
+</div>
+
+<div class="grid grid-cols-3 gap-6">
+    <div class="col-span-1">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Payee Info</h2>
+            <form method="POST" action="/payees/{{ payee.id }}/update" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" name="first_name" value="{{ payee.first_name }}" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="last_name" value="{{ payee.last_name }}" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" value="{{ payee.email or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input type="tel" name="phone_number" value="{{ payee.phone_number or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bank Reference</label>
+                    <input type="text" name="bank_reference_pattern" value="{{ payee.bank_reference_pattern or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                {% if not user.is_admin %}
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Changes</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="col-span-2">
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-900">Linked Students</h2>
+            </div>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Level</th>
+                        <th class="px-6 py-3">Hourly Rate</th>
+                        <th class="px-6 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in payee.students %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900">
+                            <a href="/students/{{ student.id }}" class="hover:text-blue-600">
+                                {{ student.first_name }} {{ student.last_name }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4">{{ student.level or "—" }}</td>
+                        <td class="px-6 py-4">{% if student.hourly_rate %}£{{ "%.2f"|format(student.hourly_rate) }}{% else %}—{% endif %}</td>
+                        <td class="px-6 py-4">
+                            {% if student.is_active %}
+                            <span class="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">Active</span>
+                            {% else %}
+                            <span class="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No students linked</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+        <!-- Payment history -->
+        <div class="mt-6 bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-900">Payment History</h2>
+            </div>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">Date</th>
+                        <th class="px-6 py-3 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">{{ p.payment_date.strftime("%d %b %Y") }}</td>
+                        <td class="px-6 py-4 text-right font-medium text-green-600">+£{{ "%.2f"|format(p.amount) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="2" class="px-6 py-8 text-center text-gray-400">No payments recorded</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Payees — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Payees</h1>
+    <a href="/payees/new" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">Add Payee</a>
+</div>
+
+<form method="GET" action="/payees" class="flex gap-2 mb-6">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name…"
+        class="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+    <button type="submit"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        Search
+    </button>
+    {% if q %}<a href="/payees" class="flex items-center px-3 py-2 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50">Clear</a>{% endif %}
+</form>
+
+<div class="bg-white rounded-xl border border-gray-200">
+    <table class="w-full text-sm text-left text-gray-600">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+            <tr>
+                <th class="px-6 py-3">Name</th>
+                <th class="px-6 py-3">Email</th>
+                <th class="px-6 py-3">Phone</th>
+                <th class="px-6 py-3">Bank Reference</th>
+                <th class="px-6 py-3">Students</th>
+                <th class="px-6 py-3">Balance</th>
+                {% if user.is_admin %}<th class="px-6 py-3">Tutor</th>{% endif %}
+                <th class="px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payee in payees %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">{{ payee.first_name }} {{ payee.last_name }}</td>
+                <td class="px-6 py-4">{{ payee.email or "—" }}</td>
+                <td class="px-6 py-4">{{ payee.phone_number or "—" }}</td>
+                <td class="px-6 py-4 font-mono text-xs">{{ payee.bank_reference_pattern or "—" }}</td>
+                <td class="px-6 py-4">{{ payee.students | length }}</td>
+                {% set bal = balances[payee.id | string] %}
+                <td class="px-6 py-4 font-medium {% if bal < 0 %}text-red-600{% elif bal > 0 %}text-green-600{% else %}text-gray-500{% endif %}">
+                    {% if bal >= 0 %}+{% endif %}£{{ "%.2f"|format(bal) }}
+                </td>
+                {% if user.is_admin %}
+                <td class="px-6 py-4">{{ payee.user.first_name }} {{ payee.user.last_name }}</td>
+                {% endif %}
+                <td class="px-6 py-4 text-right">
+                    <a href="/payees/{{ payee.id }}" class="text-blue-600 hover:underline text-xs">View</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">No payees yet</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

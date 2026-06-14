@@ -1,0 +1,188 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Log Session — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="/sessions" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </a>
+    <h1 class="text-2xl font-bold">Log Session</h1>
+</div>
+
+<!-- Mode toggle -->
+<div class="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-6">
+    <button type="button" id="tab-manual"
+        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm"
+        onclick="switchTab('manual')">Manual</button>
+    <button type="button" id="tab-zoom"
+        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700"
+        onclick="switchTab('zoom')">Zoom Summary</button>
+</div>
+
+<form method="POST" action="/sessions" class="space-y-5 max-w-2xl" id="session-form">
+    <input type="hidden" name="zoom_summary_raw" id="zoom_summary_raw_hidden" />
+
+    <!-- Shared: student + time -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Student</label>
+        <select name="student_id" required
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">— Select student —</option>
+            {% for student in students %}
+            <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input type="date" name="session_date" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <input type="time" name="start_time" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+            <input type="time" name="end_time" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+    </div>
+
+    <!-- No Show -->
+    <div class="flex items-center gap-3">
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="is_no_show" id="is_no_show" value="on" onchange="toggleNoShow(this.checked)"
+                class="sr-only peer" />
+            <div class="w-10 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
+        </label>
+        <span class="text-sm font-medium text-gray-700">Student did not show up</span>
+    </div>
+
+    <!-- Zoom panel -->
+    <div id="panel-zoom" class="hidden space-y-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p class="text-sm font-medium text-blue-900 mb-1">Paste your Zoom AI summary</p>
+            <p class="text-xs text-blue-700 mb-3">The summary will be sent to AI to extract session notes automatically.</p>
+            <textarea id="zoom-summary-input" rows="10" placeholder="Paste the full Zoom AI summary here…"
+                class="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-y"></textarea>
+            <div class="mt-3 flex items-center gap-3">
+                <button type="button" id="parse-btn" onclick="parseZoomSummary()"
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg id="parse-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    <svg id="parse-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Parse with AI
+                </button>
+                <span id="parse-status" class="text-xs text-gray-500 hidden"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes fields (shared, populated by AI in zoom mode) -->
+    <div id="notes-fields" class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Work Covered</label>
+            <textarea name="work_covered" id="field-work_covered" rows="3"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Student Actions</label>
+            <textarea name="student_actions" id="field-student_actions" rows="2"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tutor Actions</label>
+            <textarea name="tutor_actions" id="field-tutor_actions" rows="2"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Next Lesson Focus</label>
+            <textarea name="next_lesson_focus" id="field-next_lesson_focus" rows="2"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Topic Tags</label>
+            <input type="text" name="topic_tags" id="field-topic_tags" placeholder="e.g. algebra, equations, revision"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+    </div>
+
+    <div class="pt-2 flex gap-3">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Session</button>
+        <a href="/sessions" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</a>
+    </div>
+</form>
+
+<script>
+    function toggleNoShow(checked) {
+        document.getElementById('notes-fields').classList.toggle('hidden', checked);
+        document.getElementById('panel-zoom').classList.add('hidden');
+        document.querySelector('.flex.gap-1.p-1').classList.toggle('hidden', checked);
+        if (checked) {
+            // reset tabs to manual so zoom panel stays hidden
+            switchTab('manual');
+        }
+    }
+
+    function switchTab(mode) {
+        const isZoom = mode === 'zoom';
+        document.getElementById('tab-manual').className = isZoom
+            ? 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700'
+            : 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm';
+        document.getElementById('tab-zoom').className = isZoom
+            ? 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm'
+            : 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700';
+        document.getElementById('panel-zoom').classList.toggle('hidden', !isZoom);
+    }
+
+    async function parseZoomSummary() {
+        const summary = document.getElementById('zoom-summary-input').value.trim();
+        if (!summary) return;
+
+        const btn = document.getElementById('parse-btn');
+        const spinner = document.getElementById('parse-spinner');
+        const icon = document.getElementById('parse-icon');
+        const status = document.getElementById('parse-status');
+
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+        icon.classList.add('hidden');
+        status.textContent = 'Parsing…';
+        status.classList.remove('hidden');
+
+        try {
+            const form = new FormData();
+            form.append('zoom_summary', summary);
+            const res = await fetch('/sessions/zoom-parse', { method: 'POST', body: form });
+            if (!res.ok) throw new Error('Parse failed');
+            const data = await res.json();
+
+            document.getElementById('field-work_covered').value = data.work_covered || '';
+            document.getElementById('field-student_actions').value = data.student_actions || '';
+            document.getElementById('field-tutor_actions').value = data.tutor_actions || '';
+            document.getElementById('field-next_lesson_focus').value = data.next_lesson_focus || '';
+            document.getElementById('field-topic_tags').value = data.topic_tags || '';
+            document.getElementById('zoom_summary_raw_hidden').value = summary;
+
+            status.textContent = 'Done — review and edit below.';
+        } catch (e) {
+            status.textContent = 'Failed to parse. Try again.';
+        } finally {
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+            icon.classList.remove('hidden');
+        }
+    }
+</script>
+{% endblock %}

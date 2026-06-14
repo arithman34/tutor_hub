@@ -3,25 +3,481 @@
 {% block title %}Dashboard — TutorHub{% endblock %}
 
 {% block page_content %}
-<div class="mb-8">
-    <h1 class="text-2xl font-bold">Welcome back, {{ user.first_name }}</h1>
-    <p class="text-gray-500 text-sm mt-1">Here's what's going on with your students.</p>
+{% if user.is_admin %}
+{% set alert_count = (1 if outstanding_balance > 0 else 0) + tutors_no_payout|length + students_no_active_tutor|length %}
+{% endif %}
+
+<div class="mb-5 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ user.first_name }}</h1>
+    {% if user.is_admin %}
+    <p id="section-label" class="text-sm text-gray-400"></p>
+    {% endif %}
 </div>
 
-<div class="grid grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm text-gray-500 mb-1">Active Students</p>
-        <p class="text-3xl font-bold">{{ total_students }}</p>
+{% if user.is_admin %}
+
+{# ── FINANCIAL ────────────────────────────────────────────────────────────────── #}
+<div id="panel-financial" class="section-panel">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue All-Time</p>
+            <p class="text-3xl font-bold text-gray-900">£{{ "%.2f"|format(revenue_alltime) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Month</p>
+            <p class="text-3xl font-bold text-gray-900">£{{ "%.2f"|format(revenue_this_month) }}</p>
+            {% if mom_trend is not none %}
+            <p class="text-sm mt-2 {% if mom_trend >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+                {% if mom_trend >= 0 %}▲{% else %}▼{% endif %} {{ mom_trend|abs }}% vs last month
+            </p>
+            {% else %}
+            <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Year</p>
+            <p class="text-3xl font-bold text-gray-900">£{{ "%.2f"|format(revenue_this_year) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-blue-100 bg-blue-50 p-6">
+            <p class="text-xs text-blue-400 uppercase tracking-wide mb-2">Projected Revenue</p>
+            <p class="text-3xl font-bold text-blue-700">£{{ "%.2f"|format(projected_revenue) }}</p>
+            <p class="text-xs text-blue-400 mt-2">From upcoming sessions</p>
+        </div>
     </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm text-gray-500 mb-1">Total Sessions</p>
-        <p class="text-3xl font-bold">{{ total_sessions }}</p>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <p class="text-sm text-gray-500 mb-1">Pending Payments</p>
-        <p class="text-3xl font-bold {% if pending_payments > 0 %}text-amber-500{% endif %}">
-            {{ pending_payments }}
-        </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Tutor Payouts (Month)</p>
+            <p class="text-3xl font-bold text-gray-900">£{{ "%.2f"|format(total_payout_obligations) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border {% if profit_margin >= 0 %}border-green-100{% else %}border-red-200{% endif %} p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Profit Margin (Month)</p>
+            <p class="text-3xl font-bold {% if profit_margin >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                £{{ "%.2f"|format(profit_margin) }}
+            </p>
+        </div>
     </div>
 </div>
+
+{# ── OPERATIONS ───────────────────────────────────────────────────────────────── #}
+<div id="panel-operations" class="section-panel hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Sessions This Month</p>
+            <p class="text-3xl font-bold text-gray-900">{{ sessions_this_month }}</p>
+            {% if sessions_pct_change is not none %}
+            <p class="text-sm mt-2 {% if sessions_pct_change >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+                {% if sessions_pct_change >= 0 %}▲{% else %}▼{% endif %} {{ sessions_pct_change|abs }}% vs last month
+            </p>
+            {% else %}
+            <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Hours Taught (Month)</p>
+            <p class="text-3xl font-bold text-gray-900">{{ hours_this_month }}h</p>
+            {% if hours_pct_change is not none %}
+            <p class="text-sm mt-2 {% if hours_pct_change >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+                {% if hours_pct_change >= 0 %}▲{% else %}▼{% endif %} {{ hours_pct_change|abs }}% vs last month
+            </p>
+            {% else %}
+            <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-xl border border-green-100 p-6">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Completion Rate</p>
+            <p class="text-3xl font-bold text-green-600">{{ completion_rate }}%</p>
+            <p class="text-xs text-gray-400 mt-2">Sessions with minutes logged</p>
+        </div>
+    </div>
+</div>
+
+{# ── TUTORS ───────────────────────────────────────────────────────────────────── #}
+<div id="panel-tutors" class="section-panel hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-900">Top Tutors by Hours Taught</h2>
+            </div>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">#</th>
+                        <th class="px-6 py-3">Tutor</th>
+                        <th class="px-6 py-3 text-right">Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in top_by_hours %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-3 text-gray-400">{{ loop.index }}</td>
+                        <td class="px-6 py-3 font-medium text-gray-900">{{ t.name }}</td>
+                        <td class="px-6 py-3 text-right font-medium">{{ t.hours }}h</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="px-6 py-8 text-center text-gray-400">No session data yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-900">Top Tutors by Revenue Generated</h2>
+            </div>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">#</th>
+                        <th class="px-6 py-3">Tutor</th>
+                        <th class="px-6 py-3 text-right">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in top_by_revenue %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-3 text-gray-400">{{ loop.index }}</td>
+                        <td class="px-6 py-3 font-medium text-gray-900">{{ t.name }}</td>
+                        <td class="px-6 py-3 text-right font-medium">£{{ "%.2f"|format(t.revenue) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="px-6 py-8 text-center text-gray-400">No session data yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-900">No Sessions in Last 4 Weeks</h2>
+                <p class="text-sm text-gray-400">Active tutors only</p>
+            </div>
+            {% if inactive_tutors %}
+            <table class="w-full text-sm text-left text-gray-600">
+                <tbody>
+                    {% for t in inactive_tutors %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-3 font-medium text-gray-900">{{ t.first_name }} {{ t.last_name }}</td>
+                        <td class="px-6 py-3 text-gray-400">{{ t.email }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-6 py-8 text-center text-gray-400 text-sm">All active tutors have recent sessions</p>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-xl border border-amber-200">
+            <div class="px-6 py-4 border-b border-amber-200">
+                <h2 class="font-semibold text-gray-900">Tutors with Unpaid Balance</h2>
+                <p class="text-sm text-gray-400">Sessions completed but not marked paid</p>
+            </div>
+            {% if tutors_with_balance %}
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">Tutor</th>
+                        <th class="px-6 py-3 text-right">Unpaid Hours</th>
+                        <th class="px-6 py-3 text-right">Owed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tutors_with_balance %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-3 font-medium text-gray-900">{{ t.name }}</td>
+                        <td class="px-6 py-3 text-right">{{ t.hours }}h</td>
+                        <td class="px-6 py-3 text-right font-medium text-amber-600">
+                            {% if t.owed is not none %}£{{ "%.2f"|format(t.owed) }}{% else %}<span class="text-gray-400 text-xs">% rate</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-6 py-8 text-center text-gray-400 text-sm">No outstanding balances</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ── STUDENTS ─────────────────────────────────────────────────────────────────── #}
+<div id="panel-students" class="section-panel hidden">
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h2 class="font-semibold text-gray-900 mb-4">Students Added — Last 12 Months</h2>
+        <canvas id="students-growth-chart" height="100"></canvas>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-gray-900">No Session in Last 4 Weeks</h2>
+                <p class="text-sm text-gray-400">Active students who may need follow-up</p>
+            </div>
+            {% if at_risk_students %}
+            <span class="bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1 rounded-full">{{ at_risk_students|length }} student(s)</span>
+            {% endif %}
+        </div>
+        {% if at_risk_students %}
+        <table class="w-full text-sm text-left text-gray-600">
+            <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3">Student</th>
+                    <th class="px-6 py-3">Tutor</th>
+                    <th class="px-6 py-3">Level</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in at_risk_students %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-3 font-medium text-gray-900">{{ s.first_name }} {{ s.last_name }}</td>
+                    <td class="px-6 py-3">{{ s.user.first_name }} {{ s.user.last_name }}</td>
+                    <td class="px-6 py-3">{{ s.level or "—" }}</td>
+                    <td class="px-6 py-3 text-right"><a href="/students/{{ s.id }}" class="text-blue-600 hover:underline text-xs">View →</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="px-6 py-8 text-center text-gray-400 text-sm">All active students have had a recent session</p>
+        {% endif %}
+    </div>
+    {% if students_no_active_tutor %}
+    <div class="bg-white rounded-xl border border-red-200">
+        <div class="px-6 py-4 border-b border-red-200">
+            <h2 class="font-semibold text-gray-900">Students with Inactive Tutor</h2>
+            <p class="text-sm text-gray-400">Need reassigning</p>
+        </div>
+        <table class="w-full text-sm text-left text-gray-600">
+            <tbody>
+                {% for s in students_no_active_tutor %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-3 font-medium text-gray-900">
+                        <a href="/students/{{ s.id }}" class="hover:text-blue-600">{{ s.first_name }} {{ s.last_name }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{# ── ALERTS ───────────────────────────────────────────────────────────────────── #}
+<div id="panel-alerts" class="section-panel hidden">
+    {% if alert_count == 0 %}
+    <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+        <p class="text-green-700 font-medium text-lg">All clear — no alerts</p>
+        <p class="text-green-500 text-sm mt-1">Everything looks good</p>
+    </div>
+    {% endif %}
+    {% if outstanding_balance > 0 %}
+    <div class="bg-white rounded-xl border border-amber-200 p-6 mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="font-semibold text-gray-900">Outstanding Payee Balance</h2>
+            <p class="text-sm text-gray-400 mt-0.5">Payments received are less than sessions billed</p>
+        </div>
+        <div class="text-right">
+            <p class="text-3xl font-bold text-amber-600">£{{ "%.2f"|format(outstanding_balance) }}</p>
+            <a href="/payees" class="text-xs text-blue-600 hover:underline">View payees →</a>
+        </div>
+    </div>
+    {% endif %}
+    {% if tutors_no_payout %}
+    <div class="bg-white rounded-xl border border-amber-200 mb-6">
+        <div class="px-6 py-4 border-b border-amber-200 flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-gray-900">Tutors with No Payout Rate Set</h2>
+                <p class="text-sm text-gray-400">Earnings cannot be calculated</p>
+            </div>
+            <a href="/admin/users" class="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Manage Tutors</a>
+        </div>
+        <table class="w-full text-sm text-left text-gray-600">
+            <tbody>
+                {% for t in tutors_no_payout %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-3 font-medium text-gray-900">{{ t.first_name }} {{ t.last_name }}</td>
+                    <td class="px-6 py-3 text-gray-400">{{ t.email }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{# ── ACTIVITY ─────────────────────────────────────────────────────────────────── #}
+<div id="panel-activity" class="section-panel hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="font-semibold text-gray-900">Recent Sessions</h2>
+                <a href="/sessions" class="text-xs text-blue-600 hover:underline">View all →</a>
+            </div>
+            <div class="divide-y divide-gray-100">
+                {% for s in recent_sessions %}
+                <div class="px-6 py-3">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-sm text-gray-900">{{ s.student.first_name }} {{ s.student.last_name }}</span>
+                        <span class="text-xs text-gray-400">{{ s.session_date.strftime("%d %b %Y") }}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        {{ s.user.first_name }} {{ s.user.last_name }}
+                        · {{ s.minutes }} min
+                    </p>
+                </div>
+                {% else %}
+                <p class="px-6 py-8 text-center text-gray-400 text-sm">No sessions logged yet</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="space-y-6">
+            <div class="bg-white rounded-xl border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-900">Recent Payments Received</h2>
+                    <a href="/payments" class="text-xs text-blue-600 hover:underline">View all →</a>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {% for p in recent_payments %}
+                    <div class="px-6 py-3 flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-sm text-gray-900">{{ p.payee.first_name }} {{ p.payee.last_name }}</span>
+                            <p class="text-xs text-gray-400">{{ p.payment_date.strftime("%d %b %Y") }}</p>
+                        </div>
+                        <span class="text-green-600 font-semibold text-sm">£{{ "%.2f"|format(p.amount) }}</span>
+                    </div>
+                    {% else %}
+                    <p class="px-6 py-6 text-center text-gray-400 text-sm">No payments recorded yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+    const SECTIONS = ['financial','operations','tutors','students','alerts','activity'];
+    const LABELS   = {financial:'Financial',operations:'Operations',tutors:'Tutors',students:'Students',alerts:'Alerts',activity:'Activity'};
+
+    function showSection(id) {
+        if (!SECTIONS.includes(id)) id = 'financial';
+        SECTIONS.forEach(s => {
+            document.getElementById('panel-' + s).classList.toggle('hidden', s !== id);
+        });
+        const label = document.getElementById('section-label');
+        if (label) label.textContent = LABELS[id];
+
+        // highlight active sidebar link
+        document.querySelectorAll('.dashboard-section-link').forEach(a => {
+            const active = a.dataset.section === id;
+            a.classList.toggle('text-blue-600', active);
+            a.classList.toggle('text-gray-700', !active);
+        });
+    }
+
+    function onHashChange() {
+        const hash = window.location.hash.replace('#', '');
+        showSection(hash);
+    }
+
+    document.addEventListener('DOMContentLoaded', onHashChange);
+    window.addEventListener('hashchange', onHashChange);
+
+    // prevent page jump on hash click, just update hash
+    document.querySelectorAll('.dashboard-section-link').forEach(a => {
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.hash = this.dataset.section;
+        });
+    });
+
+    // ── Students growth chart ────────────────────────────────────────────────────
+    const rawLabels = {{ students_chart_labels | tojson }};
+    const chartData = {{ students_chart_data | tojson }};
+    const chartLabels = rawLabels.map(d => {
+        const dt = new Date(d);
+        return dt.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    });
+
+    new Chart(document.getElementById('students-growth-chart'), {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Students Added',
+                data: chartData,
+                borderColor: 'rgba(59,130,246,0.9)',
+                borderWidth: 2.5,
+                backgroundColor: 'rgba(59,130,246,0.08)',
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: 'rgba(59,130,246,0.9)',
+                pointRadius: 3,
+                pointHoverRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} student${ctx.parsed.y !== 1 ? 's' : ''}` } }
+            },
+            scales: {
+                y: { beginAtZero: true, max: Math.ceil(Math.max(...chartData, 1) / 10) * 10, ticks: { stepSize: 1, precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+
+{% else %}
+{# ── TUTOR DASHBOARD ─────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 gap-6 mb-8 lg:grid-cols-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <p class="text-sm text-gray-500 mb-1">Active Students</p>
+        <p class="text-3xl font-bold">{{ active_students }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <p class="text-sm text-gray-500 mb-1">Sessions This Week</p>
+        <p class="text-3xl font-bold">{{ sessions_this_week }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <p class="text-sm text-gray-500 mb-1">Sessions This Month</p>
+        <p class="text-3xl font-bold">{{ sessions_this_week }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <p class="text-sm text-gray-500 mb-1">Amount Owed</p>
+        <p class="text-3xl font-bold text-blue-600">£{{ "%.2f"|format(amount_owed) }}</p>
+    </div>
+</div>
+<div class="bg-white rounded-xl border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">Upcoming Sessions</h2>
+        <a href="/sessions/new" class="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Log Session</a>
+    </div>
+    <table class="w-full text-sm text-left text-gray-600">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+            <tr>
+                <th class="px-6 py-3">Student</th>
+                <th class="px-6 py-3">Date</th>
+                <th class="px-6 py-3">Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for session in upcoming_sessions %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                    <a href="/sessions/{{ session.id }}" class="hover:text-blue-600">
+                        {{ session.student.first_name }} {{ session.student.last_name }}
+                    </a>
+                </td>
+                <td class="px-6 py-4">{{ session.session_date.strftime("%d %b %Y") }}</td>
+                <td class="px-6 py-4">{{ session.session_start_time.strftime("%H:%M") }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No upcoming sessions</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 {% endblock %}

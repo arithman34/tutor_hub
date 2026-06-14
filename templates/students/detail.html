@@ -1,0 +1,116 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}{{ student.first_name }} {{ student.last_name }} — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="/students" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </a>
+    <h1 class="text-2xl font-bold">{{ student.first_name }} {{ student.last_name }}</h1>
+    {% if student.is_active %}
+    <span class="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Active</span>
+    {% else %}
+    <span class="bg-red-100 text-red-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Inactive</span>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-3 gap-6">
+    <!-- Edit form -->
+    <div class="col-span-1">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Student Info</h2>
+            <form method="POST" action="/students/{{ student.id }}/update" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input type="text" name="first_name" value="{{ student.first_name }}" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input type="text" name="last_name" value="{{ student.last_name }}" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Level</label>
+                    <input type="text" name="level" value="{{ student.level or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (£)</label>
+                    <input type="number" name="hourly_rate" step="0.01" min="0" value="{{ student.hourly_rate or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                {% if user.is_admin %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payee</label>
+                    <select name="payee_id"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">— No payee —</option>
+                        {% for payee in payees %}
+                        <option value="{{ payee.id }}" {% if student.payee_id == payee.id %}selected{% endif %}>
+                            {{ payee.first_name }} {{ payee.last_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                    Save Changes
+                </button>
+            </form>
+
+            <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                <form method="POST" action="/students/{{ student.id }}/toggle-active">
+                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">
+                        {% if student.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                </form>
+                {% if user.is_admin %}
+                <form method="POST" action="/students/{{ student.id }}/delete" onsubmit="return confirm('Delete this student? This cannot be undone.')">
+                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-50">
+                        Delete Student
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="col-span-2">
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="font-semibold text-gray-900">Recent Sessions</h2>
+                {% if not user.is_admin %}
+                <a href="/sessions/new" class="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Log Session</a>
+                {% endif %}
+            </div>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3">Date</th>
+                        <th class="px-6 py-3">Duration</th>
+                        <th class="px-6 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">{{ session.session_date.strftime("%d %b %Y") }}</td>
+                        <td class="px-6 py-4">{{ session.minutes }} min</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="/sessions/{{ session.id }}" class="text-blue-600 hover:underline text-xs">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No sessions yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

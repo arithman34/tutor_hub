@@ -1,0 +1,162 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Session — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="/sessions" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </a>
+    <h1 class="text-2xl font-bold">
+        Session — {{ session.student.first_name }} {{ session.student.last_name }}
+    </h1>
+    {% if session.is_no_show %}
+    <span class="bg-red-100 text-red-700 text-sm font-medium px-3 py-1 rounded-full">No Show</span>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-3 gap-6">
+    <!-- Session details (editable for tutors) -->
+    <div class="col-span-1 space-y-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Details</h2>
+            {% if not user.is_admin %}
+            <form method="POST" action="/sessions/{{ session.id }}/update" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                    <select name="student_id" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {% for s in students %}
+                        <option value="{{ s.id }}" {% if s.id == session.student_id %}selected{% endif %}>
+                            {{ s.first_name }} {{ s.last_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" name="session_date" required
+                        value="{{ session.session_date.strftime('%Y-%m-%d') }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start</label>
+                        <input type="time" name="start_time" required
+                            value="{{ session.session_start_time.strftime('%H:%M') }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End</label>
+                        <input type="time" name="end_time" required
+                            value="{{ session.session_end_time.strftime('%H:%M') }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="is_no_show" id="edit_is_no_show" value="on"
+                            {% if session.is_no_show %}checked{% endif %}
+                            class="sr-only peer" />
+                        <div class="w-10 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </label>
+                    <span class="text-sm text-gray-700">No show</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-400">Duration: {{ session.minutes }} min</span>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Changes</button>
+            </form>
+            {% else %}
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="text-gray-500">Student</dt>
+                    <dd class="font-medium text-gray-900">
+                        <a href="/students/{{ session.student.id }}" class="hover:text-blue-600">
+                            {{ session.student.first_name }} {{ session.student.last_name }}
+                        </a>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500">Date</dt>
+                    <dd class="font-medium text-gray-900">{{ session.session_date.strftime("%d %B %Y") }}</dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500">Time</dt>
+                    <dd class="font-medium text-gray-900">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500">Duration</dt>
+                    <dd class="font-medium text-gray-900">{% if session.is_no_show %}—{% else %}{{ session.minutes }} min{% endif %}</dd>
+                </div>
+                {% if session.topic_tags %}
+                <div>
+                    <dt class="text-gray-500">Topics</dt>
+                    <dd class="font-medium text-gray-900">{{ session.topic_tags }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+            {% endif %}
+        </div>
+
+        <!-- Delete -->
+        <div class="bg-white rounded-xl border border-red-200 p-4">
+            <p class="text-sm text-gray-500 mb-3">Deleting a session is permanent and cannot be undone.</p>
+            <form method="POST" action="/sessions/{{ session.id }}/delete"
+                onsubmit="return confirm('Delete this session? This cannot be undone.')">
+                <button type="submit"
+                    class="w-full px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-50">
+                    Delete Session
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Editable notes -->
+    <div class="col-span-2">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Session Notes</h2>
+            {% if session.is_no_show %}
+            <p class="text-sm text-gray-400 italic">No notes recorded — student did not attend.</p>
+            {% else %}
+            <form method="POST" action="/sessions/{{ session.id }}/update" class="space-y-4">
+                <input type="hidden" name="student_id" value="{{ session.student_id }}" />
+                <input type="hidden" name="session_date" value="{{ session.session_date.strftime('%Y-%m-%d') }}" />
+                <input type="hidden" name="start_time" value="{{ session.session_start_time.strftime('%H:%M') }}" />
+                <input type="hidden" name="end_time" value="{{ session.session_end_time.strftime('%H:%M') }}" />
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Work Covered</label>
+                    <textarea name="work_covered" rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.work_covered or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Student Actions</label>
+                    <textarea name="student_actions" rows="2"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.student_actions or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tutor Actions</label>
+                    <textarea name="tutor_actions" rows="2"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.tutor_actions or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Next Lesson Focus</label>
+                    <textarea name="next_lesson_focus" rows="2"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.next_lesson_focus or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Topic Tags</label>
+                    <input type="text" name="topic_tags" value="{{ session.topic_tags or '' }}"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                {% if not user.is_admin %}
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Notes</button>
+                {% endif %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

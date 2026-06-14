@@ -1,3 +1,5 @@
 .env
 __pycache__/
 *.pyc
+seed.py
+old_backend.xlsx

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import hash_password
 from app.core.database import get_db
+from app.utils import cap_name
 from app.models.user import User, UserRole
 
 router = APIRouter(tags=["Setup"])
@@ -41,8 +42,8 @@ async def setup_submit(
     user = User(
         email=email,
         hashed_password=hash_password(password),
-        first_name=first_name,
-        last_name=last_name,
+        first_name=cap_name(first_name),
+        last_name=cap_name(last_name),
         role=UserRole.admin,
         is_active=True,
     )

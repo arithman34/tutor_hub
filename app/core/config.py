@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     api_prefix: str = "/api/v1"
+    openai_api_key: str
 
 
 settings = Settings()

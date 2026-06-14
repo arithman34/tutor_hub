@@ -11,6 +11,10 @@ class NotAuthenticatedException(Exception):
     pass
 
 
+class NotAdminException(Exception):
+    pass
+
+
 async def get_current_user_from_cookie(access_token: str | None = Cookie(default=None), db: AsyncSession = Depends(get_db)) -> User:
     if not access_token:
         raise NotAuthenticatedException()
@@ -25,4 +29,10 @@ async def get_current_user_from_cookie(access_token: str | None = Cookie(default
     if not user or not user.is_active:
         raise NotAuthenticatedException()
 
+    return user
+
+
+async def require_admin(user: User = Depends(get_current_user_from_cookie)) -> User:
+    if not user.is_admin:
+        raise NotAdminException()
     return user
