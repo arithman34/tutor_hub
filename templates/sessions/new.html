@@ -24,6 +24,18 @@
 
 <form method="POST" action="/sessions" class="space-y-5 max-w-2xl" id="session-form">
     <input type="hidden" name="zoom_summary_raw" id="zoom_summary_raw_hidden" />
+    <input type="hidden" name="calendar_event_id" value="{{ prefill_event_id }}" />
+    <input type="hidden" name="calendar_html_link" value="{{ prefill_html_link }}" />
+
+    {% if prefill_event_id %}
+    <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        Pre-filled from your Google Calendar event.
+    </div>
+    {% endif %}
 
     <!-- Shared: student + time -->
     <div>
@@ -32,7 +44,10 @@
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">— Select student —</option>
             {% for student in students %}
-            <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }}</option>
+            <option value="{{ student.id }}"
+                {% if prefill_student_id and student.id | string == prefill_student_id %}selected{% endif %}>
+                {{ student.first_name }} {{ student.last_name }}
+            </option>
             {% endfor %}
         </select>
     </div>
@@ -40,17 +55,17 @@
     <div class="grid grid-cols-3 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input type="date" name="session_date" required
+            <input type="date" name="session_date" value="{{ prefill_date }}" required
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-            <input type="time" name="start_time" required
+            <input type="time" name="start_time" value="{{ prefill_start }}" required
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-            <input type="time" name="end_time" required
+            <input type="time" name="end_time" value="{{ prefill_end }}" required
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
     </div>

@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
+from app.models.google_calendar_token import GoogleCalendarToken
 from app.models.payment import Payment
 from app.models.payee import Payee
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import PayoutType, User, UserRole
+from app.services import google_calendar as gcal_svc
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(tags=["Web Dashboard"])
@@ -36,25 +38,50 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
     if not user.is_admin:
         week_from_now = now + timedelta(days=7)
         active_students = await db.scalar(select(func.count()).select_from(Student).where(Student.user_id == user.id, Student.is_active))
-        sessions_this_week = await db.scalar(
-            select(func.count()).select_from(Session)
-            .where(Session.user_id == user.id, Session.session_date >= now, Session.session_date <= week_from_now)
-        )
         total_minutes = float(await db.scalar(
             select(func.sum(_mins)).where(Session.user_id == user.id)
         ) or 0)
         amount_owed = round((total_minutes / 60) * (user.payout_hourly_rate or 0), 2)
-        upcoming_result = await db.execute(
-            select(Session).options(joinedload(Session.student))
-            .where(Session.user_id == user.id, Session.session_date >= now)
-            .order_by(Session.session_date).limit(5)
-        )
-        upcoming_sessions = upcoming_result.unique().scalars().all()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        sessions_this_month = await db.scalar(
+            select(func.count()).select_from(Session)
+            .where(Session.user_id == user.id, Session.session_date >= month_start, Session.session_date <= now)
+        ) or 0
+
+        # Upcoming sessions come from Google Calendar (next 7 days), grouped by day.
+        token = (await db.execute(
+            select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id)
+        )).scalar_one_or_none()
+        google_connected = token is not None
+        upcoming_days = []
+        sessions_this_week = 0
+        if token:
+            label = token.label or "Tuition"
+            try:
+                events = await gcal_svc.fetch_events(user.id, label, now, week_from_now, db)
+            except Exception:
+                events = []
+            sessions_this_week = len(events)
+            grouped: dict[str, list] = {}
+            for event in events:
+                parsed = gcal_svc.parse_event(event)
+                if not parsed["date"]:
+                    continue
+                grouped.setdefault(parsed["date"], []).append(parsed)
+            for date_str in sorted(grouped):
+                try:
+                    label_date = datetime.fromisoformat(date_str).strftime("%a %d %b")
+                except ValueError:
+                    label_date = date_str
+                upcoming_days.append({"date": date_str, "label": label_date, "events": grouped[date_str]})
+
         return templates.TemplateResponse(request, "dashboard/index.html", {
             "user": user, "active_page": "dashboard",
             "active_students": active_students, "sessions_this_week": sessions_this_week,
+            "sessions_this_month": sessions_this_month,
             "amount_owed": amount_owed,
-            "upcoming_sessions": upcoming_sessions,
+            "google_connected": google_connected,
+            "upcoming_days": upcoming_days,
         })
 
     # ── ADMIN DASHBOARD ──────────────────────────────────────────────────────────

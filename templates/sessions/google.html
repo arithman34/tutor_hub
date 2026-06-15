@@ -1,0 +1,101 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Sessions — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Sessions</h1>
+    <a href="/calendar/create"
+        class="inline-flex items-center gap-2 bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Schedule Session
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="flex items-center justify-between mb-6">
+    <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+        {% for val, lbl in [('all','All'), ('logged','Logged'), ('unlogged','Not logged')] %}
+        <a href="/sessions?status={{ val }}&period={{ period }}"
+            class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
+            {% if status == val %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            {{ lbl }}
+        </a>
+        {% endfor %}
+    </div>
+    <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+        {% for val, lbl in [('all','All time'), ('past','Past'), ('today','Today'), ('future','Future')] %}
+        <a href="/sessions?status={{ status }}&period={{ val }}"
+            class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
+            {% if period == val %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            {{ lbl }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if error %}
+<div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+    {{ error }}
+</div>
+{% endif %}
+
+<div class="bg-white rounded-xl border border-gray-200">
+    <table class="w-full text-sm text-left text-gray-600">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+            <tr>
+                <th class="px-6 py-3">Session</th>
+                <th class="px-6 py-3">Date</th>
+                <th class="px-6 py-3">Time</th>
+                <th class="px-6 py-3">Status</th>
+                <th class="px-6 py-3 text-right"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">{{ item.summary or '(No title)' }}</td>
+                <td class="px-6 py-4">{{ item.date }}</td>
+                <td class="px-6 py-4">
+                    {% if item.start_time %}{{ item.start_time }}{% if item.end_time %} – {{ item.end_time }}{% endif %}
+                    {% else %}<span class="text-gray-400">All day</span>{% endif %}
+                </td>
+                <td class="px-6 py-4">
+                    {% if item.logged %}
+                    <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        Logged
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        Not logged
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right">
+                    {% if item.logged %}
+                    <a href="/sessions/{{ item.session_id }}" class="text-blue-600 hover:underline text-xs">View</a>
+                    {% else %}
+                    {% set qs = "date=" ~ item.date ~ "&start_time=" ~ item.start_time ~ "&end_time=" ~ item.end_time ~ "&event_id=" ~ item.event_id ~ "&html_link=" ~ (item.html_link | urlencode) %}
+                    {% if item.student_id %}{% set qs = "student_id=" ~ item.student_id ~ "&" ~ qs %}{% endif %}
+                    <a href="/sessions/new?{{ qs }}"
+                        class="inline-block px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700">
+                        Log Session
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">
+                {% if status == 'unlogged' %}No unlogged sessions — you're all caught up.
+                {% elif period == 'today' %}No sessions today.
+                {% elif period == 'future' %}No upcoming sessions.
+                {% elif period == 'past' %}No past sessions found.
+                {% else %}No sessions found in your calendar.{% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

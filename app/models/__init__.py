@@ -1,4 +1,5 @@
 from app.models.enrollment import Enrollment
+from app.models.google_calendar_token import GoogleCalendarToken
 from app.models.payee import Payee
 from app.models.payment import Payment
 from app.models.session import Session
@@ -8,6 +9,7 @@ from app.models.user import User
 
 __all__ = [
     "Enrollment",
+    "GoogleCalendarToken",
     "Payee",
     "Payment",
     "Session",

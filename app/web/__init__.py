@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.web.routers import admin, auth, dashboard, payees, payments, sessions, setup, students
+from app.web.routers import admin, auth, calendar, connections, dashboard, payees, payments, sessions, setup, students
 
 router = APIRouter()
 
@@ -12,3 +12,5 @@ router.include_router(sessions.router)
 router.include_router(payments.router)
 router.include_router(payees.router)
 router.include_router(admin.router)
+router.include_router(calendar.router)
+router.include_router(connections.router)

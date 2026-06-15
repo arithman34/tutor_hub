@@ -1,0 +1,206 @@
+{% extends "layouts/app.html" %}
+
+{% block page_content %}
+<div class="max-w-2xl">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="/sessions" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900">Add Session</h1>
+    </div>
+
+    {% if form_error %}
+    <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+        {% if form_error == 'no_days' %}
+            Please select at least one day for a recurring session.
+        {% elif form_error == 'no_student' %}
+            Please select a student.
+        {% else %}
+            {{ form_error }}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/calendar/create" id="create-form">
+
+        <!-- Type toggle -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+            <p class="text-sm font-medium text-gray-700 mb-3">Session type</p>
+            <div class="flex gap-2">
+                <label class="flex-1">
+                    <input type="radio" name="session_type" value="oneoff" class="sr-only peer" checked>
+                    <div class="text-center px-4 py-2 rounded-lg border text-sm font-medium cursor-pointer
+                        peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
+                        border-gray-200 text-gray-700 hover:border-blue-300"
+                        onclick="setType('oneoff')">
+                        One-off
+                    </div>
+                </label>
+                <label class="flex-1">
+                    <input type="radio" name="session_type" value="recurring" class="sr-only peer">
+                    <div class="text-center px-4 py-2 rounded-lg border text-sm font-medium cursor-pointer
+                        peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
+                        border-gray-200 text-gray-700 hover:border-blue-300"
+                        onclick="setType('recurring')">
+                        Recurring
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Student -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Student <span class="text-red-500">*</span></label>
+                <select name="student_id" id="student-select" required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="updatePreview()">
+                    <option value="">— Select student —</option>
+                    {% for s in students %}
+                    <option value="{{ s.id }}" data-name="{{ s.first_name }} {{ s.last_name }}">
+                        {{ s.first_name }} {{ s.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Title preview -->
+            <div class="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-sm text-gray-500">Google Calendar title: </span>
+                <span id="title-preview" class="text-sm font-medium text-gray-700 italic">Select a student above</span>
+            </div>
+        </div>
+
+        <!-- One-off fields -->
+        <div id="oneoff-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" name="date" required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Start time</label>
+                    <input type="time" name="start_time" value="09:00" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">End time</label>
+                    <input type="time" name="end_time" value="10:00" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Recurring fields -->
+        <div id="recurring-section" class="hidden space-y-4">
+
+            <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start date</label>
+                        <input type="date" name="start_date"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End date</label>
+                        <input type="date" name="end_date"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Repeat every</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="interval_weeks" value="1" min="1" max="52"
+                            class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <span class="text-sm text-gray-600">week(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day grid -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <p class="text-sm font-medium text-gray-700 mb-4">Days &amp; times</p>
+                <div class="space-y-3">
+                    {% for day in days %}
+                    {% set i = loop.index0 %}
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 w-32 shrink-0 cursor-pointer select-none">
+                            <input type="checkbox" name="day_{{ i }}_enabled" value="1"
+                                id="day_{{ i }}_enabled"
+                                onchange="toggleDay({{ i }})"
+                                class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">{{ day }}</span>
+                        </label>
+                        <div class="flex items-center gap-2 flex-1">
+                            <input type="time" name="day_{{ i }}_start" value="09:00"
+                                id="day_{{ i }}_start"
+                                class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:bg-gray-50"
+                                disabled />
+                            <span class="text-gray-400 text-sm">–</span>
+                            <input type="time" name="day_{{ i }}_end" value="10:00"
+                                id="day_{{ i }}_end"
+                                class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:bg-gray-50"
+                                disabled />
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex gap-3">
+            <button type="submit"
+                class="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                Add to Google Calendar
+            </button>
+            <a href="/sessions"
+                class="px-5 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    function setType(type) {
+        const oneoff = document.getElementById('oneoff-section');
+        const recurring = document.getElementById('recurring-section');
+        if (type === 'oneoff') {
+            oneoff.classList.remove('hidden');
+            recurring.classList.add('hidden');
+            document.querySelectorAll('#recurring-section input[type=date]').forEach(el => el.removeAttribute('required'));
+            document.querySelectorAll('#oneoff-section input').forEach(el => {
+                if (el.name === 'date' || el.name === 'start_time' || el.name === 'end_time') el.setAttribute('required', '');
+            });
+        } else {
+            oneoff.classList.add('hidden');
+            recurring.classList.remove('hidden');
+            document.querySelectorAll('#recurring-section input[type=date]').forEach(el => el.setAttribute('required', ''));
+            document.querySelectorAll('#oneoff-section input').forEach(el => el.removeAttribute('required'));
+        }
+    }
+
+    function toggleDay(i) {
+        const enabled = document.getElementById(`day_${i}_enabled`).checked;
+        document.getElementById(`day_${i}_start`).disabled = !enabled;
+        document.getElementById(`day_${i}_end`).disabled = !enabled;
+    }
+
+    function updatePreview() {
+        const select = document.getElementById('student-select');
+        const preview = document.getElementById('title-preview');
+        const selected = select.options[select.selectedIndex];
+        const name = selected ? selected.getAttribute('data-name') : null;
+        preview.textContent = name ? `${name} - Tuition` : 'Select a student above';
+        preview.classList.toggle('italic', !name);
+        preview.classList.toggle('text-gray-400', !name);
+        preview.classList.toggle('text-gray-700', !!name);
+    }
+</script>
+{% endblock %}

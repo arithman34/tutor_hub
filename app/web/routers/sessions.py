@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -9,9 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
+from app.models.google_calendar_token import GoogleCalendarToken
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import User
+from app.services import google_calendar as gcal_svc
 from app.services.ai import parse_zoom_summary
 from app.web.deps import get_current_user_from_cookie
 
@@ -20,27 +22,126 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/sessions", response_class=HTMLResponse)
-async def sessions_list(request: Request, q: str = Query(default=""), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
+async def sessions_list(
+    request: Request,
+    q: str = Query(default=""),
+    status: str = Query(default="all"),
+    period: str = Query(default="all"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
+    # Admins always see the DB-backed table of every logged session.
     if user.is_admin:
         stmt = select(Session).options(joinedload(Session.student), joinedload(Session.user)).order_by(Session.session_date.desc())
-    else:
-        stmt = select(Session).options(joinedload(Session.student)).where(Session.user_id == user.id).order_by(Session.session_date.desc())
-    if q:
-        pattern = f"%{q}%"
-        stmt = stmt.where(Session.student_id.in_(
-            select(Student.id).where(or_(Student.first_name.ilike(pattern), Student.last_name.ilike(pattern)))
-        ))
-    sessions = (await db.execute(stmt)).unique().scalars().all()
-    return templates.TemplateResponse(request, "sessions/index.html", {"user": user, "active_page": "sessions", "sessions": sessions, "q": q})
+        if q:
+            pattern = f"%{q}%"
+            stmt = stmt.where(Session.student_id.in_(
+                select(Student.id).where(or_(Student.first_name.ilike(pattern), Student.last_name.ilike(pattern)))
+            ))
+        sessions = (await db.execute(stmt)).unique().scalars().all()
+        return templates.TemplateResponse(request, "sessions/index.html", {"user": user, "active_page": "sessions", "sessions": sessions, "q": q})
+
+    # Tutors require Google Calendar.
+    token = (await db.execute(
+        select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id)
+    )).scalar_one_or_none()
+
+    if not token:
+        return RedirectResponse(url="/connections?error=not_connected", status_code=303)
+
+    label = token.label or "Tuition"
+    now = datetime.now(timezone.utc)
+    time_min = now - timedelta(days=365)
+    time_max = now + timedelta(days=365)
+
+    error = None
+    events = []
+    try:
+        events = await gcal_svc.fetch_events(user.id, label, time_min, time_max, db)
+    except Exception as exc:
+        error = str(exc)
+
+    # Sessions logged via the app, keyed by the Google Calendar event id they came from.
+    logged = (await db.execute(
+        select(Session).options(joinedload(Session.student)).where(Session.user_id == user.id)
+    )).unique().scalars().all()
+    logged_by_event = {s.calendar_event_id: s for s in logged if s.calendar_event_id}
+
+    students = (await db.execute(
+        select(Student).where(Student.user_id == user.id, Student.is_active == True)
+    )).scalars().all()
+    student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
+
+    items = []
+    for event in events:
+        parsed = gcal_svc.parse_event(event)
+        sess = logged_by_event.get(parsed["event_id"])
+        student = student_by_name.get(parsed["student_name"])
+        items.append({
+            **parsed,
+            "logged": sess is not None,
+            "session_id": str(sess.id) if sess else None,
+            "student_id": str(student.id) if student else None,
+        })
+
+    # Past + today newest-first, then upcoming sessions ascending.
+    today_str = now.strftime("%Y-%m-%d")
+    past = sorted(
+        (i for i in items if i["date"] <= today_str),
+        key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}",
+        reverse=True,
+    )
+    future = sorted(
+        (i for i in items if i["date"] > today_str),
+        key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}",
+    )
+    items = past + future
+
+    if status == "logged":
+        items = [i for i in items if i["logged"]]
+    elif status == "unlogged":
+        items = [i for i in items if not i["logged"]]
+
+    if period == "past":
+        items = [i for i in items if i["date"] < today_str]
+    elif period == "today":
+        items = [i for i in items if i["date"] == today_str]
+    elif period == "future":
+        items = [i for i in items if i["date"] > today_str]
+
+    return templates.TemplateResponse(request, "sessions/google.html", {
+        "user": user, "active_page": "sessions",
+        "items": items, "status": status, "period": period, "label": label, "error": error,
+    })
 
 
 @router.get("/sessions/new", response_class=HTMLResponse)
-async def sessions_new(request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
+async def sessions_new(
+    request: Request,
+    student_id: str = Query(default=""),
+    date: str = Query(default=""),
+    start_time: str = Query(default=""),
+    end_time: str = Query(default=""),
+    event_id: str = Query(default=""),
+    html_link: str = Query(default=""),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
     if user.is_admin:
         return RedirectResponse(url="/sessions", status_code=303)
     result = await db.execute(select(Student).where(Student.user_id == user.id, Student.is_active == True).order_by(Student.first_name))
     students = result.scalars().all()
-    return templates.TemplateResponse(request, "sessions/new.html", {"user": user, "active_page": "sessions", "students": students})
+    return templates.TemplateResponse(request, "sessions/new.html", {
+        "user": user,
+        "active_page": "sessions",
+        "students": students,
+        "prefill_student_id": student_id,
+        "prefill_date": date,
+        "prefill_start": start_time,
+        "prefill_end": end_time,
+        "prefill_event_id": event_id,
+        "prefill_html_link": html_link,
+    })
 
 
 @router.post("/sessions/zoom-parse", response_class=JSONResponse)
@@ -73,6 +174,8 @@ async def sessions_create(
     tutor_actions: str = Form(default=""),
     next_lesson_focus: str = Form(default=""),
     topic_tags: str = Form(default=""),
+    calendar_event_id: str = Form(default=""),
+    calendar_html_link: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -94,6 +197,8 @@ async def sessions_create(
         tutor_actions=None if no_show else (tutor_actions or None),
         next_lesson_focus=None if no_show else (next_lesson_focus or None),
         topic_tags=None if no_show else (topic_tags or None),
+        calendar_event_id=calendar_event_id or None,
+        calendar_html_link=calendar_html_link or None,
     )
     db.add(session)
     await db.commit()

@@ -104,6 +104,22 @@
                 </a>
             </li>
 
+            <!-- Integrations section (all users) -->
+            <li class="pt-3">
+                <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Integrations</p>
+            </li>
+            <li>
+                <a href="/connections"
+                    class="flex items-center px-2 py-2 text-sm rounded-lg group
+                    {% if active_page == 'connections' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span class="ms-3">Connections</span>
+                </a>
+            </li>
+
             {% if user.is_admin %}
             <!-- Payments -->
             <li>
