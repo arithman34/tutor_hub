@@ -30,9 +30,14 @@ async def sessions_list(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
-    # Admins always see the DB-backed table of every logged session.
+    # Admins see all logged sessions across all tutors
     if user.is_admin:
-        stmt = select(Session).options(joinedload(Session.student), joinedload(Session.user)).order_by(Session.session_date.desc())
+        stmt = (
+            select(Session)
+            .options(joinedload(Session.student), joinedload(Session.user))
+            .where(Session.calendar_event_id.isnot(None))
+            .order_by(Session.session_date.desc())
+        )
         if q:
             pattern = f"%{q}%"
             stmt = stmt.where(Session.student_id.in_(

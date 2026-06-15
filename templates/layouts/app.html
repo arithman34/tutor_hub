@@ -104,7 +104,7 @@
                 </a>
             </li>
 
-            <!-- Integrations section (all users) -->
+            {% if not user.is_admin %}
             <li class="pt-3">
                 <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Integrations</p>
             </li>
@@ -119,6 +119,7 @@
                     <span class="ms-3">Connections</span>
                 </a>
             </li>
+            {% endif %}
 
             {% if user.is_admin %}
             <!-- Payments -->
