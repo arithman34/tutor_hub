@@ -84,14 +84,6 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
     revenue_this_year = float(await db.scalar(
         select(func.sum(Payment.amount)).where(Payment.payment_date >= this_year_start)
     ) or 0)
-    total_session_value = float(await db.scalar(
-        select(func.sum(_mins / 60.0 * Student.hourly_rate))
-        .select_from(Session)
-        .join(Student, Session.student_id == Student.id)
-        .where(Student.hourly_rate.isnot(None))
-    ) or 0)
-    projected_revenue = round(total_session_value - revenue_alltime, 2)
-
     # Payout obligations this month
     hourly_rows = (await db.execute(
         select(User.payout_hourly_rate, func.sum(_mins).label("mins"))
@@ -293,7 +285,6 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
         "revenue_alltime": revenue_alltime,
         "revenue_this_month": revenue_this_month,
         "revenue_this_year": revenue_this_year,
-        "projected_revenue": projected_revenue,
         "total_payout_obligations": total_payout_obligations,
         "profit_margin": profit_margin,
         "mom_trend": mom_trend,

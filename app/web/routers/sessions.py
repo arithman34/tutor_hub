@@ -69,7 +69,7 @@ async def sessions_list(
 
     label = token.label or "Tuition"
     now = datetime.now(timezone.utc)
-    time_min = now - timedelta(days=365)
+    time_min = datetime(2026, 4, 1, tzinfo=timezone.utc)
     time_max = now + timedelta(days=365)
 
     error = None
