@@ -84,12 +84,13 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db), user: 
     revenue_this_year = float(await db.scalar(
         select(func.sum(Payment.amount)).where(Payment.payment_date >= this_year_start)
     ) or 0)
-    projected_revenue = float(await db.scalar(
+    total_session_value = float(await db.scalar(
         select(func.sum(_mins / 60.0 * Student.hourly_rate))
         .select_from(Session)
         .join(Student, Session.student_id == Student.id)
-        .where(Session.session_date > now, Student.hourly_rate.isnot(None))
+        .where(Student.hourly_rate.isnot(None))
     ) or 0)
+    projected_revenue = round(total_session_value - revenue_alltime, 2)
 
     # Payout obligations this month
     hourly_rows = (await db.execute(

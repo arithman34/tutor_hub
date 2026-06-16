@@ -25,8 +25,8 @@ templates = Jinja2Templates(directory="templates")
 async def sessions_list(
     request: Request,
     q: str = Query(default=""),
-    status: str = Query(default="all"),
-    period: str = Query(default="all"),
+    status: str | None = Query(default=None),
+    period: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -54,6 +54,19 @@ async def sessions_list(
     if not token:
         return RedirectResponse(url="/connections?error=not_connected", status_code=303)
 
+    # Restore saved filters from cookies when none are in the URL.
+    if status is None and period is None:
+        saved_status = request.cookies.get("sessions_status", "all")
+        saved_period = request.cookies.get("sessions_period", "all")
+        if saved_status != "all" or saved_period != "all":
+            return RedirectResponse(
+                url=f"/sessions?status={saved_status}&period={saved_period}",
+                status_code=303,
+            )
+
+    status = status or "all"
+    period = period or "all"
+
     label = token.label or "Tuition"
     now = datetime.now(timezone.utc)
     time_min = now - timedelta(days=365)
@@ -76,12 +89,13 @@ async def sessions_list(
         select(Student).where(Student.user_id == user.id, Student.is_active == True)
     )).scalars().all()
     student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
+    student_by_first = {s.first_name: s for s in students}
 
     items = []
     for event in events:
         parsed = gcal_svc.parse_event(event)
         sess = logged_by_event.get(parsed["event_id"])
-        student = student_by_name.get(parsed["student_name"])
+        student = student_by_name.get(parsed["student_name"]) or student_by_first.get(parsed["student_name"])
         items.append({
             **parsed,
             "logged": sess is not None,
@@ -114,10 +128,13 @@ async def sessions_list(
     elif period == "future":
         items = [i for i in items if i["date"] > today_str]
 
-    return templates.TemplateResponse(request, "sessions/google.html", {
+    response = templates.TemplateResponse(request, "sessions/google.html", {
         "user": user, "active_page": "sessions",
         "items": items, "status": status, "period": period, "label": label, "error": error,
     })
+    response.set_cookie("sessions_status", status, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
+    response.set_cookie("sessions_period", period, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
+    return response
 
 
 @router.get("/sessions/new", response_class=HTMLResponse)
