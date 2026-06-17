@@ -1,50 +1,59 @@
 import re
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
-from app.utils import cap_name
+from app.exceptions import ForbiddenError, NotFoundError
 from app.models.payee import Payee
 from app.models.session import Session
-from app.models.student import Student
 from app.models.user import User, UserRole
-from app.services import google_docs as gdocs_svc
+from app.services import student as student_service
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(tags=["Web Students"])
 templates = Jinja2Templates(directory="templates")
 
 
+def _doc_id_from_url(url: str) -> str | None:
+    match = re.search(r"/document/d/([a-zA-Z0-9_-]+)", url)
+    return match.group(1) if match else None
+
+
 @router.get("/students", response_class=HTMLResponse)
-async def students_list(request: Request, q: str = Query(default=""), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
-    stmt = select(Student).order_by(Student.created_at.desc())
-    if user.is_admin:
-        stmt = stmt.options(joinedload(Student.user))
-    else:
-        stmt = stmt.where(Student.user_id == user.id)
-    if q:
-        pattern = f"%{q}%"
-        stmt = stmt.where(or_(Student.first_name.ilike(pattern), Student.last_name.ilike(pattern)))
-    students = (await db.execute(stmt)).scalars().all()
-    return templates.TemplateResponse(request, "students/index.html", {"user": user, "active_page": "students", "students": students, "q": q})
+async def students_list(
+    request: Request,
+    q: str = Query(default=""),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
+    students = await student_service.list_students(db, user, q=q)
+    return templates.TemplateResponse(request, "students/index.html", {
+        "user": user, "active_page": "students", "students": students, "q": q,
+    })
 
 
 @router.get("/students/new", response_class=HTMLResponse)
-async def students_new(request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
+async def students_new(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
     if not user.is_admin:
         return RedirectResponse(url="/students", status_code=303)
-    tutors_result = await db.execute(select(User).where(User.role.in_([UserRole.tutor, UserRole.admin_tutor]), User.is_active).order_by(User.first_name))
+    tutors_result = await db.execute(
+        select(User).where(User.role.in_([UserRole.tutor, UserRole.admin_tutor]), User.is_active).order_by(User.first_name)
+    )
     tutors = tutors_result.scalars().all()
     payees_result = await db.execute(select(Payee).order_by(Payee.first_name))
     payees = payees_result.scalars().all()
-    return templates.TemplateResponse(request, "students/new.html", {"user": user, "active_page": "students", "tutors": tutors, "payees": payees})
+    return templates.TemplateResponse(request, "students/new.html", {
+        "user": user, "active_page": "students", "tutors": tutors, "payees": payees,
+    })
 
 
 @router.post("/students")
@@ -61,38 +70,29 @@ async def students_create(
 ):
     if not user.is_admin:
         return RedirectResponse(url="/students", status_code=303)
-    tutor_uuid = uuid.UUID(tutor_id)
-    student = Student(
-        user_id=tutor_uuid,
-        first_name=cap_name(first_name),
-        last_name=cap_name(last_name),
+    await student_service.create_student(
+        db,
+        calling_user=user,
+        user_id=uuid.UUID(tutor_id),
+        first_name=first_name,
+        last_name=last_name,
         level=level or None,
         hourly_rate=hourly_rate or None,
         payee_id=uuid.UUID(payee_id) if payee_id else None,
     )
-    db.add(student)
-    await db.commit()
-    await db.refresh(student)
-
-    try:
-        payee = None
-        if student.payee_id:
-            payee_result = await db.execute(select(Payee).where(Payee.id == student.payee_id))
-            payee = payee_result.scalar_one_or_none()
-        doc_id = await gdocs_svc.create_ilp_document(tutor_uuid, student, payee, db)
-        student.google_doc_id = doc_id
-        await db.commit()
-    except Exception:
-        pass
-
     return RedirectResponse(url="/students", status_code=303)
 
 
 @router.get("/students/{student_id}", response_class=HTMLResponse)
-async def student_detail(student_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
-    result = await db.execute(select(Student).where(Student.id == student_id))
-    student = result.scalar_one_or_none()
-    if not student or (not user.is_admin and student.user_id != user.id):
+async def student_detail(
+    student_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
+    try:
+        student = await student_service.get_student(db, student_id, user)
+    except (NotFoundError, ForbiddenError):
         return RedirectResponse(url="/students", status_code=303)
 
     sessions_result = await db.execute(
@@ -106,17 +106,8 @@ async def student_detail(student_id: uuid.UUID, request: Request, db: AsyncSessi
         payees = payees_result.scalars().all()
 
     return templates.TemplateResponse(request, "students/detail.html", {
-        "user": user,
-        "active_page": "students",
-        "student": student,
-        "sessions": sessions,
-        "payees": payees,
+        "user": user, "active_page": "students", "student": student, "sessions": sessions, "payees": payees,
     })
-
-
-def _doc_id_from_url(url: str) -> str | None:
-    match = re.search(r"/document/d/([a-zA-Z0-9_-]+)", url)
-    return match.group(1) if match else None
 
 
 @router.post("/students/{student_id}/update")
@@ -131,40 +122,45 @@ async def student_update(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
-    result = await db.execute(select(Student).where(Student.id == student_id))
-    student = result.scalar_one_or_none()
-    if not student or (not user.is_admin and student.user_id != user.id):
-        return RedirectResponse(url="/students", status_code=303)
-    student.first_name = cap_name(first_name)
+    updates = {
+        "first_name": first_name,
+        "level": level or None,
+        "hourly_rate": hourly_rate or None,
+        "google_doc_id": _doc_id_from_url(ilp_url) if ilp_url else None,
+    }
     if last_name:
-        student.last_name = cap_name(last_name)
-    student.level = level or None
-    student.hourly_rate = hourly_rate or None
-    student.google_doc_id = _doc_id_from_url(ilp_url) if ilp_url else None
+        updates["last_name"] = last_name
     if user.is_admin:
-        student.payee_id = uuid.UUID(payee_id) if payee_id else None
-    student.updated_at = datetime.now(timezone.utc)
-    await db.commit()
+        updates["payee_id"] = uuid.UUID(payee_id) if payee_id else None
+
+    try:
+        await student_service.update_student(db, student_id, user, updates)
+    except (NotFoundError, ForbiddenError):
+        return RedirectResponse(url="/students", status_code=303)
     return RedirectResponse(url=f"/students/{student_id}", status_code=303)
 
 
 @router.post("/students/{student_id}/toggle-active")
-async def student_toggle_active(student_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
-    result = await db.execute(select(Student).where(Student.id == student_id))
-    student = result.scalar_one_or_none()
-    if student and (user.is_admin or student.user_id == user.id):
-        student.is_active = not student.is_active
-        await db.commit()
+async def student_toggle_active(
+    student_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
+    try:
+        await student_service.toggle_active(db, student_id, user)
+    except (NotFoundError, ForbiddenError):
+        pass
     return RedirectResponse(url=f"/students/{student_id}", status_code=303)
 
 
 @router.post("/students/{student_id}/delete")
-async def student_delete(student_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
-    if not user.is_admin:
-        return RedirectResponse(url="/students", status_code=303)
-    result = await db.execute(select(Student).where(Student.id == student_id))
-    student = result.scalar_one_or_none()
-    if student:
-        await db.delete(student)
-        await db.commit()
+async def student_delete(
+    student_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
+    try:
+        await student_service.delete_student(db, student_id, user)
+    except (NotFoundError, ForbiddenError):
+        pass
     return RedirectResponse(url="/students", status_code=303)

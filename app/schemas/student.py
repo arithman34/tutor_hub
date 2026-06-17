@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class StudentCreate(BaseModel):
+    tutor_id: uuid.UUID | None = Field(None, description="Tutor to assign the student to (admin only)")
     first_name: str = Field(..., description="Student's first name", examples=["John"])
     last_name: str = Field(..., description="Student's last name", examples=["Doe"])
     payee_id: uuid.UUID | None = Field(

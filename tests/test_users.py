@@ -130,3 +130,18 @@ async def test_activate_nonexistent_user(client, admin_headers):
         headers=admin_headers,
     )
     assert response.status_code == 404
+
+
+async def test_create_second_admin_returns_400(client, admin_headers):
+    response = await client.post(
+        "/api/v1/users/",
+        json={
+            "email": "admin2@example.com",
+            "password": "adminpassword",
+            "first_name": "Second",
+            "last_name": "Admin",
+            "role": "admin",
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 400

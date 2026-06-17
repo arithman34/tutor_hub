@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user, hash_password
+from app.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate
+from app.services import user as user_service
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -20,15 +21,11 @@ async def update_my_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if updates.email is not None:
-        current_user.email = updates.email
-    if updates.password is not None:
-        current_user.hashed_password = hash_password(updates.password)
-    if updates.first_name is not None:
-        current_user.first_name = updates.first_name
-    if updates.last_name is not None:
-        current_user.last_name = updates.last_name
-
-    await db.commit()
-    await db.refresh(current_user)
-    return current_user
+    return await user_service.update_profile(
+        db,
+        current_user=current_user,
+        email=updates.email,
+        password=updates.password,
+        first_name=updates.first_name,
+        last_name=updates.last_name,
+    )

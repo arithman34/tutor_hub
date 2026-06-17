@@ -1,0 +1,5 @@
+[run]
+omit =
+    app/services/google_calendar.py
+    app/services/google_docs.py
+    app/web/**

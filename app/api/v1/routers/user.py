@@ -1,100 +1,90 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user, hash_password
+from app.auth import get_current_user
 from app.core.database import get_db
-from app.models.user import User, UserRole
+from app.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
+from app.services import user as user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_create: UserCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Create a new user."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can create users")
-
-    result = await db.execute(select(func.count()).select_from(User).where(User.role == UserRole.admin))
-    existing_admin = result.scalar()
-    if existing_admin is not None and existing_admin > 0 and user_create.role == UserRole.admin:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An admin user already exists")
-
-    result = await db.execute(select(User).where(User.email == user_create.email))
-    existing_user = result.scalar_one_or_none()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-
-    user = User(
-        email=user_create.email,
-        hashed_password=hash_password(user_create.password),
-        first_name=user_create.first_name,
-        last_name=user_create.last_name,
-        role=UserRole(user_create.role),
-        is_active=user_create.is_active,
-    )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
 @router.get("/", response_model=list[UserResponse])
-async def get_users(limit: int = 10, offset: int = 0, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Get a list of all users."""
+async def get_users(
+    limit: int = 10,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can access the user list")
+    return await user_service.list_users(db, limit=limit, offset=offset)
 
-    result = await db.execute(select(User).offset(offset).limit(limit))
-    return result.scalars().all()
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_create: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return await user_service.create_user(
+            db,
+            current_user=current_user,
+            email=user_create.email,
+            password=user_create.password,
+            first_name=user_create.first_name,
+            last_name=user_create.last_name,
+            role=user_create.role,
+            is_active=user_create.is_active,
+        )
+    except ForbiddenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can create users")
+    except ConflictError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Get a user by ID."""
+async def get_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     if current_user.id != user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this user")
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
+    try:
+        return await user_service.get_user_by_id(db, user_id)
+    except NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    return user
-
-
-@router.patch("/{user_id}/deactivate", response_model=UserResponse)
-async def deactivate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Deactivate a user account."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can deactivate users")
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    user.is_active = False
-    await db.commit()
-    await db.refresh(user)
-    return user
 
 
 @router.patch("/{user_id}/activate", response_model=UserResponse)
-async def activate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Activate a user account."""
+async def activate_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can activate users")
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
+    try:
+        return await user_service.activate(db, user_id)
+    except NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.is_active = True
-    await db.commit()
-    await db.refresh(user)
-    return user
+
+@router.patch("/{user_id}/deactivate", response_model=UserResponse)
+async def deactivate_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can deactivate users")
+    try:
+        return await user_service.deactivate(db, user_id)
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.models.google_calendar_token import GoogleCalendarToken
 from app.models.student import Student
 from app.models.user import User
-from app.services import google_calendar as gcal_svc
+from app.services import google_calendar as google_calendar_service
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(prefix="/calendar", tags=["Calendar"])
@@ -78,7 +78,7 @@ async def calendar_create(
 
     try:
         if session_type == "oneoff":
-            await gcal_svc.create_one_off_event(
+            await google_calendar_service.create_one_off_event(
                 user_id=user.id,
                 summary=title,
                 date_str=str(form.get("date", "")),
@@ -100,7 +100,7 @@ async def calendar_create(
             if not day_configs:
                 return RedirectResponse(url="/calendar/create?error=no_days", status_code=303)
 
-            await gcal_svc.create_recurring_events(
+            await google_calendar_service.create_recurring_events(
                 user_id=user.id,
                 summary=title,
                 day_configs=day_configs,
@@ -118,7 +118,7 @@ async def calendar_create(
 @router.get("/connect")
 async def calendar_connect(user: User = Depends(get_current_user_from_cookie)):
     state = secrets.token_urlsafe(32)
-    url = gcal_svc.build_connect_url(state)
+    url = google_calendar_service.build_connect_url(state)
     response = RedirectResponse(url=url)
     response.set_cookie("gcal_state", state, max_age=300, httponly=True, samesite="lax")
     return response
@@ -141,7 +141,7 @@ async def calendar_callback(
         return RedirectResponse(url="/connections?error=invalid_state")
 
     try:
-        await gcal_svc.exchange_code(code, user.id, db)
+        await google_calendar_service.exchange_code(code, user.id, db)
     except Exception:
         return RedirectResponse(url="/connections?error=token_exchange_failed")
 

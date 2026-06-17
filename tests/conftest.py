@@ -140,3 +140,45 @@ async def tutor_headers(client, tutor_user):
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture()
+async def second_tutor_user(client, admin_headers):
+    response = await client.post(
+        "/api/v1/users/",
+        json={
+            "email": "tutor2@example.com",
+            "password": "tutor2password",
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "role": "tutor",
+        },
+        headers=admin_headers,
+    )
+    return response.json()
+
+
+@pytest_asyncio.fixture()
+async def second_tutor_headers(client, second_tutor_user):
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "tutor2@example.com", "password": "tutor2password"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture()
+async def student(client, admin_headers, tutor_user):
+    response = await client.post(
+        "/api/v1/students/",
+        json={
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "level": "GCSE",
+            "hourly_rate": 50.0,
+            "tutor_id": tutor_user["id"],
+        },
+        headers=admin_headers,
+    )
+    return response.json()
