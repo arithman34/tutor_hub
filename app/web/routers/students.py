@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -14,6 +15,7 @@ from app.models.payee import Payee
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import User, UserRole
+from app.services import google_docs as gdocs_svc
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(tags=["Web Students"])
@@ -59,8 +61,9 @@ async def students_create(
 ):
     if not user.is_admin:
         return RedirectResponse(url="/students", status_code=303)
+    tutor_uuid = uuid.UUID(tutor_id)
     student = Student(
-        user_id=uuid.UUID(tutor_id),
+        user_id=tutor_uuid,
         first_name=cap_name(first_name),
         last_name=cap_name(last_name),
         level=level or None,
@@ -69,6 +72,19 @@ async def students_create(
     )
     db.add(student)
     await db.commit()
+    await db.refresh(student)
+
+    try:
+        payee = None
+        if student.payee_id:
+            payee_result = await db.execute(select(Payee).where(Payee.id == student.payee_id))
+            payee = payee_result.scalar_one_or_none()
+        doc_id = await gdocs_svc.create_ilp_document(tutor_uuid, student, payee, db)
+        student.google_doc_id = doc_id
+        await db.commit()
+    except Exception:
+        pass
+
     return RedirectResponse(url="/students", status_code=303)
 
 
@@ -98,14 +114,20 @@ async def student_detail(student_id: uuid.UUID, request: Request, db: AsyncSessi
     })
 
 
+def _doc_id_from_url(url: str) -> str | None:
+    match = re.search(r"/document/d/([a-zA-Z0-9_-]+)", url)
+    return match.group(1) if match else None
+
+
 @router.post("/students/{student_id}/update")
 async def student_update(
     student_id: uuid.UUID,
     first_name: str = Form(...),
-    last_name: str = Form(...),
+    last_name: str = Form(default=""),
     level: str = Form(default=""),
     hourly_rate: float = Form(default=0.0),
     payee_id: str = Form(default=""),
+    ilp_url: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -114,9 +136,11 @@ async def student_update(
     if not student or (not user.is_admin and student.user_id != user.id):
         return RedirectResponse(url="/students", status_code=303)
     student.first_name = cap_name(first_name)
-    student.last_name = cap_name(last_name)
+    if last_name:
+        student.last_name = cap_name(last_name)
     student.level = level or None
     student.hourly_rate = hourly_rate or None
+    student.google_doc_id = _doc_id_from_url(ilp_url) if ilp_url else None
     if user.is_admin:
         student.payee_id = uuid.UUID(payee_id) if payee_id else None
     student.updated_at = datetime.now(timezone.utc)

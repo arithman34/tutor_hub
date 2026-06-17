@@ -15,7 +15,11 @@ _EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/ev
 _PRIMARY_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary"
 _CREATE_EVENT_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
 
-_SCOPE = "https://www.googleapis.com/auth/calendar"
+_SCOPE = " ".join([
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive.file",
+])
 
 _DAY_RRULE = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 _TUITION_SUFFIX = " - Tuition"

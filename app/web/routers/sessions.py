@@ -10,10 +10,12 @@ from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.models.google_calendar_token import GoogleCalendarToken
+from app.models.payee import Payee
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import User
 from app.services import google_calendar as gcal_svc
+from app.services import google_docs as gdocs_svc
 from app.services.ai import parse_zoom_summary
 from app.web.deps import get_current_user_from_cookie
 
@@ -67,7 +69,7 @@ async def sessions_list(
 
     label = token.label or "Tuition"
     now = datetime.now(timezone.utc)
-    time_min = datetime(2026, 4, 1, tzinfo=timezone.utc)
+    time_min = datetime(2020, 1, 1, tzinfo=timezone.utc)
     time_max = now + timedelta(days=365)
 
     error = None
@@ -235,6 +237,28 @@ async def sessions_create(
     )
     db.add(session)
     await db.commit()
+    await db.refresh(session)
+
+    try:
+        student_result = await db.execute(select(Student).where(Student.id == session.student_id))
+        student = student_result.scalar_one_or_none()
+        if student and student.google_doc_id:
+            all_sessions = (
+                await db.execute(
+                    select(Session)
+                    .where(Session.student_id == student.id)
+                    .order_by(Session.session_date)
+                )
+            ).scalars().all()
+            payee = None
+            if student.payee_id:
+                payee = (await db.execute(select(Payee).where(Payee.id == student.payee_id))).scalar_one_or_none()
+            await gdocs_svc.update_ilp_document(user.id, student.google_doc_id, student, payee, all_sessions, db)
+            session.ilp_generated_at = datetime.now(timezone.utc)
+            await db.commit()
+    except Exception:
+        pass
+
     return RedirectResponse(url="/sessions", status_code=303)
 
 
