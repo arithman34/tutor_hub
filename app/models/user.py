@@ -12,6 +12,7 @@ from app.core.database import Base
 class UserRole(enum.Enum):
     admin = "admin"
     tutor = "tutor"
+    admin_tutor = "admin_tutor"
 
 
 class PayoutType(enum.Enum):
@@ -39,7 +40,11 @@ class User(Base):
 
     @property
     def is_admin(self) -> bool:
-        return self.role == UserRole.admin
+        return self.role in (UserRole.admin, UserRole.admin_tutor)
+
+    @property
+    def is_tutor(self) -> bool:
+        return self.role in (UserRole.tutor, UserRole.admin_tutor)
 
     students = relationship("Student", back_populates="user")
     payees = relationship("Payee", back_populates="user")

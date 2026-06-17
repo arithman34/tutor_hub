@@ -31,7 +31,7 @@ async def sessions_list(
     user: User = Depends(get_current_user_from_cookie),
 ):
     # Admins see all logged sessions across all tutors
-    if user.is_admin:
+    if not user.is_tutor:
         stmt = (
             select(Session)
             .options(joinedload(Session.student), joinedload(Session.user))
@@ -40,16 +40,14 @@ async def sessions_list(
         )
         if q:
             pattern = f"%{q}%"
-            stmt = stmt.where(Session.student_id.in_(
-                select(Student.id).where(or_(Student.first_name.ilike(pattern), Student.last_name.ilike(pattern)))
-            ))
+            stmt = stmt.where(
+                Session.student_id.in_(select(Student.id).where(or_(Student.first_name.ilike(pattern), Student.last_name.ilike(pattern))))
+            )
         sessions = (await db.execute(stmt)).unique().scalars().all()
         return templates.TemplateResponse(request, "sessions/index.html", {"user": user, "active_page": "sessions", "sessions": sessions, "q": q})
 
     # Tutors require Google Calendar.
-    token = (await db.execute(
-        select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id)
-    )).scalar_one_or_none()
+    token = (await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id))).scalar_one_or_none()
 
     if not token:
         return RedirectResponse(url="/connections?error=not_connected", status_code=303)
@@ -80,14 +78,10 @@ async def sessions_list(
         error = str(exc)
 
     # Sessions logged via the app, keyed by the Google Calendar event id they came from.
-    logged = (await db.execute(
-        select(Session).options(joinedload(Session.student)).where(Session.user_id == user.id)
-    )).unique().scalars().all()
+    logged = (await db.execute(select(Session).options(joinedload(Session.student)).where(Session.user_id == user.id))).unique().scalars().all()
     logged_by_event = {s.calendar_event_id: s for s in logged if s.calendar_event_id}
 
-    students = (await db.execute(
-        select(Student).where(Student.user_id == user.id, Student.is_active == True)
-    )).scalars().all()
+    students = (await db.execute(select(Student).where(Student.user_id == user.id, Student.is_active == True))).scalars().all()
     student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
     student_by_first = {s.first_name: s for s in students}
 
@@ -96,12 +90,14 @@ async def sessions_list(
         parsed = gcal_svc.parse_event(event)
         sess = logged_by_event.get(parsed["event_id"])
         student = student_by_name.get(parsed["student_name"]) or student_by_first.get(parsed["student_name"])
-        items.append({
-            **parsed,
-            "logged": sess is not None,
-            "session_id": str(sess.id) if sess else None,
-            "student_id": str(student.id) if student else None,
-        })
+        items.append(
+            {
+                **parsed,
+                "logged": sess is not None,
+                "session_id": str(sess.id) if sess else None,
+                "student_id": str(student.id) if student else None,
+            }
+        )
 
     # Past + today newest-first, then upcoming sessions ascending.
     today_str = now.strftime("%Y-%m-%d")
@@ -128,10 +124,19 @@ async def sessions_list(
     elif period == "future":
         items = [i for i in items if i["date"] > today_str]
 
-    response = templates.TemplateResponse(request, "sessions/google.html", {
-        "user": user, "active_page": "sessions",
-        "items": items, "status": status, "period": period, "label": label, "error": error,
-    })
+    response = templates.TemplateResponse(
+        request,
+        "sessions/google.html",
+        {
+            "user": user,
+            "active_page": "sessions",
+            "items": items,
+            "status": status,
+            "period": period,
+            "label": label,
+            "error": error,
+        },
+    )
     response.set_cookie("sessions_status", status, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
     response.set_cookie("sessions_period", period, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
     return response
@@ -149,21 +154,25 @@ async def sessions_new(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
-    if user.is_admin:
+    if not user.is_tutor:
         return RedirectResponse(url="/sessions", status_code=303)
     result = await db.execute(select(Student).where(Student.user_id == user.id, Student.is_active == True).order_by(Student.first_name))
     students = result.scalars().all()
-    return templates.TemplateResponse(request, "sessions/new.html", {
-        "user": user,
-        "active_page": "sessions",
-        "students": students,
-        "prefill_student_id": student_id,
-        "prefill_date": date,
-        "prefill_start": start_time,
-        "prefill_end": end_time,
-        "prefill_event_id": event_id,
-        "prefill_html_link": html_link,
-    })
+    return templates.TemplateResponse(
+        request,
+        "sessions/new.html",
+        {
+            "user": user,
+            "active_page": "sessions",
+            "students": students,
+            "prefill_student_id": student_id,
+            "prefill_date": date,
+            "prefill_start": start_time,
+            "prefill_end": end_time,
+            "prefill_event_id": event_id,
+            "prefill_html_link": html_link,
+        },
+    )
 
 
 @router.post("/sessions/zoom-parse", response_class=JSONResponse)
@@ -171,16 +180,18 @@ async def sessions_zoom_parse(
     zoom_summary: str = Form(...),
     user: User = Depends(get_current_user_from_cookie),
 ):
-    if user.is_admin:
+    if not user.is_tutor:
         return JSONResponse({"error": "Admins cannot log sessions"}, status_code=403)
     parsed = await parse_zoom_summary(zoom_summary)
-    return JSONResponse({
-        "work_covered": parsed.work_covered,
-        "student_actions": parsed.student_actions,
-        "tutor_actions": parsed.tutor_actions,
-        "next_lesson_focus": parsed.next_lesson_focus,
-        "topic_tags": parsed.topic_tags,
-    })
+    return JSONResponse(
+        {
+            "work_covered": parsed.work_covered,
+            "student_actions": parsed.student_actions,
+            "tutor_actions": parsed.tutor_actions,
+            "next_lesson_focus": parsed.next_lesson_focus,
+            "topic_tags": parsed.topic_tags,
+        }
+    )
 
 
 @router.post("/sessions")
@@ -201,7 +212,7 @@ async def sessions_create(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
-    if user.is_admin:
+    if not user.is_tutor:
         return RedirectResponse(url="/sessions", status_code=303)
     start_dt = datetime.strptime(f"{session_date} {start_time}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
     end_dt = datetime.strptime(f"{session_date} {end_time}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
@@ -228,17 +239,23 @@ async def sessions_create(
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse)
-async def session_detail(session_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
+async def session_detail(
+    session_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)
+):
     result = await db.execute(select(Session).options(joinedload(Session.student)).where(Session.id == session_id))
     session = result.scalar_one_or_none()
     if not session or (not user.is_admin and session.user_id != user.id):
         return RedirectResponse(url="/sessions", status_code=303)
     students = []
-    if not user.is_admin:
-        students = (await db.execute(
-            select(Student).where(Student.user_id == user.id, Student.is_active == True).order_by(Student.first_name)
-        )).scalars().all()
-    return templates.TemplateResponse(request, "sessions/detail.html", {"user": user, "active_page": "sessions", "session": session, "students": students})
+    if user.is_tutor:
+        students = (
+            (await db.execute(select(Student).where(Student.user_id == user.id, Student.is_active == True).order_by(Student.first_name)))
+            .scalars()
+            .all()
+        )
+    return templates.TemplateResponse(
+        request, "sessions/detail.html", {"user": user, "active_page": "sessions", "session": session, "students": students}
+    )
 
 
 @router.post("/sessions/{session_id}/update")
@@ -293,5 +310,3 @@ async def session_delete(
     await db.delete(session)
     await db.commit()
     return RedirectResponse(url="/sessions", status_code=303)
-
-

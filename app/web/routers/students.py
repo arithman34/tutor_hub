@@ -38,7 +38,7 @@ async def students_list(request: Request, q: str = Query(default=""), db: AsyncS
 async def students_new(request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
     if not user.is_admin:
         return RedirectResponse(url="/students", status_code=303)
-    tutors_result = await db.execute(select(User).where(User.role == UserRole.tutor, User.is_active).order_by(User.first_name))
+    tutors_result = await db.execute(select(User).where(User.role.in_([UserRole.tutor, UserRole.admin_tutor]), User.is_active).order_by(User.first_name))
     tutors = tutors_result.scalars().all()
     payees_result = await db.execute(select(Payee).order_by(Payee.first_name))
     payees = payees_result.scalars().all()

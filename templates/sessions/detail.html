@@ -22,7 +22,7 @@
     <div class="col-span-1 space-y-4">
         <div class="bg-white rounded-xl border border-gray-200 p-6">
             <h2 class="font-semibold text-gray-900 mb-4">Details</h2>
-            {% if not user.is_admin %}
+            {% if user.is_tutor %}
             <form method="POST" action="/sessions/{{ session.id }}/update" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Student</label>
@@ -151,7 +151,7 @@
                     <input type="text" name="topic_tags" value="{{ session.topic_tags or '' }}"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
-                {% if not user.is_admin %}
+                {% if user.is_tutor %}
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Notes</button>
                 {% endif %}
             </form>
