@@ -59,10 +59,10 @@ async def sessions_list(
         saved_status = request.cookies.get("sessions_status", "all")
         saved_period = request.cookies.get("sessions_period", "all")
         if saved_status != "all" or saved_period != "all":
-            return RedirectResponse(
-                url=f"/sessions?status={saved_status}&period={saved_period}",
-                status_code=303,
-            )
+            redirect_url = f"/sessions?status={saved_status}&period={saved_period}"
+            if q:
+                redirect_url += f"&q={q}"
+            return RedirectResponse(url=redirect_url, status_code=303)
 
     status = status or "all"
     period = period or "all"
@@ -114,6 +114,10 @@ async def sessions_list(
     )
     items = past + future
 
+    if q:
+        q_lower = q.lower()
+        items = [i for i in items if q_lower in (i.get("summary") or "").lower()]
+
     if status == "logged":
         items = [i for i in items if i["logged"]]
     elif status == "unlogged":
@@ -135,6 +139,7 @@ async def sessions_list(
             "items": items,
             "status": status,
             "period": period,
+            "q": q,
             "label": label,
             "error": error,
         },

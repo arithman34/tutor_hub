@@ -23,6 +23,8 @@
     {% if q %}<a href="/sessions" class="flex items-center px-3 py-2 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50">Clear</a>{% endif %}
 </form>
 
+{% if q %}<p class="text-sm text-gray-500 mb-3">Returned {{ sessions | length }} result{{ 's' if sessions | length != 1 else '' }}</p>{% endif %}
+
 <div class="bg-white rounded-xl border border-gray-200">
     <table class="w-full text-sm text-left text-gray-600">
         <thead class="text-xs text-gray-500 uppercase bg-gray-50">
