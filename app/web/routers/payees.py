@@ -105,7 +105,7 @@ async def payee_detail(payee_id: uuid.UUID, request: Request, db: AsyncSession =
     if not user.is_admin:
         return RedirectResponse(url="/dashboard", status_code=303)
     result = await db.execute(select(Payee).options(joinedload(Payee.students)).where(Payee.id == payee_id))
-    payee = result.scalar_one_or_none()
+    payee = result.unique().scalar_one_or_none()
     if not payee:
         return RedirectResponse(url="/payees", status_code=303)
     balances = await _balances(db, [payee_id])

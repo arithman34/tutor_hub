@@ -33,12 +33,12 @@ async def payments_list(request: Request, q: str = Query(default=""), db: AsyncS
 
 
 @router.get("/payments/new", response_class=HTMLResponse)
-async def payments_new(request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
+async def payments_new(request: Request, payee_id: str = Query(default=""), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_from_cookie)):
     if not user.is_admin:
         return RedirectResponse(url="/dashboard", status_code=303)
     result = await db.execute(select(Payee).order_by(Payee.first_name))
     payees = result.scalars().all()
-    return templates.TemplateResponse(request, "payments/new.html", {"user": user, "active_page": "payments", "payees": payees})
+    return templates.TemplateResponse(request, "payments/new.html", {"user": user, "active_page": "payments", "payees": payees, "selected_payee_id": payee_id})
 
 
 @router.post("/payments")

@@ -28,6 +28,7 @@
 </div>
 
 <div class="grid grid-cols-3 gap-6">
+    <!-- Edit form -->
     <div class="col-span-1">
         <div class="bg-white rounded-xl border border-gray-200 p-6">
             <h2 class="font-semibold text-gray-900 mb-4">Payee Info</h2>
@@ -59,13 +60,14 @@
                     <input type="text" name="bank_reference_pattern" value="{{ payee.bank_reference_pattern or '' }}"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
-                {% if not user.is_admin %}
-                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Changes</button>
-                {% endif %}
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                    Save Changes
+                </button>
             </form>
         </div>
     </div>
 
+    <!-- Linked students -->
     <div class="col-span-2">
         <div class="bg-white rounded-xl border border-gray-200">
             <div class="px-6 py-4 border-b border-gray-200">
@@ -78,16 +80,13 @@
                         <th class="px-6 py-3">Level</th>
                         <th class="px-6 py-3">Hourly Rate</th>
                         <th class="px-6 py-3">Status</th>
+                        <th class="px-6 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for student in payee.students %}
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">
-                            <a href="/students/{{ student.id }}" class="hover:text-blue-600">
-                                {{ student.first_name }} {{ student.last_name }}
-                            </a>
-                        </td>
+                        <td class="px-6 py-4 font-medium text-gray-900">{{ student.first_name }} {{ student.last_name }}</td>
                         <td class="px-6 py-4">{{ student.level or "—" }}</td>
                         <td class="px-6 py-4">{% if student.hourly_rate %}£{{ "%.2f"|format(student.hourly_rate) }}{% else %}—{% endif %}</td>
                         <td class="px-6 py-4">
@@ -97,39 +96,44 @@
                             <span class="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">Inactive</span>
                             {% endif %}
                         </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="/students/{{ student.id }}" class="text-blue-600 hover:underline text-xs">View</a>
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No students linked</td></tr>
+                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No students linked</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+</div>
 
-        <!-- Payment history -->
-        <div class="mt-6 bg-white rounded-xl border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="font-semibold text-gray-900">Payment History</h2>
-            </div>
-            <table class="w-full text-sm text-left text-gray-600">
-                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3">Date</th>
-                        <th class="px-6 py-3 text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in payments %}
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">{{ p.payment_date.strftime("%d %b %Y") }}</td>
-                        <td class="px-6 py-4 text-right font-medium text-green-600">+£{{ "%.2f"|format(p.amount) }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="2" class="px-6 py-8 text-center text-gray-400">No payments recorded</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<!-- Payment history -->
+<div class="mt-6 bg-white rounded-xl border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">Payment History</h2>
+        <a href="/payments/new?payee_id={{ payee.id }}" class="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Add Payment</a>
     </div>
+    <table class="w-full text-sm text-left text-gray-600">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+            <tr>
+                <th class="px-6 py-3">Date</th>
+                <th class="px-6 py-3">Reference</th>
+                <th class="px-6 py-3 text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="px-6 py-4">{{ p.payment_date.strftime("%d %b %Y") }}</td>
+                <td class="px-6 py-4 text-gray-400 font-mono text-xs">{{ p.payment_reference or "—" }}</td>
+                <td class="px-6 py-4 text-right font-medium text-green-600">+£{{ "%.2f"|format(p.amount) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="px-6 py-8 text-center text-gray-400">No payments recorded</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}
