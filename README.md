@@ -8,9 +8,9 @@ A full-stack tutoring management platform. The backend is a FastAPI REST API wit
 - Student profiles with Zoom, Google Docs, and OneDrive links
 - Session logging with AI-powered Zoom summary parsing via OpenAI
 - Payment and payee management
-- Subject enrollment system
 - Google Calendar integration (OAuth 2.0) for session scheduling
 - Dashboard with analytics and KPIs
+- Automated overdue payment alerts via email (Celery + Redis + Resend)
 - Dark mode
 - Alembic database migrations
 
@@ -24,8 +24,10 @@ tutor_hub/
 │   ├── models/             # SQLAlchemy ORM models
 │   ├── schemas/            # Pydantic request/response schemas
 │   ├── services/           # Business logic layer
+│   ├── tasks/              # Celery background tasks
 │   ├── core/               # Config and database setup
 │   ├── auth.py
+│   ├── worker.py           # Celery app and beat schedule
 │   └── main.py
 ├── alembic/                # Database migrations
 ├── templates/              # Jinja2 HTML templates
@@ -97,6 +99,9 @@ Coverage reports are written to `htmlcov/`. Open `htmlcov/index.html` in a brows
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI (default: `http://localhost:8000/calendar/callback`) |
+| `REDIS_URL` | Redis connection URL (default: `redis://redis:6379/0`) |
+| `RESEND_API_KEY` | API key from resend.com for outbound email |
+| `FROM_EMAIL` | Sender address for alert emails |
 
 ## API Endpoints
 
@@ -162,22 +167,6 @@ All REST endpoints are under the `/api/v1` prefix.
 | PATCH | `/payees/{payee_id}` | Update a payee | Admin |
 | DELETE | `/payees/{payee_id}` | Delete a payee | Admin |
 
-### Subjects
-
-| Method | Endpoint | Description | Auth required |
-|---|---|---|---|
-| GET | `/subjects/` | List all subjects | Yes |
-| POST | `/subjects/` | Create a subject | Admin |
-| DELETE | `/subjects/{subject_id}` | Delete a subject | Admin |
-
-### Enrollments
-
-| Method | Endpoint | Description | Auth required |
-|---|---|---|---|
-| POST | `/enrollments/` | Enroll a student in a subject | Yes |
-| GET | `/enrollments/students/{student_id}` | Get a student's enrollments | Yes |
-| DELETE | `/enrollments/students/{student_id}/subjects/{subject_id}` | Remove an enrollment | Yes |
-
 ## Tech Stack
 
 | Layer | Technology |
@@ -187,6 +176,8 @@ All REST endpoints are under the `/api/v1` prefix.
 | Auth | JWT (python-jose), bcrypt (passlib) |
 | AI | OpenAI API (Zoom summary parsing) |
 | Calendar | Google OAuth 2.0, Google Calendar API |
+| Background tasks | Celery, Redis |
+| Email | Resend |
 | Templating | Jinja2, Bootstrap |
 | Testing | pytest, pytest-asyncio, httpx, pytest-cov |
 | Containerisation | Docker, Docker Compose |

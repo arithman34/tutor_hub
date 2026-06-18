@@ -12,6 +12,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from sqlalchemy import text
+
 from app.auth import hash_password
 from app.core.database import Base, get_db
 from app.main import app
@@ -58,7 +60,8 @@ def create_test_database():
 def create_tables(create_test_database):
     async def _create():
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
+            await conn.execute(text("DROP SCHEMA public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
             await conn.run_sync(Base.metadata.create_all)
 
     asyncio.run(_create())
