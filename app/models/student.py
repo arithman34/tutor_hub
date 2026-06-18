@@ -28,4 +28,3 @@ class Student(Base):
     user = relationship("User", back_populates="students")
     payee = relationship("Payee", back_populates="students")
     sessions = relationship("Session", back_populates="student")
-    enrollments = relationship("Enrollment", back_populates="student")

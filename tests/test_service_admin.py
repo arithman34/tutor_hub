@@ -7,7 +7,7 @@ async def test_export_data_has_correct_structure(db):
     data = await admin_service.export_data(db)
     assert "exported_at" in data
     assert data["version"] == "1"
-    for key in ("users", "subjects", "payees", "students", "enrollments", "sessions", "payments"):
+    for key in ("users", "payees", "students", "sessions", "payments"):
         assert key in data
         assert isinstance(data[key], list)
 

@@ -6,12 +6,10 @@ from decimal import Decimal
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enrollment import Enrollment
 from app.models.payee import Payee
 from app.models.payment import Payment
 from app.models.session import Session
 from app.models.student import Student
-from app.models.subject import Subject
 from app.models.user import PayoutType, User, UserRole
 
 
@@ -36,17 +34,15 @@ async def export_data(db: AsyncSession) -> dict:
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "version": "1",
         "users": [_serialize(r) for r in (await db.execute(select(User))).scalars().all()],
-        "subjects": [_serialize(r) for r in (await db.execute(select(Subject))).scalars().all()],
         "payees": [_serialize(r) for r in (await db.execute(select(Payee))).scalars().all()],
         "students": [_serialize(r) for r in (await db.execute(select(Student))).scalars().all()],
-        "enrollments": [_serialize(r) for r in (await db.execute(select(Enrollment))).scalars().all()],
         "sessions": [_serialize(r) for r in (await db.execute(select(Session))).scalars().all()],
         "payments": [_serialize(r) for r in (await db.execute(select(Payment))).scalars().all()],
     }
 
 
 async def import_data(db: AsyncSession, data: dict) -> None:
-    for tbl in ["payments", "enrollments", "sessions", "students", "payees", "subjects", "users"]:
+    for tbl in ["payments", "sessions", "students", "payees", "users"]:
         await db.execute(text(f"DELETE FROM {tbl}"))
     db.expunge_all()
 
@@ -73,10 +69,6 @@ async def import_data(db: AsyncSession, data: dict) -> None:
                 updated_at=_dt(row.get("updated_at")),
             )
         )
-    await db.flush()
-
-    for row in data.get("subjects", []):
-        db.add(Subject(id=_uuid(row["id"]), name=row["name"]))
     await db.flush()
 
     for row in data.get("payees", []):
@@ -110,10 +102,6 @@ async def import_data(db: AsyncSession, data: dict) -> None:
                 updated_at=_dt(row.get("updated_at")),
             )
         )
-    await db.flush()
-
-    for row in data.get("enrollments", []):
-        db.add(Enrollment(student_id=_uuid(row["student_id"]), subject_id=_uuid(row["subject_id"])))
     await db.flush()
 
     for row in data.get("sessions", []):
