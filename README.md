@@ -2,6 +2,8 @@
 
 A full-stack tutoring management platform. The backend is a FastAPI REST API with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. Integrates with Google Calendar and uses OpenAI to parse Zoom session summaries into structured notes.
 
+**Live:** [tutorhub.arithman.dev](https://tutorhub.arithman.dev)
+
 ## Features
 
 - Role-based access control (admin, tutor, admin\_tutor)
@@ -35,6 +37,8 @@ tutor_hub/
 ├── tests/
 ├── docker/
 ├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
 ├── Dockerfile
 └── .env.example
 ```
@@ -58,13 +62,7 @@ The variables you must set are listed in the [Environment Variables](#environmen
 Build and start all services:
 
 ```bash
-docker compose up --build
-```
-
-Run migrations (first time only):
-
-```bash
-docker compose exec api alembic upgrade head
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 The app will be available at `http://localhost:8000`.
@@ -75,6 +73,16 @@ To stop:
 
 ```bash
 docker compose down
+```
+
+## Deployment
+
+The app is deployed on a Hetzner VPS using Docker Compose. A GitHub Actions pipeline runs tests on every push to `main` and deploys automatically if they pass.
+
+To deploy manually on the server:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ## Running Tests
@@ -98,7 +106,7 @@ Coverage reports are written to `htmlcov/`. Open `htmlcov/index.html` in a brows
 | `OPENAI_API_KEY` | API key from platform.openai.com |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `GOOGLE_REDIRECT_URI` | OAuth redirect URI (default: `http://localhost:8000/calendar/callback`) |
+| `GOOGLE_REDIRECT_URI` | OAuth redirect URI |
 | `REDIS_URL` | Redis connection URL (default: `redis://redis:6379/0`) |
 | `RESEND_API_KEY` | API key from resend.com for outbound email |
 | `FROM_EMAIL` | Sender address for alert emails |
@@ -181,3 +189,5 @@ All REST endpoints are under the `/api/v1` prefix.
 | Templating | Jinja2, Bootstrap |
 | Testing | pytest, pytest-asyncio, httpx, pytest-cov |
 | Containerisation | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+| Hosting | Hetzner VPS |
