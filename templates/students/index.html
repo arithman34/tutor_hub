@@ -46,9 +46,9 @@
                 {% if user.is_admin %}<td class="px-6 py-4">{{ student.user.first_name }} {{ student.user.last_name }}</td>{% endif %}
                 <td class="px-6 py-4">
                     {% if student.is_active %}
-                    <span class="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Active</span>
+                    <span class="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Active</span>
                     {% else %}
-                    <span class="bg-red-100 text-red-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Inactive</span>
+                    <span class="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Inactive</span>
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-right">

@@ -207,7 +207,7 @@
                 <p class="text-sm text-gray-400">Active students who may need follow-up</p>
             </div>
             {% if at_risk_students %}
-            <span class="bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1 rounded-full">{{ at_risk_students|length }} student(s)</span>
+            <span class="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 text-sm font-medium px-3 py-1 rounded-full">{{ at_risk_students|length }} student(s)</span>
             {% endif %}
         </div>
         {% if at_risk_students %}
@@ -260,8 +260,8 @@
 <div id="panel-alerts" class="section-panel hidden">
     {% if alert_count == 0 %}
     <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center dark:bg-green-900/20 dark:border-green-800">
-        <p class="text-green-700 font-medium text-lg">All clear — no alerts</p>
-        <p class="text-green-500 text-sm mt-1">Everything looks good</p>
+        <p class="text-green-700 dark:text-green-400 font-medium text-lg">All clear — no alerts</p>
+        <p class="text-green-500 dark:text-green-500 text-sm mt-1">Everything looks good</p>
     </div>
     {% endif %}
     {% if outstanding_balance > 0 %}

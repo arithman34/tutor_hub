@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/calendar/callback"
+    redis_url: str = "redis://localhost:6379/0"
+    resend_api_key: str = ""
+    from_email: str = ""
 
 
 settings = Settings()

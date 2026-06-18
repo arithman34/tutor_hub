@@ -4,16 +4,16 @@
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-xl shadow w-full max-w-md">
+    <div class="bg-white p-8 rounded-xl shadow w-full max-w-md dark:bg-gray-800">
         <h1 class="text-2xl font-bold mb-2 text-center">Setup Complete</h1>
-        <p class="text-gray-500 text-sm text-center mb-6">Your admin account has been created.</p>
+        <p class="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">Your admin account has been created.</p>
 
-        <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
-            <p class="text-sm font-medium text-yellow-800 mb-3">Save this password — it will not be shown again.</p>
+        <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6 dark:bg-yellow-900/20 dark:border-yellow-800">
+            <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-3">Save this password — it will not be shown again.</p>
             <div class="space-y-1 text-sm">
                 <p><span class="font-medium">Email:</span> {{ email }}</p>
                 <p><span class="font-medium">Password:</span>
-                    <code class="bg-yellow-100 px-2 py-0.5 rounded font-mono">{{ password }}</code>
+                    <code class="bg-yellow-100 dark:bg-yellow-900/40 px-2 py-0.5 rounded font-mono">{{ password }}</code>
                 </p>
             </div>
         </div>

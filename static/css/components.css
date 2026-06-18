@@ -5,7 +5,7 @@
   border-radius: 0.75rem;
   border: 1px solid #e5e7eb;
 }
-.dark .th-card {
+html.dark .th-card {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -15,7 +15,7 @@
   border-radius: 0.75rem;
   border: 1px solid #fecaca;
 }
-.dark .th-card-red {
+html.dark .th-card-red {
   background-color: #1f2937;
   border-color: #7f1d1d;
 }
@@ -26,7 +26,7 @@
   font-weight: 600;
   color: #111827;
 }
-.dark .th-section-title {
+html.dark .th-section-title {
   color: #ffffff;
 }
 
@@ -35,7 +35,7 @@
   font-weight: 700;
   color: #111827;
 }
-.dark .th-page-title {
+html.dark .th-page-title {
   color: #ffffff;
 }
 
@@ -48,7 +48,7 @@
   color: #374151;
   margin-bottom: 0.25rem;
 }
-.dark .th-label {
+html.dark .th-label {
   color: #d1d5db;
 }
 
@@ -66,12 +66,12 @@
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
 }
-.dark .th-input {
+html.dark .th-input {
   background-color: #374151;
   border-color: #4b5563;
   color: #ffffff;
 }
-.dark .th-input::placeholder {
+html.dark .th-input::placeholder {
   color: #9ca3af;
 }
 
@@ -83,7 +83,7 @@
   text-align: left;
   color: #4b5563;
 }
-.dark .th-table {
+html.dark .th-table {
   color: #d1d5db;
 }
 .th-table thead {
@@ -93,7 +93,7 @@
   color: #6b7280;
   background-color: #f9fafb;
 }
-.dark .th-table thead {
+html.dark .th-table thead {
   background-color: #374151;
   color: #9ca3af;
 }
@@ -103,10 +103,10 @@
 .th-table tbody tr:hover {
   background-color: #f9fafb;
 }
-.dark .th-table tbody tr {
+html.dark .th-table tbody tr {
   border-bottom-color: #374151;
 }
-.dark .th-table tbody tr:hover {
+html.dark .th-table tbody tr:hover {
   background-color: rgba(55, 65, 81, 0.5);
 }
 
@@ -114,7 +114,7 @@
   font-weight: 500;
   color: #111827;
 }
-.dark .th-cell-bold {
+html.dark .th-cell-bold {
   color: #ffffff;
 }
 
@@ -127,7 +127,7 @@
   background-color: #f3f4f6;
   border-radius: 0.5rem;
 }
-.dark .th-tabs {
+html.dark .th-tabs {
   background-color: #374151;
 }
 
@@ -136,7 +136,7 @@
   color: #111827;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.dark .th-tab-active {
+html.dark .th-tab-active {
   background-color: #4b5563;
   color: #ffffff;
 }
@@ -147,9 +147,9 @@
 .th-tab-inactive:hover {
   color: #374151;
 }
-.dark .th-tab-inactive {
+html.dark .th-tab-inactive {
   color: #9ca3af;
 }
-.dark .th-tab-inactive:hover {
+html.dark .th-tab-inactive:hover {
   color: #e5e7eb;
 }

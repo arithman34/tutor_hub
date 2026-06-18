@@ -4,16 +4,16 @@
 
 {% block page_content %}
 <div class="flex items-center gap-3 mb-6">
-    <a href="/students" class="text-gray-400 hover:text-gray-600">
+    <a href="/students" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
     </a>
     <h1 class="text-2xl font-bold">{{ student.first_name }} {{ student.last_name }}</h1>
     {% if student.is_active %}
-    <span class="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Active</span>
+    <span class="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Active</span>
     {% else %}
-    <span class="bg-red-100 text-red-700 text-xs font-medium px-2.5 py-0.5 rounded-full">Inactive</span>
+    <span class="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Inactive</span>
     {% endif %}
 </div>
 
@@ -88,7 +88,7 @@
                 </form>
                 {% if user.is_admin %}
                 <form method="POST" action="/students/{{ student.id }}/delete" onsubmit="return confirm('Delete this student? This cannot be undone.')">
-                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-50">
+                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                         Delete Student
                     </button>
                 </form>

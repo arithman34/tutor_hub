@@ -4,7 +4,7 @@
 
 {% block page_content %}
 <div class="flex items-center justify-between mb-4">
-    <h1 class="text-2xl font-bold">Sessions</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Sessions</h1>
     {% if user.is_tutor %}
     <a href="/sessions/new" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">Log Session</a>
     {% endif %}
@@ -25,7 +25,7 @@
 
 {% if q %}<p class="text-sm text-gray-500 mb-3">Returned {{ sessions | length }} result{{ 's' if sessions | length != 1 else '' }}</p>{% endif %}
 
-<div class="th-card">
+<div class="th-card dark:bg-gray-800 dark:border-gray-700">
     <table class="th-table">
         <thead>
             <tr>
@@ -47,7 +47,7 @@
                 <td class="px-6 py-4">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</td>
                 <td class="px-6 py-4">
                     {% if session.is_no_show %}
-                    <span class="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">No Show</span>
+                    <span class="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 text-xs font-medium px-2 py-0.5 rounded-full">No Show</span>
                     {% else %}
                     {{ session.minutes }} min
                     {% endif %}
