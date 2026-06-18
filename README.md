@@ -2,7 +2,7 @@
 
 A full-stack tutoring management platform. The backend is a FastAPI REST API with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. Integrates with Google Calendar and uses OpenAI to parse Zoom session summaries into structured notes.
 
-**Live:** [tutorhub.arithman.dev](https://tutorhub.arithman.dev)
+**Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login)
 
 ## Features
 
