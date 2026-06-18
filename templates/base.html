@@ -13,6 +13,20 @@
     {% block content %}{% endblock %}
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
     <script>
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-collapse-toggle]');
+            if (!btn) return;
+            const targetId = btn.getAttribute('data-collapse-toggle');
+            document.querySelectorAll('[data-collapse-toggle]').forEach(function (other) {
+                const otherId = other.getAttribute('data-collapse-toggle');
+                if (otherId !== targetId) {
+                    const el = document.getElementById(otherId);
+                    if (el) el.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+    <script>
         (function () {
             const btn = document.getElementById('theme-toggle');
             if (!btn) return;
