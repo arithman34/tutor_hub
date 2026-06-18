@@ -40,8 +40,6 @@ services:
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy
@@ -57,8 +55,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${APP_DB_USER}:${APP_DB_PASSWORD}@db:5432/${APP_DB_NAME}
       REDIS_URL: redis://redis:6379/0
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy
@@ -74,8 +70,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${APP_DB_USER}:${APP_DB_PASSWORD}@db:5432/${APP_DB_NAME}
       REDIS_URL: redis://redis:6379/0
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy

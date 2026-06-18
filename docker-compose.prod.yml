@@ -7,12 +7,9 @@ services:
 
   api:
     restart: unless-stopped
-    volumes: []
 
   worker:
     restart: unless-stopped
-    volumes: []
 
   beat:
     restart: unless-stopped
-    volumes: []
