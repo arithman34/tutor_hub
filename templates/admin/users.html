@@ -8,9 +8,27 @@
     <a href="/admin/users/new" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">Add Tutor</a>
 </div>
 
-<div class="bg-white rounded-xl border border-gray-200">
-    <table class="w-full text-sm text-left text-gray-600">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+{% if new_email and temp_password %}
+<div class="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-5 dark:bg-amber-900/20 dark:border-amber-800">
+    <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        <div>
+            <p class="text-sm font-semibold text-amber-800">Welcome email sent to {{ new_email }}</p>
+            <p class="text-sm text-amber-700 mt-1">
+                Temporary password: <span class="font-mono font-semibold">{{ temp_password }}</span>
+            </p>
+            <p class="text-xs text-amber-600 mt-2">The tutor should update their password after their first login.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="th-card">
+    <table class="th-table">
+        <thead>
             <tr>
                 <th class="px-6 py-3">Name</th>
                 <th class="px-6 py-3">Email</th>
@@ -22,8 +40,8 @@
         </thead>
         <tbody>
             {% for tutor in tutors %}
-            <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium text-gray-900">{{ tutor.first_name }} {{ tutor.last_name }}</td>
+            <tr>
+                <td class="px-6 py-4 th-cell-bold">{{ tutor.first_name }} {{ tutor.last_name }}</td>
                 <td class="px-6 py-4">{{ tutor.email }}</td>
                 <td class="px-6 py-4">
                     {% if tutor.payout_type %}
@@ -48,7 +66,7 @@
                 <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                         <form method="POST" action="/admin/users/{{ tutor.id }}/toggle-active">
-                            <button type="submit" class="text-xs text-gray-600 hover:underline">
+                            <button type="submit" class="text-xs text-gray-600 hover:underline dark:text-gray-400">
                                 {% if tutor.is_active %}Deactivate{% else %}Activate{% endif %}
                             </button>
                         </form>
@@ -57,6 +75,24 @@
                             class="text-xs text-blue-600 hover:underline">
                             Edit Payout
                         </button>
+                        {% if deletable[tutor.id] %}
+                        <form method="POST" action="/admin/users/{{ tutor.id }}/delete"
+                            onsubmit="return confirm('Delete {{ tutor.first_name }} {{ tutor.last_name }}? This cannot be undone.')">
+                            <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors" title="Delete tutor">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-gray-200 dark:text-gray-600" title="Tutor has linked data and cannot be deleted">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </span>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
@@ -69,31 +105,31 @@
 
 <!-- Payout modal -->
 <div id="payout-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm">
-        <h2 class="font-semibold text-gray-900 mb-4">Edit Payout</h2>
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm dark:bg-gray-800">
+        <h2 class="th-section-title mb-4">Edit Payout</h2>
         <form id="payout-form" method="POST" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Payout Type</label>
+                <label class="th-label">Payout Type</label>
                 <select id="modal-payout-type" name="payout_type" onchange="togglePayoutFields()"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="th-input">
                     <option value="">— Not set —</option>
                     <option value="hourly">Hourly Rate</option>
                     <option value="percentage">Percentage</option>
                 </select>
             </div>
             <div id="field-hourly" class="hidden">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (£)</label>
+                <label class="th-label">Hourly Rate (£)</label>
                 <input type="number" id="modal-hourly-rate" name="payout_hourly_rate" step="0.01" min="0"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    class="th-input" />
             </div>
             <div id="field-percentage" class="hidden">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Percentage (%)</label>
+                <label class="th-label">Percentage (%)</label>
                 <input type="number" id="modal-percentage" name="payout_percentage" step="0.1" min="0" max="100"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    class="th-input" />
             </div>
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save</button>
-                <button type="button" onclick="closePayoutModal()" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</button>
+                <button type="button" onclick="closePayoutModal()" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Cancel</button>
             </div>
         </form>
     </div>

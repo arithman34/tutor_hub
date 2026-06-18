@@ -20,34 +20,34 @@
 <div class="grid grid-cols-3 gap-6">
     <!-- Edit form -->
     <div class="col-span-1">
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 class="font-semibold text-gray-900 mb-4">Student Info</h2>
+        <div class="th-card p-6">
+            <h2 class="th-section-title mb-4">Student Info</h2>
             <form method="POST" action="/students/{{ student.id }}/update" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <label class="th-label">First Name</label>
                     <input type="text" name="first_name" value="{{ student.first_name }}" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <label class="th-label">Last Name</label>
                     <input type="text" name="last_name" value="{{ student.last_name }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Level</label>
+                    <label class="th-label">Level</label>
                     <input type="text" name="level" value="{{ student.level or '' }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (£)</label>
+                    <label class="th-label">Hourly Rate (£)</label>
                     <input type="number" name="hourly_rate" step="0.01" min="0" value="{{ student.hourly_rate or '' }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 {% if user.is_admin %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Payee</label>
+                    <label class="th-label">Payee</label>
                     <select name="payee_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="th-input">
                         <option value="">— No payee —</option>
                         {% for payee in payees %}
                         <option value="{{ payee.id }}" {% if student.payee_id == payee.id %}selected{% endif %}>
@@ -58,11 +58,11 @@
                 </div>
                 {% endif %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">ILP Document URL</label>
+                    <label class="th-label">ILP Document URL</label>
                     <input type="url" name="ilp_url"
                         value="{{ 'https://docs.google.com/document/d/' + student.google_doc_id + '/' if student.google_doc_id else '' }}"
                         placeholder="https://docs.google.com/document/d/..."
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                     {% if student.google_doc_id %}
                     <a href="https://docs.google.com/document/d/{{ student.google_doc_id }}/"
                        target="_blank" rel="noopener noreferrer"
@@ -80,9 +80,9 @@
                 </button>
             </form>
 
-            <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 <form method="POST" action="/students/{{ student.id }}/toggle-active">
-                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    <button type="submit" class="w-full px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                         {% if student.is_active %}Deactivate{% else %}Activate{% endif %}
                     </button>
                 </form>
@@ -99,15 +99,15 @@
 
     <!-- Sessions -->
     <div class="col-span-2">
-        <div class="bg-white rounded-xl border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 class="font-semibold text-gray-900">Recent Sessions</h2>
+        <div class="th-card">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h2 class="th-section-title">Recent Sessions</h2>
                 {% if not user.is_admin %}
                 <a href="/sessions/new" class="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Log Session</a>
                 {% endif %}
             </div>
-            <table class="w-full text-sm text-left text-gray-600">
-                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+            <table class="th-table">
+                <thead>
                     <tr>
                         <th class="px-6 py-3">Date</th>
                         <th class="px-6 py-3">Duration</th>
@@ -116,8 +116,8 @@
                 </thead>
                 <tbody>
                     {% for session in sessions %}
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">{{ session.session_date.strftime("%d %b %Y") }}</td>
+                    <tr>
+                        <td class="px-6 py-4">{{ session.session_date.strftime("%d/%m/%Y") }}</td>
                         <td class="px-6 py-4">{{ session.minutes }} min</td>
                         <td class="px-6 py-4 text-right">
                             <a href="/sessions/{{ session.id }}" class="text-blue-600 hover:underline text-xs">View</a>

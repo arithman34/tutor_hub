@@ -13,12 +13,12 @@
 </div>
 
 <!-- Mode toggle -->
-<div class="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-6">
+<div class="th-tabs w-fit mb-6">
     <button type="button" id="tab-manual"
-        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm"
+        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors th-tab-active"
         onclick="switchTab('manual')">Manual</button>
     <button type="button" id="tab-zoom"
-        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700"
+        class="tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors th-tab-inactive"
         onclick="switchTab('zoom')">Zoom Summary</button>
 </div>
 
@@ -39,9 +39,9 @@
 
     <!-- Shared: student + time -->
     <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Student</label>
+        <label class="th-label">Student</label>
         <select name="student_id" required
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            class="th-input">
             <option value="">— Select student —</option>
             {% for student in students %}
             <option value="{{ student.id }}"
@@ -54,19 +54,19 @@
 
     <div class="grid grid-cols-3 gap-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label class="th-label">Date</label>
             <input type="date" name="session_date" value="{{ prefill_date }}" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <label class="th-label">Start Time</label>
             <input type="time" name="start_time" value="{{ prefill_start }}" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+            <label class="th-label">End Time</label>
             <input type="time" name="end_time" value="{{ prefill_end }}" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
     </div>
 
@@ -77,16 +77,16 @@
                 class="sr-only peer" />
             <div class="w-10 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
         </label>
-        <span class="text-sm font-medium text-gray-700">Student did not show up</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Student did not show up</span>
     </div>
 
     <!-- Zoom panel -->
     <div id="panel-zoom" class="hidden space-y-4">
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 dark:bg-blue-900/20 dark:border-blue-800">
             <p class="text-sm font-medium text-blue-900 mb-1">Paste your Zoom AI summary</p>
             <p class="text-xs text-blue-700 mb-3">The summary will be sent to AI to extract session notes automatically.</p>
             <textarea id="zoom-summary-input" rows="10" placeholder="Paste the full Zoom AI summary here…"
-                class="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-y"></textarea>
+                class="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-y dark:bg-gray-700 dark:border-blue-700 dark:text-white"></textarea>
             <div class="mt-3 flex items-center gap-3">
                 <button type="button" id="parse-btn" onclick="parseZoomSummary()"
                     class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -107,35 +107,35 @@
     <!-- Notes fields (shared, populated by AI in zoom mode) -->
     <div id="notes-fields" class="space-y-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Work Covered</label>
+            <label class="th-label">Work Covered</label>
             <textarea name="work_covered" id="field-work_covered" rows="3"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                class="th-input"></textarea>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Student Actions</label>
+            <label class="th-label">Student Actions</label>
             <textarea name="student_actions" id="field-student_actions" rows="2"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                class="th-input"></textarea>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tutor Actions</label>
+            <label class="th-label">Tutor Actions</label>
             <textarea name="tutor_actions" id="field-tutor_actions" rows="2"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                class="th-input"></textarea>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Next Lesson Focus</label>
+            <label class="th-label">Next Lesson Focus</label>
             <textarea name="next_lesson_focus" id="field-next_lesson_focus" rows="2"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                class="th-input"></textarea>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Topic Tags</label>
+            <label class="th-label">Topic Tags</label>
             <input type="text" name="topic_tags" id="field-topic_tags" placeholder="e.g. algebra, equations, revision"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
     </div>
 
     <div class="pt-2 flex gap-3">
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Session</button>
-        <a href="/sessions" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</a>
+        <a href="/sessions" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Cancel</a>
     </div>
 </form>
 
@@ -152,12 +152,9 @@
 
     function switchTab(mode) {
         const isZoom = mode === 'zoom';
-        document.getElementById('tab-manual').className = isZoom
-            ? 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700'
-            : 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm';
-        document.getElementById('tab-zoom').className = isZoom
-            ? 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm'
-            : 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-700';
+        const base = 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors';
+        document.getElementById('tab-manual').className = base + (isZoom ? ' th-tab-inactive' : ' th-tab-active');
+        document.getElementById('tab-zoom').className = base + (isZoom ? ' th-tab-active' : ' th-tab-inactive');
         document.getElementById('panel-zoom').classList.toggle('hidden', !isZoom);
     }
 

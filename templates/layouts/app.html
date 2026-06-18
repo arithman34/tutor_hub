@@ -13,14 +13,14 @@
 
 <!-- Sidebar -->
 <aside id="sidebar"
-    class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 bg-white border-r border-gray-200 flex flex-col"
+    class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 bg-white border-r border-gray-200 flex flex-col dark:bg-gray-800 dark:border-gray-700"
     aria-label="Sidebar">
 
     <!-- Logo -->
-    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between dark:border-gray-700">
         <span class="text-lg font-bold text-blue-600">TutorHub</span>
         <button type="button" data-drawer-hide="sidebar" aria-controls="sidebar"
-            class="sm:hidden text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg w-8 h-8 flex items-center justify-center">
+            class="sm:hidden text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg w-8 h-8 flex items-center justify-center dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -36,7 +36,7 @@
             <li>
                 <button type="button"
                     class="flex items-center w-full px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'dashboard' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}"
+                    {% if active_page == 'dashboard' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}"
                     aria-controls="dropdown-dashboard" data-collapse-toggle="dropdown-dashboard">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -51,7 +51,7 @@
                     {% for section, label in [('financial','Financial'),('operations','Operations'),('tutors','Tutors'),('students','Students'),('alerts','Alerts'),('activity','Activity')] %}
                     <li>
                         <a href="/dashboard#{{ section }}"
-                            class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 dashboard-section-link"
+                            class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400 dashboard-section-link"
                             data-section="{{ section }}">
                             {{ label }}
                             {% if section == 'alerts' and alert_count is defined and alert_count > 0 %}
@@ -68,7 +68,7 @@
             <li>
                 <a href="/dashboard"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'dashboard' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'dashboard' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -82,7 +82,7 @@
             <li>
                 <a href="/students"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'students' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'students' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -95,7 +95,7 @@
             <li>
                 <a href="/sessions"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'sessions' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'sessions' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -111,7 +111,7 @@
             <li>
                 <a href="/connections"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'connections' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'connections' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -126,7 +126,7 @@
             <li>
                 <a href="/payments"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'payments' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'payments' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -139,7 +139,7 @@
             <li>
                 <a href="/payees"
                     class="flex items-center px-2 py-2 text-sm rounded-lg group
-                    {% if active_page == 'payees' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                    {% if active_page == 'payees' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -159,7 +159,7 @@
             <li>
                 <button type="button"
                     class="flex items-center w-full px-2 py-2 text-sm rounded-lg group
-                    {% if active_page in ['admin_users', 'admin_settings', 'admin_data'] %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}"
+                    {% if active_page in ['admin_users', 'admin_settings', 'admin_data'] %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}"
                     aria-controls="dropdown-admin" data-collapse-toggle="dropdown-admin">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -175,21 +175,21 @@
                     <li>
                         <a href="/admin/users"
                             class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg
-                            {% if active_page == 'admin_users' %}text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                            {% if active_page == 'admin_users' %}text-blue-600 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                             Users
                         </a>
                     </li>
                     <li>
                         <a href="/admin/settings"
                             class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg
-                            {% if active_page == 'admin_settings' %}text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                            {% if active_page == 'admin_settings' %}text-blue-600 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                             Settings
                         </a>
                     </li>
                     <li>
                         <a href="/admin/data"
                             class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg
-                            {% if active_page == 'admin_data' %}text-blue-600{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600{% endif %}">
+                            {% if active_page == 'admin_data' %}text-blue-600 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
                             Data
                         </a>
                     </li>
@@ -201,11 +201,29 @@
     </div>
 
     <!-- User + logout -->
-    <div class="px-3 py-4 border-t border-gray-200">
-        <p class="text-xs text-gray-500 px-2 mb-2">{{ user.first_name }} {{ user.last_name }}</p>
+    <div class="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+        <button id="theme-toggle" type="button"
+            class="flex items-center w-full px-2 py-2 mb-1 text-sm rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400">
+            <svg id="theme-icon-moon" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+            <svg id="theme-icon-sun" class="w-5 h-5 shrink-0 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M5.64 18.36l-.71.71m12.02 0-.71-.71M5.64 5.64l-.71-.71M12 7a5 5 0 100 10A5 5 0 0012 7z" />
+            </svg>
+            <span id="theme-label" class="ms-3">Dark mode</span>
+        </button>
+        <a href="/profile"
+            class="flex items-center px-2 py-2 text-sm rounded-lg group mb-1
+            {% if active_page == 'profile' %}bg-blue-50 text-blue-600 dark:bg-gray-700 dark:text-blue-400{% else %}text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400{% endif %}">
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="ms-3">{{ user.first_name }} {{ user.last_name }}</span>
+        </a>
         <form method="POST" action="/logout">
             <button type="submit"
-                class="flex items-center w-full px-2 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 hover:text-blue-600">
+                class="flex items-center w-full px-2 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400">
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

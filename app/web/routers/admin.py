@@ -11,6 +11,7 @@ from app.exceptions import NotFoundError
 from app.models.user import PayoutType, User
 from app.services import admin as admin_service
 from app.services import user as user_service
+from app.utils import generate_temp_password
 from app.web.deps import require_admin
 
 router = APIRouter(prefix="/admin", tags=["Web Admin"])
@@ -18,17 +19,32 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/users", response_class=HTMLResponse)
-async def admin_users(request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(require_admin)):
+async def admin_users(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+    new_email: str = "",
+    temp_password: str = "",
+):
     tutors = await user_service.list_tutors(db)
+    deletable = {
+        t.id: not await user_service.tutor_has_data(db, t.id)
+        for t in tutors
+    }
     return templates.TemplateResponse(request, "admin/users.html", {
-        "user": user, "active_page": "admin_users", "tutors": tutors,
+        "user": user,
+        "active_page": "admin_users",
+        "tutors": tutors,
+        "deletable": deletable,
+        "new_email": new_email,
+        "temp_password": temp_password,
     })
 
 
 @router.get("/users/new", response_class=HTMLResponse)
-async def admin_users_new(request: Request, user: User = Depends(require_admin)):
+async def admin_users_new(request: Request, user: User = Depends(require_admin), error: str = ""):
     return templates.TemplateResponse(request, "admin/users_new.html", {
-        "user": user, "active_page": "admin_users", "PayoutType": PayoutType,
+        "user": user, "active_page": "admin_users", "PayoutType": PayoutType, "error": error,
     })
 
 
@@ -37,17 +53,17 @@ async def admin_users_create(
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: str = Form(...),
-    password: str = Form(...),
     payout_type: str = Form(default=""),
     payout_hourly_rate: float = Form(default=None),
     payout_percentage: float = Form(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_admin),
 ):
+    temp_password = generate_temp_password()
     result = await user_service.create_tutor(
         db,
         email=email,
-        password=password,
+        password=temp_password,
         first_name=first_name,
         last_name=last_name,
         payout_type=payout_type or None,
@@ -55,8 +71,10 @@ async def admin_users_create(
         payout_percentage=payout_percentage,
     )
     if result is None:
-        return RedirectResponse(url="/admin/users/new", status_code=303)
-    return RedirectResponse(url="/admin/users", status_code=303)
+        return RedirectResponse(url="/admin/users/new?error=email_taken", status_code=303)
+    from urllib.parse import urlencode
+    params = urlencode({"new_email": email, "temp_password": temp_password})
+    return RedirectResponse(url=f"/admin/users?{params}", status_code=303)
 
 
 @router.post("/users/{user_id}/toggle-active")
@@ -83,6 +101,19 @@ async def admin_update_payout(
 ):
     try:
         await user_service.update_payout(db, user_id, payout_type or None, payout_hourly_rate, payout_percentage)
+    except (NotFoundError, Exception):
+        pass
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@router.post("/users/{user_id}/delete")
+async def admin_delete_tutor(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    try:
+        await user_service.delete_tutor(db, user_id)
     except (NotFoundError, Exception):
         pass
     return RedirectResponse(url="/admin/users", status_code=303)

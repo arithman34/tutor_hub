@@ -12,7 +12,7 @@
 
 <form method="GET" action="/sessions" class="flex gap-2 mb-6">
     <input type="text" name="q" value="{{ q }}" placeholder="Search by student name…"
-        class="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+        class="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400" />
     <button type="submit"
         class="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -20,14 +20,14 @@
         </svg>
         Search
     </button>
-    {% if q %}<a href="/sessions" class="flex items-center px-3 py-2 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50">Clear</a>{% endif %}
+    {% if q %}<a href="/sessions" class="flex items-center px-3 py-2 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700">Clear</a>{% endif %}
 </form>
 
 {% if q %}<p class="text-sm text-gray-500 mb-3">Returned {{ sessions | length }} result{{ 's' if sessions | length != 1 else '' }}</p>{% endif %}
 
-<div class="bg-white rounded-xl border border-gray-200">
-    <table class="w-full text-sm text-left text-gray-600">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+<div class="th-card">
+    <table class="th-table">
+        <thead>
             <tr>
                 <th class="px-6 py-3">Student</th>
                 <th class="px-6 py-3">Date</th>
@@ -39,11 +39,11 @@
         </thead>
         <tbody>
             {% for session in sessions %}
-            <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium text-gray-900">
+            <tr>
+                <td class="px-6 py-4 th-cell-bold">
                     {{ session.student.first_name }} {{ session.student.last_name }}
                 </td>
-                <td class="px-6 py-4">{{ session.session_date.strftime("%d %b %Y") }}</td>
+                <td class="px-6 py-4">{{ session.session_date.strftime("%d/%m/%Y") }}</td>
                 <td class="px-6 py-4">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</td>
                 <td class="px-6 py-4">
                     {% if session.is_no_show %}

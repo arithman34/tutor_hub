@@ -5,6 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import hash_password
 from app.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.models.payee import Payee
+from app.models.payment import Payment
+from app.models.session import Session
+from app.models.student import Student
 from app.models.user import PayoutType, User, UserRole
 from app.utils import cap_name
 
@@ -148,6 +152,27 @@ async def update_payout(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def tutor_has_data(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    for model in (Student, Session, Payment, Payee):
+        count = await db.scalar(select(func.count()).select_from(model).where(model.user_id == user_id))
+        if count:
+            return True
+    return False
+
+
+async def delete_tutor(db: AsyncSession, user_id: uuid.UUID) -> None:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise NotFoundError("User not found")
+    if user.is_admin:
+        raise ForbiddenError("Cannot delete an admin user")
+    if await tutor_has_data(db, user_id):
+        raise ForbiddenError("Tutor has linked data and cannot be deleted")
+    await db.delete(user)
+    await db.commit()
 
 
 async def update_profile(

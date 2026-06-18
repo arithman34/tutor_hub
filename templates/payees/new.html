@@ -12,39 +12,39 @@
     <h1 class="text-2xl font-bold">Add Payee</h1>
 </div>
 
-<div class="bg-white rounded-xl border border-gray-200 p-6 max-w-lg">
+<div class="th-card p-6 max-w-lg">
     <form method="POST" action="/payees" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <label class="th-label">First Name</label>
                 <input type="text" name="first_name" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    class="th-input" />
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <label class="th-label">Last Name</label>
                 <input type="text" name="last_name" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    class="th-input" />
             </div>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email (optional)</label>
+            <label class="th-label">Email (optional)</label>
             <input type="email" name="email"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number (optional)</label>
+            <label class="th-label">Phone Number (optional)</label>
             <input type="tel" name="phone_number"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Bank Reference Pattern (optional)</label>
+            <label class="th-label">Bank Reference Pattern (optional)</label>
             <input type="text" name="bank_reference_pattern" placeholder="e.g. SMITH-JAN"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
             <p class="text-xs text-gray-400 mt-1">Used to match bank transfers automatically in future.</p>
         </div>
         <div class="pt-2 flex gap-3">
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Add Payee</button>
-            <a href="/payees" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</a>
+            <a href="/payees" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Cancel</a>
         </div>
     </form>
 </div>

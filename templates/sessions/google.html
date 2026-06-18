@@ -19,7 +19,7 @@
     <input type="hidden" name="status" value="{{ status }}" />
     <input type="hidden" name="period" value="{{ period }}" />
     <input type="text" name="q" value="{{ q }}" placeholder="Search sessions…"
-        class="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+        class="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400" />
     <button type="submit"
         class="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,20 +34,20 @@
 
 <!-- Filters -->
 <div class="flex items-center justify-between mb-6">
-    <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+    <div class="th-tabs">
         {% for val, lbl in [('all','All'), ('logged','Logged'), ('unlogged','Not logged')] %}
         <a href="/sessions?status={{ val }}&period={{ period }}{% if q %}&q={{ q }}{% endif %}"
             class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
-            {% if status == val %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            {% if status == val %}th-tab-active{% else %}th-tab-inactive{% endif %}">
             {{ lbl }}
         </a>
         {% endfor %}
     </div>
-    <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+    <div class="th-tabs">
         {% for val, lbl in [('all','All time'), ('past','Past'), ('today','Today'), ('future','Future')] %}
         <a href="/sessions?status={{ status }}&period={{ val }}{% if q %}&q={{ q }}{% endif %}"
             class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors
-            {% if period == val %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-700{% endif %}">
+            {% if period == val %}th-tab-active{% else %}th-tab-inactive{% endif %}">
             {{ lbl }}
         </a>
         {% endfor %}
@@ -60,9 +60,9 @@
 </div>
 {% endif %}
 
-<div class="bg-white rounded-xl border border-gray-200">
-    <table class="w-full text-sm text-left text-gray-600">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+<div class="th-card">
+    <table class="th-table">
+        <thead>
             <tr>
                 <th class="px-6 py-3">Session</th>
                 <th class="px-6 py-3">Date</th>
@@ -73,9 +73,9 @@
         </thead>
         <tbody>
             {% for item in items %}
-            <tr class="border-b hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium text-gray-900">{{ item.summary or '(No title)' }}</td>
-                <td class="px-6 py-4">{{ item.date }}</td>
+            <tr>
+                <td class="px-6 py-4 th-cell-bold">{{ item.summary or '(No title)' }}</td>
+                <td class="px-6 py-4">{{ item.date[8:10] }}/{{ item.date[5:7] }}/{{ item.date[0:4] }}</td>
                 <td class="px-6 py-4">
                     {% if item.start_time %}{{ item.start_time }}{% if item.end_time %} – {{ item.end_time }}{% endif %}
                     {% else %}<span class="text-gray-400">All day</span>{% endif %}

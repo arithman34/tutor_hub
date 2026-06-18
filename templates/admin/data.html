@@ -2,23 +2,23 @@
 
 {% block page_content %}
 <div class="max-w-2xl">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">Data Management</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Data Management</h1>
 
     {% if request.query_params.get('imported') %}
-    <div class="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
+    <div class="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400 text-sm">
         Import complete — all data has been replaced successfully.
     </div>
     {% endif %}
 
     {% if request.query_params.get('error') %}
-    <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+    <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 text-sm">
         Import failed: {{ request.query_params.get('error') }}
     </div>
     {% endif %}
 
     <!-- Export -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <h2 class="text-base font-semibold text-gray-800 mb-1">Export</h2>
+    <div class="th-card p-6 mb-6">
+        <h2 class="text-base font-semibold text-gray-800 dark:text-white mb-1">Export</h2>
         <p class="text-sm text-gray-500 mb-4">
             Downloads all data — users, students, payees, sessions, payments — as a single JSON file.
             Passwords are preserved so you can log in on the new system with the same credentials.
@@ -30,8 +30,8 @@
     </div>
 
     <!-- Import -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 class="text-base font-semibold text-gray-800 mb-1">Import</h2>
+    <div class="th-card p-6">
+        <h2 class="text-base font-semibold text-gray-800 dark:text-white mb-1">Import</h2>
         <p class="text-sm text-gray-500 mb-1">
             Upload a previously exported JSON file. <strong class="text-red-600">This will permanently delete all
             existing data</strong> and replace it with the contents of the file.
@@ -41,7 +41,7 @@
             onsubmit="return confirm('This will delete ALL existing data and replace it with the imported file. Are you sure?')">
             <div class="flex items-center gap-3">
                 <input type="file" name="file" accept=".json" required
-                    class="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                    class="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 dark:text-gray-400 dark:file:bg-gray-600 dark:file:text-gray-200 dark:hover:file:bg-gray-500" />
                 <button type="submit"
                     class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700">
                     Import

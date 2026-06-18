@@ -12,12 +12,12 @@
     <h1 class="text-2xl font-bold">Add Payment</h1>
 </div>
 
-<div class="bg-white rounded-xl border border-gray-200 p-6 max-w-lg">
+<div class="th-card p-6 max-w-lg">
     <form method="POST" action="/payments" class="space-y-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Payee</label>
+            <label class="th-label">Payee</label>
             <select name="payee_id" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                class="th-input">
                 <option value="">— Select payee —</option>
                 {% for payee in payees %}
                 <option value="{{ payee.id }}" {% if payee.id | string == selected_payee_id %}selected{% endif %}>{{ payee.first_name }} {{ payee.last_name }}</option>
@@ -26,26 +26,26 @@
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Amount (£)</label>
+            <label class="th-label">Amount (£)</label>
             <input type="number" name="amount" step="0.01" min="0" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+            <label class="th-label">Payment Date</label>
             <input type="date" name="payment_date" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Payment Reference (optional)</label>
+            <label class="th-label">Payment Reference (optional)</label>
             <input type="text" name="payment_reference" placeholder="e.g. bank transfer ref"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="th-input" />
         </div>
 
         <div class="pt-2 flex gap-3">
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Add Payment</button>
-            <a href="/payments" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</a>
+            <a href="/payments" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Cancel</a>
         </div>
     </form>
 </div>

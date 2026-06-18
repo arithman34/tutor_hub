@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import router as v1_router
 from app.web import router as web_router
@@ -10,6 +11,8 @@ app = FastAPI(
     description="API for managing tutors, students, sessions, and payments in the Tutor Hub application.",
     version="1.0.0",
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.exception_handler(NotAuthenticatedException)

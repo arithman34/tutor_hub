@@ -4,6 +4,7 @@ import pytest
 
 from app.auth import hash_password
 from app.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.models.student import Student
 from app.models.user import PayoutType, User, UserRole
 from app.services import user as user_service
 
@@ -126,3 +127,43 @@ async def test_update_payout_admin_raises_forbidden(db):
     admin = await _make_admin(db)
     with pytest.raises(ForbiddenError):
         await user_service.update_payout(db, admin.id, "hourly", 30.0, None)
+
+
+async def test_tutor_has_data_false_for_clean_tutor(db):
+    tutor = await _make_tutor(db)
+    assert await user_service.tutor_has_data(db, tutor.id) is False
+
+
+async def test_tutor_has_data_true_with_student(db):
+    tutor = await _make_tutor(db)
+    student = Student(user_id=tutor.id, first_name="Alice", last_name="Brown")
+    db.add(student)
+    await db.commit()
+    assert await user_service.tutor_has_data(db, tutor.id) is True
+
+
+async def test_delete_tutor_removes_clean_tutor(db):
+    tutor = await _make_tutor(db)
+    await user_service.delete_tutor(db, tutor.id)
+    with pytest.raises(NotFoundError):
+        await user_service.get_user_by_id(db, tutor.id)
+
+
+async def test_delete_tutor_nonexistent_raises_not_found(db):
+    with pytest.raises(NotFoundError):
+        await user_service.delete_tutor(db, uuid.uuid4())
+
+
+async def test_delete_tutor_admin_raises_forbidden(db):
+    admin = await _make_admin(db)
+    with pytest.raises(ForbiddenError):
+        await user_service.delete_tutor(db, admin.id)
+
+
+async def test_delete_tutor_with_data_raises_forbidden(db):
+    tutor = await _make_tutor(db)
+    student = Student(user_id=tutor.id, first_name="Bob", last_name="Smith")
+    db.add(student)
+    await db.commit()
+    with pytest.raises(ForbiddenError):
+        await user_service.delete_tutor(db, tutor.id)

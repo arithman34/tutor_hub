@@ -20,14 +20,14 @@
 <div class="grid grid-cols-3 gap-6">
     <!-- Session details (editable for tutors) -->
     <div class="col-span-1 space-y-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 class="font-semibold text-gray-900 mb-4">Details</h2>
+        <div class="th-card p-6">
+            <h2 class="th-section-title mb-4">Details</h2>
             {% if user.is_tutor %}
             <form method="POST" action="/sessions/{{ session.id }}/update" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                    <label class="th-label">Student</label>
                     <select name="student_id" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="th-input">
                         {% for s in students %}
                         <option value="{{ s.id }}" {% if s.id == session.student_id %}selected{% endif %}>
                             {{ s.first_name }} {{ s.last_name }}
@@ -36,23 +36,23 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <label class="th-label">Date</label>
                     <input type="date" name="session_date" required
                         value="{{ session.session_date.strftime('%Y-%m-%d') }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Start</label>
+                        <label class="th-label">Start</label>
                         <input type="time" name="start_time" required
                             value="{{ session.session_start_time.strftime('%H:%M') }}"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            class="th-input" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">End</label>
+                        <label class="th-label">End</label>
                         <input type="time" name="end_time" required
                             value="{{ session.session_end_time.strftime('%H:%M') }}"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            class="th-input" />
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -62,7 +62,7 @@
                             class="sr-only peer" />
                         <div class="w-10 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
                     </label>
-                    <span class="text-sm text-gray-700">No show</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">No show</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="text-xs text-gray-400">Duration: {{ session.minutes }} min</span>
@@ -73,7 +73,7 @@
             <dl class="space-y-3 text-sm">
                 <div>
                     <dt class="text-gray-500">Student</dt>
-                    <dd class="font-medium text-gray-900">
+                    <dd class="font-medium text-gray-900 dark:text-white">
                         <a href="/students/{{ session.student.id }}" class="hover:text-blue-600">
                             {{ session.student.first_name }} {{ session.student.last_name }}
                         </a>
@@ -81,20 +81,20 @@
                 </div>
                 <div>
                     <dt class="text-gray-500">Date</dt>
-                    <dd class="font-medium text-gray-900">{{ session.session_date.strftime("%d %B %Y") }}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.session_date.strftime("%d/%m/%Y") }}</dd>
                 </div>
                 <div>
                     <dt class="text-gray-500">Time</dt>
-                    <dd class="font-medium text-gray-900">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</dd>
                 </div>
                 <div>
                     <dt class="text-gray-500">Duration</dt>
-                    <dd class="font-medium text-gray-900">{% if session.is_no_show %}—{% else %}{{ session.minutes }} min{% endif %}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white">{% if session.is_no_show %}—{% else %}{{ session.minutes }} min{% endif %}</dd>
                 </div>
                 {% if session.topic_tags %}
                 <div>
                     <dt class="text-gray-500">Topics</dt>
-                    <dd class="font-medium text-gray-900">{{ session.topic_tags }}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.topic_tags }}</dd>
                 </div>
                 {% endif %}
             </dl>
@@ -102,7 +102,7 @@
         </div>
 
         <!-- Delete -->
-        <div class="bg-white rounded-xl border border-red-200 p-4">
+        <div class="th-card-red p-4">
             <p class="text-sm text-gray-500 mb-3">Deleting a session is permanent and cannot be undone.</p>
             <form method="POST" action="/sessions/{{ session.id }}/delete"
                 onsubmit="return confirm('Delete this session? This cannot be undone.')">
@@ -116,8 +116,8 @@
 
     <!-- Editable notes -->
     <div class="col-span-2">
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 class="font-semibold text-gray-900 mb-4">Session Notes</h2>
+        <div class="th-card p-6">
+            <h2 class="th-section-title mb-4">Session Notes</h2>
             {% if session.is_no_show %}
             <p class="text-sm text-gray-400 italic">No notes recorded — student did not attend.</p>
             {% else %}
@@ -127,29 +127,29 @@
                 <input type="hidden" name="start_time" value="{{ session.session_start_time.strftime('%H:%M') }}" />
                 <input type="hidden" name="end_time" value="{{ session.session_end_time.strftime('%H:%M') }}" />
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Work Covered</label>
+                    <label class="th-label">Work Covered</label>
                     <textarea name="work_covered" rows="3"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.work_covered or '' }}</textarea>
+                        class="th-input">{{ session.work_covered or '' }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Student Actions</label>
+                    <label class="th-label">Student Actions</label>
                     <textarea name="student_actions" rows="2"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.student_actions or '' }}</textarea>
+                        class="th-input">{{ session.student_actions or '' }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tutor Actions</label>
+                    <label class="th-label">Tutor Actions</label>
                     <textarea name="tutor_actions" rows="2"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.tutor_actions or '' }}</textarea>
+                        class="th-input">{{ session.tutor_actions or '' }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Next Lesson Focus</label>
+                    <label class="th-label">Next Lesson Focus</label>
                     <textarea name="next_lesson_focus" rows="2"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ session.next_lesson_focus or '' }}</textarea>
+                        class="th-input">{{ session.next_lesson_focus or '' }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Topic Tags</label>
+                    <label class="th-label">Topic Tags</label>
                     <input type="text" name="topic_tags" value="{{ session.topic_tags or '' }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        class="th-input" />
                 </div>
                 {% if user.is_tutor %}
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Notes</button>

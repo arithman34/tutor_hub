@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select, text
@@ -33,7 +33,7 @@ def _serialize(obj) -> dict:
 
 async def export_data(db: AsyncSession) -> dict:
     return {
-        "exported_at": datetime.utcnow().isoformat(),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
         "version": "1",
         "users": [_serialize(r) for r in (await db.execute(select(User))).scalars().all()],
         "subjects": [_serialize(r) for r in (await db.execute(select(Subject))).scalars().all()],
@@ -48,6 +48,7 @@ async def export_data(db: AsyncSession) -> dict:
 async def import_data(db: AsyncSession, data: dict) -> None:
     for tbl in ["payments", "enrollments", "sessions", "students", "payees", "subjects", "users"]:
         await db.execute(text(f"DELETE FROM {tbl}"))
+    db.expunge_all()
 
     def _uuid(v):
         return uuid.UUID(v) if v else None
