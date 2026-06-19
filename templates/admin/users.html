@@ -8,23 +8,6 @@
     <a href="/admin/users/new" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">Add Tutor</a>
 </div>
 
-{% if new_email and temp_password %}
-<div class="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-5 dark:bg-amber-900/20 dark:border-amber-800">
-    <div class="flex items-start gap-3">
-        <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <div>
-            <p class="text-sm font-semibold text-amber-800">Welcome email sent to {{ new_email }}</p>
-            <p class="text-sm text-amber-700 mt-1">
-                Temporary password: <span class="font-mono font-semibold">{{ temp_password }}</span>
-            </p>
-            <p class="text-xs text-amber-600 mt-2">The tutor should update their password after their first login.</p>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 <div class="th-card">
     <table class="th-table">

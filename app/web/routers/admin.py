@@ -1,11 +1,14 @@
 import json
+import logging
 import uuid
 
+import resend
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.exceptions import NotFoundError
 from app.models.user import PayoutType, User
@@ -13,6 +16,8 @@ from app.services import admin as admin_service
 from app.services import user as user_service
 from app.utils import generate_temp_password
 from app.web.deps import require_admin
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Web Admin"])
 templates = Jinja2Templates(directory="templates")
@@ -23,8 +28,6 @@ async def admin_users(
     request: Request,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_admin),
-    new_email: str = "",
-    temp_password: str = "",
 ):
     tutors = await user_service.list_tutors(db)
     deletable = {
@@ -36,8 +39,6 @@ async def admin_users(
         "active_page": "admin_users",
         "tutors": tutors,
         "deletable": deletable,
-        "new_email": new_email,
-        "temp_password": temp_password,
     })
 
 
@@ -72,9 +73,25 @@ async def admin_users_create(
     )
     if result is None:
         return RedirectResponse(url="/admin/users/new?error=email_taken", status_code=303)
-    from urllib.parse import urlencode
-    params = urlencode({"new_email": email, "temp_password": temp_password})
-    return RedirectResponse(url=f"/admin/users?{params}", status_code=303)
+
+    try:
+        resend.api_key = settings.resend_api_key
+        resend.Emails.send({
+            "from": settings.from_email,
+            "to": [email],
+            "subject": "Welcome to TutorHub — your account details",
+            "text": (
+                f"Hi {result.first_name},\n\n"
+                f"An account has been created for you on TutorHub.\n\n"
+                f"Email: {email}\n"
+                f"Temporary password: {temp_password}\n\n"
+                "Please log in and change your password as soon as possible.\n"
+            ),
+        })
+    except Exception:
+        logger.exception("Failed to send welcome email to %s", email)
+
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 @router.post("/users/{user_id}/toggle-active")
