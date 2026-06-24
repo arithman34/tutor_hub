@@ -1,9 +1,11 @@
 services:
   db:
     restart: unless-stopped
+    ports: []
 
   redis:
     restart: unless-stopped
+    ports: []
 
   api:
     restart: unless-stopped
