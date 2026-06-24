@@ -50,5 +50,6 @@ class User(Base):
     payees = relationship("Payee", back_populates="user")
     sessions = relationship("Session", back_populates="user")
     payments = relationship("Payment", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (Index("one_admin", "role", unique=True, postgresql_where=(role == UserRole.admin)),)

@@ -8,4 +8,9 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token", examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
+    refresh_token: str = Field(..., description="Opaque refresh token", examples=["dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."])
     token_type: str = Field(default="bearer", description="Token type", examples=["bearer"])
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(..., description="Refresh token from login")

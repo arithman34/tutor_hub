@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
     api_prefix: str = "/api/v1"
     openai_api_key: str
     google_client_id: str = ""
