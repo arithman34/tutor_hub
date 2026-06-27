@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     resend_api_key: str = ""
     from_email: str = ""
+    rag_api_url: str = ""
+    rag_api_key: str = ""
 
 
 settings = Settings()
