@@ -209,6 +209,17 @@
 </div>
 
 <script>
+    MathJax = {
+        tex: {
+            inlineMath: [['\\(', '\\)']],
+            displayMath: [['\\[', '\\]']]
+        },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea'] }
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+<script>
     function switchTab(tab) {
         const base = 'tab-btn px-4 py-1.5 text-sm font-medium rounded-md transition-colors ';
         document.getElementById('tab-btn-documents').className = base + (tab === 'documents' ? 'th-tab-active' : 'th-tab-inactive');
