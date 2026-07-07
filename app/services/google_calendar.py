@@ -81,7 +81,7 @@ async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) 
         return token.access_token
 
     if not token.refresh_token:
-        raise ValueError("Token expired and no refresh token — please reconnect Google Calendar.")
+        raise ValueError("Google Calendar connection expired — please reconnect.")
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -93,8 +93,16 @@ async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) 
                 "grant_type": "refresh_token",
             },
         )
-        resp.raise_for_status()
-        data = resp.json()
+
+    if resp.status_code == 400:
+        # Refresh token was rejected (revoked, or expired — e.g. Google auto-expires
+        # test-user refresh tokens after 7 days while the OAuth app is unpublished).
+        await db.delete(token)
+        await db.commit()
+        raise ValueError("Google Calendar connection expired — please reconnect.")
+
+    resp.raise_for_status()
+    data = resp.json()
 
     token.access_token = data["access_token"]
     token.expires_at = datetime.now(timezone.utc) + timedelta(seconds=data["expires_in"])

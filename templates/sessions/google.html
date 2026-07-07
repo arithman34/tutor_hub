@@ -57,6 +57,9 @@
 {% if error %}
 <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 text-sm">
     {{ error }}
+    {% if "reconnect" in error %}
+    <a href="/calendar/connect" class="underline font-medium">Reconnect Google Calendar</a>
+    {% endif %}
 </div>
 {% endif %}
 
