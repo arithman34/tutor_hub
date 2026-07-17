@@ -93,3 +93,52 @@ async def test_protected_route_deleted_user(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 401
+
+
+async def test_refresh_token_success(client, admin_user):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "adminpassword"},
+    )
+    refresh_token = login.json()["refresh_token"]
+
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["refresh_token"] != refresh_token
+
+
+async def test_refresh_token_invalid(client):
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "notavalidtoken"})
+    assert response.status_code == 401
+
+
+async def test_refresh_token_rotation_revokes_old(client, admin_user):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "adminpassword"},
+    )
+    old_token = login.json()["refresh_token"]
+
+    await client.post("/api/v1/auth/refresh", json={"refresh_token": old_token})
+
+    # Using the old token a second time should fail
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_token})
+    assert response.status_code == 401
+
+
+async def test_logout_revokes_refresh_token(client, admin_user):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "adminpassword"},
+    )
+    refresh_token = login.json()["refresh_token"]
+
+    logout = await client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert logout.status_code == 204
+
+    # Token should be revoked now
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert response.status_code == 401

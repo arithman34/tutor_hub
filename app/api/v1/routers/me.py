@@ -23,7 +23,7 @@ async def update_my_profile(
 ):
     return await user_service.update_profile(
         db,
-        current_user=current_user,
+        user_id=current_user.id,
         email=updates.email,
         password=updates.password,
         first_name=updates.first_name,

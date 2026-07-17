@@ -48,7 +48,7 @@
                     </svg>
                 </button>
                 <ul id="dropdown-dashboard" class="{% if active_page != 'dashboard' %}hidden{% endif %} py-1 space-y-1">
-                    {% for section, label in [('financial','Financial'),('operations','Operations'),('tutors','Tutors'),('students','Students'),('alerts','Alerts'),('activity','Activity')] %}
+                    {% for section, label in [('financial','Financial & Operations'),('tutors','Tutors'),('students','Students'),('alerts','Alerts'),('activity','Activity')] %}
                     <li>
                         <a href="/dashboard#{{ section }}"
                             class="flex items-center pl-9 pr-2 py-2 text-sm rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400 dashboard-section-link"

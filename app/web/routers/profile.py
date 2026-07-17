@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import verify_password
 from app.core.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services import user as user_service
 from app.web.deps import get_current_user_from_cookie
 
@@ -34,6 +34,7 @@ async def profile_update(
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: str = Form(...),
+    role: str = Form(""),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -42,7 +43,11 @@ async def profile_update(
         if result.scalar_one_or_none():
             return RedirectResponse(url="/profile?error=email_taken", status_code=303)
 
-    await user_service.update_profile(db, current_user=user, email=email, first_name=first_name, last_name=last_name)
+    new_role: UserRole | None = None
+    if user.is_admin and role in ("admin", "admin_tutor"):
+        new_role = UserRole(role)
+
+    await user_service.update_profile(db, user_id=user.id, email=email, first_name=first_name, last_name=last_name, role=new_role)
     return RedirectResponse(url="/profile?success=details", status_code=303)
 
 
@@ -58,5 +63,5 @@ async def profile_password(
         return RedirectResponse(url="/profile?error=wrong_password", status_code=303)
     if new_password != confirm_password:
         return RedirectResponse(url="/profile?error=password_mismatch", status_code=303)
-    await user_service.update_profile(db, current_user=user, password=new_password)
+    await user_service.update_profile(db, user_id=user.id, password=new_password)
     return RedirectResponse(url="/profile?success=password", status_code=303)

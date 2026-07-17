@@ -16,7 +16,7 @@
 
 {% if user.is_admin %}
 
-{# ── FINANCIAL ────────────────────────────────────────────────────────────────── #}
+{# ── FINANCIAL & OPERATIONS ───────────────────────────────────────────────────── #}
 <div id="panel-financial" class="section-panel">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
         <div class="th-card p-6">
@@ -39,7 +39,7 @@
             <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_this_year) }}</p>
         </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
         <div class="th-card p-6">
             <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Tutor Payouts (Month)</p>
             <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(total_payout_obligations) }}</p>
@@ -51,10 +51,6 @@
             </p>
         </div>
     </div>
-</div>
-
-{# ── OPERATIONS ───────────────────────────────────────────────────────────────── #}
-<div id="panel-operations" class="section-panel hidden">
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div class="th-card p-6">
             <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Sessions This Month</p>
@@ -350,8 +346,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-    const SECTIONS = ['financial','operations','tutors','students','alerts','activity'];
-    const LABELS   = {financial:'Financial',operations:'Operations',tutors:'Tutors',students:'Students',alerts:'Alerts',activity:'Activity'};
+    const SECTIONS = ['financial','tutors','students','alerts','activity'];
+    const LABELS   = {financial:'Financial & Operations',tutors:'Tutors',students:'Students',alerts:'Alerts',activity:'Activity'};
 
     function showSection(id) {
         if (!SECTIONS.includes(id)) id = 'financial';

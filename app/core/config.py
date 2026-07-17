@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     resend_api_key: str = ""
     from_email: str = ""
-    rag_api_url: str = ""
-    rag_api_key: str = ""
+    embedding_model: str = "text-embedding-3-small"
+    chat_model: str = "gpt-4o-mini"
+    chunk_size: int = 800
+    chunk_overlap: int = 100
+    top_k: int = 5
+    bcrypt_rounds: int = 12
 
 
 settings = Settings()

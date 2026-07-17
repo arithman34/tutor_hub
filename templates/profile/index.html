@@ -71,16 +71,17 @@
             </div>
             <div>
                 <label class="th-label">Role</label>
+                {% if user.is_admin %}
+                <select name="role" class="th-input mt-1">
+                    <option value="admin" {% if user.role.value == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="admin_tutor" {% if user.role.value == 'admin_tutor' %}selected{% endif %}>Admin &amp; Tutor</option>
+                </select>
+                {% else %}
                 <div class="flex items-center gap-2 mt-1">
-                    {% if user.role.value == 'admin' %}
-                    <span class="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 text-xs font-medium px-2.5 py-1 rounded-full">Admin</span>
-                    {% elif user.role.value == 'admin_tutor' %}
-                    <span class="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs font-medium px-2.5 py-1 rounded-full">Admin &amp; Tutor</span>
-                    {% else %}
                     <span class="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-xs font-medium px-2.5 py-1 rounded-full">Tutor</span>
-                    {% endif %}
                     <span class="text-xs text-gray-400">Role is managed by an administrator</span>
                 </div>
+                {% endif %}
             </div>
             <button type="submit"
                 class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">

@@ -177,20 +177,24 @@ async def delete_tutor(db: AsyncSession, user_id: uuid.UUID) -> None:
 
 async def update_profile(
     db: AsyncSession,
-    current_user: User,
+    user_id: uuid.UUID,
     email: str | None = None,
     password: str | None = None,
     first_name: str | None = None,
     last_name: str | None = None,
+    role: UserRole | None = None,
 ) -> User:
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one()
     if email is not None:
-        current_user.email = email
+        user.email = email
     if password is not None:
-        current_user.hashed_password = hash_password(password)
+        user.hashed_password = hash_password(password)
     if first_name is not None:
-        current_user.first_name = first_name
+        user.first_name = first_name
     if last_name is not None:
-        current_user.last_name = last_name
+        user.last_name = last_name
+    if role is not None:
+        user.role = role
     await db.commit()
-    await db.refresh(current_user)
-    return current_user
+    await db.refresh(user)
+    return user
