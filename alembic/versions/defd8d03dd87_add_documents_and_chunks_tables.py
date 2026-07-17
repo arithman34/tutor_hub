@@ -21,6 +21,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
     op.create_table(
         "documents",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -56,3 +58,4 @@ def downgrade() -> None:
     op.drop_table("chunks")
     op.drop_index("ix_documents_id", table_name="documents")
     op.drop_table("documents")
+    op.execute("DROP EXTENSION IF EXISTS vector")
