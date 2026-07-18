@@ -77,12 +77,17 @@ docker compose down
 
 ## Deployment
 
-The app is deployed on a Hetzner VPS using Docker Compose. A GitHub Actions pipeline runs tests on every push to `main` and deploys automatically if they pass.
+The app runs on AWS (ECS Fargate, RDS PostgreSQL with pgvector, ElastiCache), provisioned with Terraform — see [terraform/README.md](terraform/README.md) for the architecture and setup. A GitHub Actions pipeline runs tests on every push to `main`, then builds the image, pushes it to ECR, and redeploys the ECS services.
 
-To deploy manually on the server:
+To deploy manually:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.eu-west-2.amazonaws.com
+docker build -t <ecr_repository_url>:latest .
+docker push <ecr_repository_url>:latest
+for service in api worker beat; do
+  aws ecs update-service --cluster tutorhub --service "$service" --force-new-deployment
+done
 ```
 
 ## Running Tests
@@ -190,4 +195,4 @@ All REST endpoints are under the `/api/v1` prefix.
 | Testing | pytest, pytest-asyncio, httpx, pytest-cov |
 | Containerisation | Docker, Docker Compose |
 | CI/CD | GitHub Actions |
-| Hosting | Hetzner VPS |
+| Hosting | AWS (ECS Fargate, RDS, ElastiCache), Terraform |

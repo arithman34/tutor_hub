@@ -5,3 +5,11 @@ __pycache__/
 htmlcov/
 celerybeat-schedule
 celerybeat.pid
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log

@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in
+
+secret_key           = "your-jwt-signing-key"
+openai_api_key       = "sk-..."
+resend_api_key       = "re_..."
+google_client_id     = "....apps.googleusercontent.com"
+google_client_secret = "GOCSPX-..."
+from_email           = "TutorHub <noreply@arithman.dev>"
+
+# Temporary direct DB access (data migration / one-off psql). Re-apply with
+# these removed when done.
+# db_publicly_accessible = true
+# admin_cidrs            = ["203.0.113.10/32"]

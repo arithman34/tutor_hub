@@ -58,4 +58,3 @@ def downgrade() -> None:
     op.drop_table("chunks")
     op.drop_index("ix_documents_id", table_name="documents")
     op.drop_table("documents")
-    op.execute("DROP EXTENSION IF EXISTS vector")
