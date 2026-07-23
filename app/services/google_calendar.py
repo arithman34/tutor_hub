@@ -11,9 +11,9 @@ from app.models.google_calendar_token import GoogleCalendarToken
 _AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
 _CALENDAR_LIST_URL = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
+_CALENDARS_URL = "https://www.googleapis.com/calendar/v3/calendars"
 _EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
 _PRIMARY_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary"
-_CREATE_EVENT_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
 
 _SCOPE = " ".join([
     "https://www.googleapis.com/auth/calendar",
@@ -22,7 +22,26 @@ _SCOPE = " ".join([
 ])
 
 _DAY_RRULE = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+
+# All tutoring events live on a dedicated "Tutoring" calendar (created on demand)
+# rather than the user's primary/personal calendar.
+_TUTORING_CALENDAR_NAME = "Tutoring"
+
+# Event titles are "{first name} - Tuition" (fixed suffix, not configurable).
 _TUITION_SUFFIX = " - Tuition"
+
+
+def build_event_title(first_name: str) -> str:
+    return f"{first_name}{_TUITION_SUFFIX}"
+
+# Two popup reminders on every event: 1 hour and 15 minutes before.
+_EVENT_REMINDERS = {
+    "useDefault": False,
+    "overrides": [
+        {"method": "popup", "minutes": 60},
+        {"method": "popup", "minutes": 15},
+    ],
+}
 
 
 def build_connect_url(state: str) -> str:
@@ -130,6 +149,32 @@ async def _fetch_timezone(client: httpx.AsyncClient, access_token: str) -> str:
     return "UTC"
 
 
+async def _get_tutoring_calendar_id(
+    client: httpx.AsyncClient, headers: dict, *, create: bool
+) -> str | None:
+    """Return the id of the user's "Tutoring" calendar, creating it if missing.
+
+    When create is False (read paths) a missing calendar returns None instead of
+    creating one, so we never make an empty calendar just by listing sessions.
+    """
+    resp = await client.get(_CALENDAR_LIST_URL, headers=headers)
+    resp.raise_for_status()
+    for item in resp.json().get("items", []):
+        if item.get("summary") == _TUTORING_CALENDAR_NAME:
+            return item["id"]
+
+    if not create:
+        return None
+
+    resp = await client.post(
+        _CALENDARS_URL,
+        json={"summary": _TUTORING_CALENDAR_NAME},
+        headers=headers,
+    )
+    resp.raise_for_status()
+    return resp.json()["id"]
+
+
 def _event_sort_key(event: dict) -> str:
     start = event.get("start", {})
     return start.get("dateTime") or start.get("date") or ""
@@ -153,8 +198,8 @@ def parse_event(event: dict) -> dict:
         end_time = ""
         all_day = True
 
-    # Title convention is "{First Last} - Tuition" — pull the name back out.
-    student_name = summary[: -len(_TUITION_SUFFIX)] if summary.endswith(_TUITION_SUFFIX) else ""
+    # Title convention is "{first name} - Tuition" — pull the first name back out.
+    student_name = summary[: -len(_TUITION_SUFFIX)] if summary.endswith(_TUITION_SUFFIX) else summary.strip()
 
     return {
         "event_id": event.get("id", ""),
@@ -170,54 +215,53 @@ def parse_event(event: dict) -> dict:
 
 async def fetch_events(
     user_id,
-    label: str,
     time_min: datetime,
     time_max: datetime,
     db: AsyncSession,
 ) -> list[dict]:
-    """Fetch all events matching `label` across every calendar in the given window,
-    sorted ascending by start time."""
+    """Fetch all events on the Tutoring calendar in the given window, sorted
+    ascending by start time. Returns an empty list if the calendar doesn't exist
+    yet."""
     access_token, _ = await _resolve_token(user_id, db)
     headers = {"Authorization": f"Bearer {access_token}"}
 
     params = {
-        "q": label,
         "timeMin": time_min.isoformat(),
         "timeMax": time_max.isoformat(),
         "singleEvents": "true",
         "orderBy": "startTime",
+        "maxResults": 2500,
     }
 
+    all_events: list[dict] = []
     async with httpx.AsyncClient() as client:
-        cal_resp = await client.get(_CALENDAR_LIST_URL, headers=headers)
-        cal_resp.raise_for_status()
-        calendar_ids = [c["id"] for c in cal_resp.json().get("items", [])]
+        cal_id = await _get_tutoring_calendar_id(client, headers, create=False)
+        if not cal_id:
+            return []
 
-        all_events: list[dict] = []
-        for cal_id in calendar_ids:
-            page_params = {**params, "maxResults": 2500}
-            while True:
-                ev_resp = await client.get(
-                    _EVENTS_URL.format(calendar_id=cal_id),
-                    params=page_params,
-                    headers=headers,
-                )
-                if ev_resp.status_code != 200:
-                    break
-                data = ev_resp.json()
-                all_events.extend(data.get("items", []))
-                next_token = data.get("nextPageToken")
-                if not next_token:
-                    break
-                page_params = {**page_params, "pageToken": next_token}
+        page_params = params
+        while True:
+            ev_resp = await client.get(
+                _EVENTS_URL.format(calendar_id=cal_id),
+                params=page_params,
+                headers=headers,
+            )
+            if ev_resp.status_code != 200:
+                break
+            data = ev_resp.json()
+            all_events.extend(data.get("items", []))
+            next_token = data.get("nextPageToken")
+            if not next_token:
+                break
+            page_params = {**params, "pageToken": next_token}
 
     all_events.sort(key=_event_sort_key)
     return all_events
 
 
-async def get_upcoming_events(user_id, label: str, db: AsyncSession) -> list[dict]:
+async def get_upcoming_events(user_id, db: AsyncSession) -> list[dict]:
     now = datetime.now(timezone.utc)
-    return await fetch_events(user_id, label, now, now + timedelta(days=7), db)
+    return await fetch_events(user_id, now, now + timedelta(days=7), db)
 
 
 async def create_one_off_event(
@@ -227,18 +271,25 @@ async def create_one_off_event(
     start_time: str,
     end_time: str,
     db: AsyncSession,
+    location: str | None = None,
 ) -> dict:
     access_token, _ = await _resolve_token(user_id, db)
+    headers = {"Authorization": f"Bearer {access_token}"}
     async with httpx.AsyncClient() as client:
         tz = await _fetch_timezone(client, access_token)
+        cal_id = await _get_tutoring_calendar_id(client, headers, create=True)
+        body = {
+            "summary": summary,
+            "start": {"dateTime": f"{date_str}T{start_time}:00", "timeZone": tz},
+            "end": {"dateTime": f"{date_str}T{end_time}:00", "timeZone": tz},
+            "reminders": _EVENT_REMINDERS,
+        }
+        if location:
+            body["location"] = location
         resp = await client.post(
-            _CREATE_EVENT_URL,
-            json={
-                "summary": summary,
-                "start": {"dateTime": f"{date_str}T{start_time}:00", "timeZone": tz},
-                "end": {"dateTime": f"{date_str}T{end_time}:00", "timeZone": tz},
-            },
-            headers={"Authorization": f"Bearer {access_token}"},
+            _EVENTS_URL.format(calendar_id=cal_id),
+            json=body,
+            headers=headers,
         )
         resp.raise_for_status()
         return resp.json()
@@ -252,6 +303,7 @@ async def create_recurring_events(
     end_date_str: str,
     interval_weeks: int,
     db: AsyncSession,
+    location: str | None = None,
 ) -> list[dict]:
     """
     Create one recurring event per selected weekday.
@@ -268,6 +320,7 @@ async def create_recurring_events(
     async with httpx.AsyncClient() as client:
         tz = await _fetch_timezone(client, access_token)
         headers = {"Authorization": f"Bearer {access_token}"}
+        cal_id = await _get_tutoring_calendar_id(client, headers, create=True)
 
         for config in day_configs:
             weekday = config["weekday"]
@@ -275,14 +328,18 @@ async def create_recurring_events(
             first = start_date + timedelta(days=days_ahead)
 
             rrule = f"RRULE:FREQ=WEEKLY;INTERVAL={interval_weeks};BYDAY={_DAY_RRULE[weekday]};UNTIL={until}"
+            body = {
+                "summary": summary,
+                "start": {"dateTime": f"{first.isoformat()}T{config['start']}:00", "timeZone": tz},
+                "end": {"dateTime": f"{first.isoformat()}T{config['end']}:00", "timeZone": tz},
+                "recurrence": [rrule],
+                "reminders": _EVENT_REMINDERS,
+            }
+            if location:
+                body["location"] = location
             resp = await client.post(
-                _CREATE_EVENT_URL,
-                json={
-                    "summary": summary,
-                    "start": {"dateTime": f"{first.isoformat()}T{config['start']}:00", "timeZone": tz},
-                    "end": {"dateTime": f"{first.isoformat()}T{config['end']}:00", "timeZone": tz},
-                    "recurrence": [rrule],
-                },
+                _EVENTS_URL.format(calendar_id=cal_id),
+                json=body,
                 headers=headers,
             )
             if resp.status_code in (200, 201):

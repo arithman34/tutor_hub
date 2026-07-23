@@ -24,7 +24,6 @@ async def connections_page(
     )
     token = result.scalar_one_or_none()
     google_connected = token is not None
-    google_label = token.label if token else "Tuition"
 
     error = request.query_params.get("error")
     error_msg = None
@@ -44,9 +43,7 @@ async def connections_page(
             "user": user,
             "active_page": "connections",
             "google_connected": google_connected,
-            "google_label": google_label,
             "connected_flash": request.query_params.get("connected"),
-            "label_saved": request.query_params.get("label_saved"),
             "error_msg": error_msg,
         },
     )

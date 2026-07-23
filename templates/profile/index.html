@@ -70,6 +70,12 @@
                     class="th-input" />
             </div>
             <div>
+                <label class="th-label">Tutoring Address</label>
+                <input type="text" name="address" value="{{ user.address or '' }}"
+                    placeholder="Used as the location on calendar events"
+                    class="th-input" />
+            </div>
+            <div>
                 <label class="th-label">Role</label>
                 {% if user.is_admin %}
                 <select name="role" class="th-input mt-1">

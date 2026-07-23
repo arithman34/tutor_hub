@@ -27,3 +27,12 @@ resource "aws_ssm_parameter" "google_client_secret" {
   type  = "SecureString"
   value = var.google_client_secret
 }
+
+# Only consumed by the cost-optimized environment's cloudflared sidecar.
+# Kept here (not per-environment) so it survives a production -> cost-optimized
+# cutover just like the other secrets.
+resource "aws_ssm_parameter" "cloudflare_tunnel_token" {
+  name  = "/${local.name}/cloudflare-tunnel-token"
+  type  = "SecureString"
+  value = var.cloudflare_tunnel_token != "" ? var.cloudflare_tunnel_token : "unset"
+}

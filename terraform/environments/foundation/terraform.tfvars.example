@@ -3,9 +3,12 @@
 secret_key           = "your-jwt-signing-key"
 openai_api_key       = "sk-..."
 resend_api_key       = "re_..."
-google_client_id     = "....apps.googleusercontent.com"
 google_client_secret = "GOCSPX-..."
-from_email           = "TutorHub <noreply@arithman.dev>"
+
+# Only needed once you apply the cost-optimized environment. Create the
+# tunnel in the Cloudflare Zero Trust dashboard (Networks > Tunnels) and
+# paste its token here; leave unset while running production.
+# cloudflare_tunnel_token = "eyJhIjoi..."
 
 # Temporary direct DB access (data migration / one-off psql). Re-apply with
 # these removed when done.

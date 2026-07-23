@@ -20,6 +20,7 @@ provider "aws" {
     tags = {
       Project   = "tutorhub"
       ManagedBy = "terraform"
+      Layer     = "foundation"
     }
   }
 }

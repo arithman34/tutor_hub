@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars and fill in
+
+domain_name       = "tutorhub.arithman.dev"
+google_client_id  = "....apps.googleusercontent.com"
+from_email        = "TutorHub <noreply@arithman.dev>"

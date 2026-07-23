@@ -52,6 +52,28 @@ async def test_import_data_round_trip(db):
     assert data2["users"][0]["id"] == data["users"][0]["id"]
 
 
+async def test_import_data_round_trips_address(db):
+    user = User(
+        email="tutor@test.com",
+        hashed_password=hash_password("password"),
+        first_name="Test",
+        last_name="Tutor",
+        role=UserRole.tutor,
+        is_active=True,
+        address="221B Baker Street",
+    )
+    db.add(user)
+    await db.commit()
+
+    data = await admin_service.export_data(db)
+    assert data["users"][0]["address"] == "221B Baker Street"
+
+    await admin_service.import_data(db, data)
+
+    data2 = await admin_service.export_data(db)
+    assert data2["users"][0]["address"] == "221B Baker Street"
+
+
 async def test_import_empty_payload_clears_all_tables(db):
     user = User(
         email="tutor@test.com",

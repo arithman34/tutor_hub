@@ -72,7 +72,6 @@ async def sessions_list(
     status = status or "all"
     period = period or "all"
 
-    label = token.label or "Tuition"
     now = datetime.now(timezone.utc)
     time_min = datetime(2020, 1, 1, tzinfo=timezone.utc)
     time_max = now + timedelta(days=365)
@@ -80,7 +79,7 @@ async def sessions_list(
     error = None
     events = []
     try:
-        events = await google_calendar_service.fetch_events(user.id, label, time_min, time_max, db)
+        events = await google_calendar_service.fetch_events(user.id, time_min, time_max, db)
     except Exception as exc:
         error = str(exc)
 

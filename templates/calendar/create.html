@@ -59,7 +59,7 @@
                     onchange="updatePreview()">
                     <option value="">— Select student —</option>
                     {% for s in students %}
-                    <option value="{{ s.id }}" data-name="{{ s.first_name }} {{ s.last_name }}">
+                    <option value="{{ s.id }}" data-name="{{ s.first_name }}">
                         {{ s.first_name }} {{ s.last_name }}
                     </option>
                     {% endfor %}
@@ -197,7 +197,7 @@
         const preview = document.getElementById('title-preview');
         const selected = select.options[select.selectedIndex];
         const name = selected ? selected.getAttribute('data-name') : null;
-        preview.textContent = name ? `${name} - Tuition` : 'Select a student above';
+        preview.textContent = name ? name : 'Select a student above';
         preview.classList.toggle('italic', !name);
         preview.classList.toggle('text-gray-400', !name);
         preview.classList.toggle('text-gray-700', !!name);

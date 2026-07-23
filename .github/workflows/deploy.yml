@@ -72,9 +72,7 @@ jobs:
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
 
-      - name: Redeploy ECS services
+      - name: Redeploy ECS service
         run: |
-          for service in api worker beat; do
-            aws ecs update-service --cluster tutorhub --service "$service" \
-              --force-new-deployment --no-cli-pager --query 'service.serviceName' --output text
-          done
+          aws ecs update-service --cluster tutorhub-lean --service app \
+            --force-new-deployment --no-cli-pager --query 'service.serviceName' --output text

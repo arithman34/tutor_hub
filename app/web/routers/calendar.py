@@ -74,7 +74,8 @@ async def calendar_create(
     student = student_result.scalar_one_or_none()
     if not student:
         return RedirectResponse(url="/calendar/create?error=no_student", status_code=303)
-    title = f"{student.first_name} {student.last_name} - Tuition"
+    title = google_calendar_service.build_event_title(student.first_name)
+    location = user.address
 
     try:
         if session_type == "oneoff":
@@ -85,6 +86,7 @@ async def calendar_create(
                 start_time=str(form.get("start_time", "")),
                 end_time=str(form.get("end_time", "")),
                 db=db,
+                location=location,
             )
         else:
             day_configs = []
@@ -108,6 +110,7 @@ async def calendar_create(
                 end_date_str=str(form.get("end_date", "")),
                 interval_weeks=max(1, int(form.get("interval_weeks", "1") or 1)),
                 db=db,
+                location=location,
             )
     except Exception as exc:
         return RedirectResponse(url=f"/calendar/create?error={exc}", status_code=303)
@@ -161,19 +164,3 @@ async def calendar_disconnect(
         await db.delete(token)
         await db.commit()
     return RedirectResponse(url="/connections", status_code=303)
-
-
-@router.post("/label")
-async def calendar_label(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user_from_cookie),
-):
-    form = await request.form()
-    new_label = str(form.get("label", "")).strip() or "Tuition"
-    result = await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id))
-    token = result.scalar_one_or_none()
-    if token:
-        token.label = new_label
-        await db.commit()
-    return RedirectResponse(url="/connections?label_saved=1", status_code=303)

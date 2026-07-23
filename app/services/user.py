@@ -183,6 +183,7 @@ async def update_profile(
     first_name: str | None = None,
     last_name: str | None = None,
     role: UserRole | None = None,
+    address: str | None = None,
 ) -> User:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one()
     if email is not None:
@@ -195,6 +196,8 @@ async def update_profile(
         user.last_name = last_name
     if role is not None:
         user.role = role
+    if address is not None:
+        user.address = address.strip() or None
     await db.commit()
     await db.refresh(user)
     return user

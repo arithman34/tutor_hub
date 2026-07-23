@@ -18,7 +18,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 }
 
 locals {
-  image = "${aws_ecr_repository.app.repository_url}:latest"
+  image = "${local.foundation.ecr_repository_url}:latest"
 
   container_environment = [
     { name = "REDIS_URL", value = "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0" },
@@ -28,11 +28,11 @@ locals {
   ]
 
   container_secrets = [
-    { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn },
-    { name = "SECRET_KEY", valueFrom = aws_ssm_parameter.secret_key.arn },
-    { name = "OPENAI_API_KEY", valueFrom = aws_ssm_parameter.openai_api_key.arn },
-    { name = "RESEND_API_KEY", valueFrom = aws_ssm_parameter.resend_api_key.arn },
-    { name = "GOOGLE_CLIENT_SECRET", valueFrom = aws_ssm_parameter.google_client_secret.arn },
+    { name = "DATABASE_URL", valueFrom = local.foundation.ssm_parameter_arns.database_url },
+    { name = "SECRET_KEY", valueFrom = local.foundation.ssm_parameter_arns.secret_key },
+    { name = "OPENAI_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.openai_api_key },
+    { name = "RESEND_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.resend_api_key },
+    { name = "GOOGLE_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.google_client_secret },
   ]
 }
 
@@ -42,8 +42,8 @@ resource "aws_ecs_task_definition" "api" {
   network_mode             = "awsvpc"
   cpu                      = 256
   memory                   = 1024
-  execution_role_arn       = aws_iam_role.task_execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = local.foundation.task_execution_role_arn
+  task_role_arn            = local.foundation.task_role_arn
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -88,7 +88,7 @@ resource "aws_ecs_service" "api" {
   health_check_grace_period_seconds = 120
 
   network_configuration {
-    subnets          = aws_subnet.public[*].id
+    subnets          = local.foundation.public_subnet_ids
     security_groups  = [aws_security_group.app.id]
     assign_public_ip = true
   }
@@ -116,8 +116,8 @@ resource "aws_ecs_task_definition" "worker" {
   network_mode             = "awsvpc"
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.task_execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = local.foundation.task_execution_role_arn
+  task_role_arn            = local.foundation.task_role_arn
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -158,7 +158,7 @@ resource "aws_ecs_service" "worker" {
   enable_execute_command = true
 
   network_configuration {
-    subnets          = aws_subnet.public[*].id
+    subnets          = local.foundation.public_subnet_ids
     security_groups  = [aws_security_group.app.id]
     assign_public_ip = true
   }
@@ -180,8 +180,8 @@ resource "aws_ecs_task_definition" "beat" {
   network_mode             = "awsvpc"
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.task_execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = local.foundation.task_execution_role_arn
+  task_role_arn            = local.foundation.task_role_arn
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -222,7 +222,7 @@ resource "aws_ecs_service" "beat" {
   enable_execute_command = true
 
   network_configuration {
-    subnets          = aws_subnet.public[*].id
+    subnets          = local.foundation.public_subnet_ids
     security_groups  = [aws_security_group.app.id]
     assign_public_ip = true
   }

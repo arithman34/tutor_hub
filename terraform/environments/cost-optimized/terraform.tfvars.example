@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and fill in
+
+domain_name       = "tutorhub.arithman.dev"
+google_client_id  = "....apps.googleusercontent.com"
+from_email        = "TutorHub <noreply@arithman.dev>"
+
+# The actual Cloudflare Tunnel token goes in the foundation environment's
+# terraform.tfvars as `cloudflare_tunnel_token` — this environment reads it
+# from SSM via the foundation's remote state output, not as a local variable.

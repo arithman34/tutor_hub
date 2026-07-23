@@ -16,7 +16,6 @@ class GoogleCalendarToken(Base):
     access_token: Mapped[str] = mapped_column(String, nullable=False)
     refresh_token: Mapped[str | None] = mapped_column(String, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    label: Mapped[str] = mapped_column(String, nullable=False, default="Tuition", server_default="Tuition")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow
     )

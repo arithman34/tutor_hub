@@ -1,7 +1,7 @@
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb"
   description = "Application load balancer"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.foundation.vpc_id
 
   tags = {
     Name = "${local.name}-alb"
@@ -35,7 +35,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_all" {
 resource "aws_security_group" "app" {
   name        = "${local.name}-app"
   description = "ECS tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.foundation.vpc_id
 
   tags = {
     Name = "${local.name}-app"
@@ -57,40 +57,21 @@ resource "aws_vpc_security_group_egress_rule" "app_all" {
   ip_protocol       = "-1"
 }
 
-resource "aws_security_group" "rds" {
-  name        = "${local.name}-rds"
-  description = "PostgreSQL"
-  vpc_id      = aws_vpc.main.id
-
-  tags = {
-    Name = "${local.name}-rds"
-  }
-}
-
+# RDS lives in the foundation environment; this environment only owns the
+# ingress rule that lets *this* environment's app tasks reach it.
 resource "aws_vpc_security_group_ingress_rule" "rds_from_app" {
-  security_group_id            = aws_security_group.rds.id
-  description                  = "Postgres from ECS tasks"
+  security_group_id            = local.foundation.rds_security_group_id
+  description                  = "Postgres from ECS tasks (production)"
   referenced_security_group_id = aws_security_group.app.id
   from_port                    = 5432
   to_port                      = 5432
   ip_protocol                  = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "rds_from_admin" {
-  for_each = toset(var.admin_cidrs)
-
-  security_group_id = aws_security_group.rds.id
-  description       = "Postgres admin access"
-  cidr_ipv4         = each.value
-  from_port         = 5432
-  to_port           = 5432
-  ip_protocol       = "tcp"
-}
-
 resource "aws_security_group" "redis" {
   name        = "${local.name}-redis"
   description = "Valkey (Celery broker)"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.foundation.vpc_id
 
   tags = {
     Name = "${local.name}-redis"

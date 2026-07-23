@@ -62,6 +62,7 @@ async def import_data(db: AsyncSession, data: dict) -> None:
                 last_name=row["last_name"],
                 role=UserRole(row["role"]),
                 is_active=row["is_active"],
+                address=row.get("address"),
                 payout_type=PayoutType(row["payout_type"]) if row.get("payout_type") else None,
                 payout_hourly_rate=row.get("payout_hourly_rate"),
                 payout_percentage=row.get("payout_percentage"),

@@ -4,12 +4,6 @@ variable "aws_region" {
   default     = "eu-west-2"
 }
 
-variable "domain_name" {
-  description = "Public domain the app is served on (DNS stays in Cloudflare)."
-  type        = string
-  default     = "tutorhub.arithman.dev"
-}
-
 variable "github_repository" {
   description = "GitHub repo (owner/name) allowed to assume the deploy role via OIDC."
   type        = string
@@ -20,12 +14,6 @@ variable "db_instance_class" {
   description = "RDS instance class."
   type        = string
   default     = "db.t4g.micro"
-}
-
-variable "redis_node_type" {
-  description = "ElastiCache node type."
-  type        = string
-  default     = "cache.t4g.micro"
 }
 
 variable "db_name" {
@@ -76,12 +64,9 @@ variable "google_client_secret" {
   sensitive   = true
 }
 
-variable "google_client_id" {
-  description = "Google OAuth client ID."
+variable "cloudflare_tunnel_token" {
+  description = "Token for the Cloudflare Tunnel used by the cost-optimized environment's cloudflared sidecar. Not used by production. Create the tunnel in the Cloudflare Zero Trust dashboard (Networks > Tunnels) and paste its token here."
   type        = string
-}
-
-variable "from_email" {
-  description = "From address for outbound email."
-  type        = string
+  sensitive   = true
+  default     = ""
 }

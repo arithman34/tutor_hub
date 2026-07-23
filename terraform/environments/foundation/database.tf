@@ -8,6 +8,30 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = aws_subnet.public[*].id
 }
 
+resource "aws_security_group" "rds" {
+  name        = "${local.name}-rds"
+  description = "PostgreSQL"
+  vpc_id      = aws_vpc.main.id
+
+  tags = {
+    Name = "${local.name}-rds"
+  }
+}
+
+# Ingress from whichever compute environment is live is added by that
+# environment (aws_vpc_security_group_ingress_rule referencing this SG's id),
+# not here — the app security group doesn't exist at this layer.
+resource "aws_vpc_security_group_ingress_rule" "rds_from_admin" {
+  for_each = toset(var.admin_cidrs)
+
+  security_group_id = aws_security_group.rds.id
+  description       = "Postgres admin access"
+  cidr_ipv4         = each.value
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+}
+
 resource "aws_db_instance" "main" {
   identifier     = "${local.name}-db"
   engine         = "postgres"

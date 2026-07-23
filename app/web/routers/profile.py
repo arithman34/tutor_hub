@@ -35,6 +35,7 @@ async def profile_update(
     last_name: str = Form(...),
     email: str = Form(...),
     role: str = Form(""),
+    address: str = Form(""),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -47,7 +48,7 @@ async def profile_update(
     if user.is_admin and role in ("admin", "admin_tutor"):
         new_role = UserRole(role)
 
-    await user_service.update_profile(db, user_id=user.id, email=email, first_name=first_name, last_name=last_name, role=new_role)
+    await user_service.update_profile(db, user_id=user.id, email=email, first_name=first_name, last_name=last_name, role=new_role, address=address)
     return RedirectResponse(url="/profile?success=details", status_code=303)
 
 

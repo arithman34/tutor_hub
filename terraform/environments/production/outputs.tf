@@ -14,21 +14,6 @@ output "acm_validation_records" {
   ]
 }
 
-output "ecr_repository_url" {
-  description = "Push the app image here (tag: latest)."
-  value       = aws_ecr_repository.app.repository_url
-}
-
-output "rds_address" {
-  description = "Postgres hostname (reachable from ECS tasks; from admin_cidrs when db_publicly_accessible = true)."
-  value       = aws_db_instance.main.address
-}
-
-output "deploy_role_arn" {
-  description = "Set as the AWS_DEPLOY_ROLE_ARN secret in the GitHub repo."
-  value       = aws_iam_role.github_deploy.arn
-}
-
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.main.name
 }

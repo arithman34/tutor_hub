@@ -1,6 +1,6 @@
 resource "aws_elasticache_subnet_group" "main" {
   name       = local.name
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = local.foundation.private_subnet_ids
 }
 
 resource "aws_elasticache_replication_group" "redis" {

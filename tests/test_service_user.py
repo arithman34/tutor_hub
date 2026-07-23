@@ -167,3 +167,24 @@ async def test_delete_tutor_with_data_raises_forbidden(db):
     await db.commit()
     with pytest.raises(ForbiddenError):
         await user_service.delete_tutor(db, tutor.id)
+
+
+async def test_update_profile_sets_address(db):
+    tutor = await _make_tutor(db)
+    updated = await user_service.update_profile(db, tutor.id, address="10 Downing Street")
+    assert updated.address == "10 Downing Street"
+
+
+async def test_update_profile_blank_address_clears_it(db):
+    tutor = await _make_tutor(db)
+    await user_service.update_profile(db, tutor.id, address="10 Downing Street")
+    updated = await user_service.update_profile(db, tutor.id, address="   ")
+    assert updated.address is None
+
+
+async def test_update_profile_omitting_address_leaves_it_unchanged(db):
+    tutor = await _make_tutor(db)
+    await user_service.update_profile(db, tutor.id, address="10 Downing Street")
+    updated = await user_service.update_profile(db, tutor.id, first_name="Renamed")
+    assert updated.first_name == "Renamed"
+    assert updated.address == "10 Downing Street"

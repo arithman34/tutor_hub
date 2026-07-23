@@ -30,6 +30,7 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, values_callable=lambda x: [e.value for e in x], name="userrole"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    address: Mapped[str | None] = mapped_column(String, nullable=True)
     payout_type: Mapped[PayoutType | None] = mapped_column(
         Enum(PayoutType, values_callable=lambda x: [e.value for e in x], name="payouttype"), nullable=True
     )
