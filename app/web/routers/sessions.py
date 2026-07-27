@@ -133,7 +133,6 @@ async def sessions_list(
             "status": status,
             "period": period,
             "q": q,
-            "label": label,
             "error": error,
         },
     )
