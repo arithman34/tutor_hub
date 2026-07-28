@@ -107,7 +107,7 @@ async def calendar_create(
                 summary=title,
                 day_configs=day_configs,
                 start_date_str=str(form.get("start_date", "")),
-                end_date_str=str(form.get("end_date", "")),
+                end_date_str=str(form.get("end_date", "")).strip() or None,
                 interval_weeks=max(1, int(form.get("interval_weeks", "1") or 1)),
                 db=db,
                 location=location,

@@ -295,12 +295,25 @@ async def create_one_off_event(
         return resp.json()
 
 
+def build_rrule(weekday: int, interval_weeks: int, end_date_str: str | None = None) -> str:
+    """
+    Build a weekly RRULE for a single weekday.
+
+    A blank or missing end date omits UNTIL, so the event repeats indefinitely.
+    """
+    rrule = f"RRULE:FREQ=WEEKLY;INTERVAL={interval_weeks};BYDAY={_DAY_RRULE[weekday]}"
+    if end_date_str:
+        until = date.fromisoformat(end_date_str).strftime("%Y%m%dT235959Z")
+        rrule += f";UNTIL={until}"
+    return rrule
+
+
 async def create_recurring_events(
     user_id,
     summary: str,
     day_configs: list[dict],
     start_date_str: str,
-    end_date_str: str,
+    end_date_str: str | None,
     interval_weeks: int,
     db: AsyncSession,
     location: str | None = None,
@@ -310,11 +323,10 @@ async def create_recurring_events(
 
     day_configs: [{"weekday": int (0=Mon, 6=Sun), "start": "HH:MM", "end": "HH:MM"}, ...]
     One RRULE event is created per day so each day can have its own start/end time.
+    A blank end_date_str creates events that repeat forever.
     """
     access_token, _ = await _resolve_token(user_id, db)
     start_date = date.fromisoformat(start_date_str)
-    end_date = date.fromisoformat(end_date_str)
-    until = end_date.strftime("%Y%m%dT235959Z")
 
     created: list[dict] = []
     async with httpx.AsyncClient() as client:
@@ -327,7 +339,7 @@ async def create_recurring_events(
             days_ahead = (weekday - start_date.weekday()) % 7
             first = start_date + timedelta(days=days_ahead)
 
-            rrule = f"RRULE:FREQ=WEEKLY;INTERVAL={interval_weeks};BYDAY={_DAY_RRULE[weekday]};UNTIL={until}"
+            rrule = build_rrule(weekday, interval_weeks, end_date_str)
             body = {
                 "summary": summary,
                 "start": {"dateTime": f"{first.isoformat()}T{config['start']}:00", "timeZone": tz},
