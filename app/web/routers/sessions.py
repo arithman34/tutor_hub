@@ -30,6 +30,10 @@ _PERIOD_WINDOWS: dict[str, tuple[int, int]] = {
     "all": (-180, 180),
 }
 
+# Calendar rows rendered per page. The filtered list still lives in memory; this
+# caps how much HTML the browser has to parse and paint.
+_PAGE_SIZE = 50
+
 
 @router.get("/sessions", response_class=HTMLResponse)
 async def sessions_list(
@@ -37,6 +41,7 @@ async def sessions_list(
     q: str = Query(default=""),
     status: str | None = Query(default=None),
     period: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie),
 ):
@@ -137,6 +142,13 @@ async def sessions_list(
     elif period == "future":
         items = [i for i in items if i["date"] > today_str]
 
+    # Paginate last, so counts and page bounds reflect the filtered set.
+    total_items = len(items)
+    total_pages = max(1, -(-total_items // _PAGE_SIZE))
+    page = min(page, total_pages)
+    page_start = (page - 1) * _PAGE_SIZE
+    items = items[page_start : page_start + _PAGE_SIZE]
+
     response = templates.TemplateResponse(
         request,
         "sessions/google.html",
@@ -148,6 +160,11 @@ async def sessions_list(
             "period": period,
             "q": q,
             "error": error,
+            "page": page,
+            "total_pages": total_pages,
+            "total_items": total_items,
+            "page_start": page_start + 1 if total_items else 0,
+            "page_end": page_start + len(items),
         },
     )
     response.set_cookie("sessions_status", status, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
