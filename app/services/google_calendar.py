@@ -15,11 +15,13 @@ _CALENDARS_URL = "https://www.googleapis.com/calendar/v3/calendars"
 _EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
 _PRIMARY_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary"
 
-_SCOPE = " ".join([
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/documents",
-    "https://www.googleapis.com/auth/drive.file",
-])
+_SCOPE = " ".join(
+    [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive.file",
+    ]
+)
 
 _DAY_RRULE = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 
@@ -33,6 +35,7 @@ _TUITION_SUFFIX = " - Tuition"
 
 def build_event_title(first_name: str) -> str:
     return f"{first_name}{_TUITION_SUFFIX}"
+
 
 # Two popup reminders on every event: 1 hour and 15 minutes before.
 _EVENT_REMINDERS = {
@@ -149,9 +152,7 @@ async def _fetch_timezone(client: httpx.AsyncClient, access_token: str) -> str:
     return "UTC"
 
 
-async def _get_tutoring_calendar_id(
-    client: httpx.AsyncClient, headers: dict, *, create: bool
-) -> str | None:
+async def _get_tutoring_calendar_id(client: httpx.AsyncClient, headers: dict, *, create: bool) -> str | None:
     """Return the id of the user's "Tutoring" calendar, creating it if missing.
 
     When create is False (read paths) a missing calendar returns None instead of
@@ -173,6 +174,53 @@ async def _get_tutoring_calendar_id(
     )
     resp.raise_for_status()
     return resp.json()["id"]
+
+
+async def _resolve_calendar_id(
+    client: httpx.AsyncClient,
+    headers: dict,
+    token: GoogleCalendarToken,
+    db: AsyncSession,
+    *,
+    create: bool,
+) -> str | None:
+    """Return the Tutoring calendar id, preferring the copy stored on the token.
+
+    A calendar's id never changes, so caching it on the token row saves a
+    calendarList round trip on every calendar request.
+    """
+    if token.tutoring_calendar_id:
+        return token.tutoring_calendar_id
+
+    cal_id = await _get_tutoring_calendar_id(client, headers, create=create)
+    if cal_id:
+        token.tutoring_calendar_id = cal_id
+        await db.commit()
+    return cal_id
+
+
+async def _forget_calendar_id(token: GoogleCalendarToken, db: AsyncSession) -> None:
+    """Drop the stored id after Google rejects it, so the next call re-looks it up."""
+    token.tutoring_calendar_id = None
+    await db.commit()
+
+
+async def _post_event(
+    client: httpx.AsyncClient,
+    headers: dict,
+    token: GoogleCalendarToken,
+    db: AsyncSession,
+    body: dict,
+) -> httpx.Response:
+    """Create an event on the Tutoring calendar, retrying once against a fresh
+    calendar id if the stored one has gone stale."""
+    cal_id = await _resolve_calendar_id(client, headers, token, db, create=True)
+    resp = await client.post(_EVENTS_URL.format(calendar_id=cal_id), json=body, headers=headers)
+    if resp.status_code in (404, 410):
+        await _forget_calendar_id(token, db)
+        cal_id = await _resolve_calendar_id(client, headers, token, db, create=True)
+        resp = await client.post(_EVENTS_URL.format(calendar_id=cal_id), json=body, headers=headers)
+    return resp
 
 
 def _event_sort_key(event: dict) -> str:
@@ -222,7 +270,7 @@ async def fetch_events(
     """Fetch all events on the Tutoring calendar in the given window, sorted
     ascending by start time. Returns an empty list if the calendar doesn't exist
     yet."""
-    access_token, _ = await _resolve_token(user_id, db)
+    access_token, token = await _resolve_token(user_id, db)
     headers = {"Authorization": f"Bearer {access_token}"}
 
     params = {
@@ -235,17 +283,27 @@ async def fetch_events(
 
     all_events: list[dict] = []
     async with httpx.AsyncClient() as client:
-        cal_id = await _get_tutoring_calendar_id(client, headers, create=False)
+        cal_id = await _resolve_calendar_id(client, headers, token, db, create=False)
         if not cal_id:
             return []
 
         page_params = params
+        retried = False
         while True:
             ev_resp = await client.get(
                 _EVENTS_URL.format(calendar_id=cal_id),
                 params=page_params,
                 headers=headers,
             )
+            if ev_resp.status_code in (404, 410) and not retried:
+                retried = True
+                await _forget_calendar_id(token, db)
+                cal_id = await _resolve_calendar_id(client, headers, token, db, create=False)
+                if not cal_id:
+                    return []
+                all_events.clear()
+                page_params = params
+                continue
             if ev_resp.status_code != 200:
                 break
             data = ev_resp.json()
@@ -273,11 +331,10 @@ async def create_one_off_event(
     db: AsyncSession,
     location: str | None = None,
 ) -> dict:
-    access_token, _ = await _resolve_token(user_id, db)
+    access_token, token = await _resolve_token(user_id, db)
     headers = {"Authorization": f"Bearer {access_token}"}
     async with httpx.AsyncClient() as client:
         tz = await _fetch_timezone(client, access_token)
-        cal_id = await _get_tutoring_calendar_id(client, headers, create=True)
         body = {
             "summary": summary,
             "start": {"dateTime": f"{date_str}T{start_time}:00", "timeZone": tz},
@@ -286,11 +343,7 @@ async def create_one_off_event(
         }
         if location:
             body["location"] = location
-        resp = await client.post(
-            _EVENTS_URL.format(calendar_id=cal_id),
-            json=body,
-            headers=headers,
-        )
+        resp = await _post_event(client, headers, token, db, body)
         resp.raise_for_status()
         return resp.json()
 
@@ -325,14 +378,13 @@ async def create_recurring_events(
     One RRULE event is created per day so each day can have its own start/end time.
     A blank end_date_str creates events that repeat forever.
     """
-    access_token, _ = await _resolve_token(user_id, db)
+    access_token, token = await _resolve_token(user_id, db)
     start_date = date.fromisoformat(start_date_str)
 
     created: list[dict] = []
     async with httpx.AsyncClient() as client:
         tz = await _fetch_timezone(client, access_token)
         headers = {"Authorization": f"Bearer {access_token}"}
-        cal_id = await _get_tutoring_calendar_id(client, headers, create=True)
 
         for config in day_configs:
             weekday = config["weekday"]
@@ -349,11 +401,7 @@ async def create_recurring_events(
             }
             if location:
                 body["location"] = location
-            resp = await client.post(
-                _EVENTS_URL.format(calendar_id=cal_id),
-                json=body,
-                headers=headers,
-            )
+            resp = await _post_event(client, headers, token, db, body)
             if resp.status_code in (200, 201):
                 created.append(resp.json())
 

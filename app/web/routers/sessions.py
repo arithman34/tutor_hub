@@ -23,6 +23,14 @@ router = APIRouter(tags=["Web Sessions"])
 templates = Jinja2Templates(directory="templates")
 
 
+_PERIOD_WINDOWS: dict[str, tuple[int, int]] = {
+    "past": (-90, 0),
+    "today": (-1, 1),
+    "future": (0, 90),
+    "all": (-180, 180),
+}
+
+
 @router.get("/sessions", response_class=HTMLResponse)
 async def sessions_list(
     request: Request,
@@ -73,8 +81,9 @@ async def sessions_list(
     period = period or "all"
 
     now = datetime.now(timezone.utc)
-    time_min = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    time_max = now + timedelta(days=365)
+    days_before, days_after = _PERIOD_WINDOWS.get(period, _PERIOD_WINDOWS["all"])
+    time_min = now + timedelta(days=days_before)
+    time_max = now + timedelta(days=days_after)
 
     error = None
     events = []
@@ -83,8 +92,13 @@ async def sessions_list(
     except Exception as exc:
         error = str(exc)
 
-    logged = (await db.execute(select(Session).options(joinedload(Session.student)).where(Session.user_id == user.id))).unique().scalars().all()
-    logged_by_event = {s.calendar_event_id: s for s in logged if s.calendar_event_id}
+    logged_rows = await db.execute(
+        select(Session.calendar_event_id, Session.id).where(
+            Session.user_id == user.id,
+            Session.calendar_event_id.isnot(None),
+        )
+    )
+    logged_by_event = {event_id: session_id for event_id, session_id in logged_rows}
 
     students = (await db.execute(select(Student).where(Student.user_id == user.id, Student.is_active == True))).scalars().all()
     student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
@@ -93,13 +107,13 @@ async def sessions_list(
     items = []
     for event in events:
         parsed = google_calendar_service.parse_event(event)
-        sess = logged_by_event.get(parsed["event_id"])
+        session_id = logged_by_event.get(parsed["event_id"])
         student = student_by_name.get(parsed["student_name"]) or student_by_first.get(parsed["student_name"])
         items.append(
             {
                 **parsed,
-                "logged": sess is not None,
-                "session_id": str(sess.id) if sess else None,
+                "logged": session_id is not None,
+                "session_id": str(session_id) if session_id else None,
                 "student_id": str(student.id) if student else None,
             }
         )

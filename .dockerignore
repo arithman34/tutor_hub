@@ -1,0 +1,29 @@
+# Secrets — runtime config comes from compose env_file / SSM, never the image.
+.env
+.env.*
+!.env.example
+
+# Host-only virtualenv (Windows binaries) and JS deps.
+.venv/
+node_modules/
+
+# Infra state and provider binaries — hundreds of MB, never needed at runtime.
+terraform/
+
+# VCS and CI.
+.git/
+.gitignore
+.github/
+
+# Build/test artefacts.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+htmlcov/
+.coverage
+celerybeat-schedule
+
+# Container tooling itself.
+Dockerfile
+.dockerignore
+docker-compose*.yml
