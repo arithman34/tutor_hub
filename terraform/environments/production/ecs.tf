@@ -25,6 +25,8 @@ locals {
     { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
     { name = "GOOGLE_REDIRECT_URI", value = "https://${var.domain_name}/calendar/callback" },
     { name = "FROM_EMAIL", value = var.from_email },
+    { name = "BACKUP_BUCKET", value = local.foundation.backup_bucket },
+    { name = "AWS_REGION", value = var.aws_region },
   ]
 
   container_secrets = [

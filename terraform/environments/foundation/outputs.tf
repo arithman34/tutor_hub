@@ -37,6 +37,11 @@ output "task_role_arn" {
   value = aws_iam_role.task.arn
 }
 
+output "backup_bucket" {
+  description = "Bucket the weekly data export is written to. Set as BACKUP_BUCKET on the beat/worker containers."
+  value       = aws_s3_bucket.backups.id
+}
+
 output "deploy_role_arn" {
   description = "Set as the AWS_DEPLOY_ROLE_ARN secret in the GitHub repo."
   value       = aws_iam_role.github_deploy.arn
@@ -45,11 +50,11 @@ output "deploy_role_arn" {
 output "ssm_parameter_arns" {
   description = "Map of secret name -> SSM parameter ARN, for use in ECS task definition `secrets` blocks."
   value = {
-    database_url         = aws_ssm_parameter.database_url.arn
-    secret_key            = aws_ssm_parameter.secret_key.arn
-    openai_api_key        = aws_ssm_parameter.openai_api_key.arn
-    resend_api_key        = aws_ssm_parameter.resend_api_key.arn
-    google_client_secret  = aws_ssm_parameter.google_client_secret.arn
+    database_url            = aws_ssm_parameter.database_url.arn
+    secret_key              = aws_ssm_parameter.secret_key.arn
+    openai_api_key          = aws_ssm_parameter.openai_api_key.arn
+    resend_api_key          = aws_ssm_parameter.resend_api_key.arn
+    google_client_secret    = aws_ssm_parameter.google_client_secret.arn
     cloudflare_tunnel_token = aws_ssm_parameter.cloudflare_tunnel_token.arn
   }
 }

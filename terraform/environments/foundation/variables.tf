@@ -40,6 +40,12 @@ variable "admin_cidrs" {
   default     = []
 }
 
+variable "backup_retention_days" {
+  description = "How long weekly data exports are kept in the backups bucket before expiring."
+  type        = number
+  default     = 365
+}
+
 variable "secret_key" {
   description = "JWT signing key for the app."
   type        = string

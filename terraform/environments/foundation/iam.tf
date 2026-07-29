@@ -64,6 +64,22 @@ resource "aws_iam_role_policy" "task_exec_command" {
   policy = data.aws_iam_policy_document.ecs_exec.json
 }
 
+# The weekly export task only ever writes new objects. It never reads, lists,
+# or deletes, so restoring a backup stays a deliberate manual step.
+data "aws_iam_policy_document" "write_backups" {
+  statement {
+    sid       = "PutWeeklyExport"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.backups.arn}/exports/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "task_write_backups" {
+  name   = "write-backups"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.write_backups.json
+}
+
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]

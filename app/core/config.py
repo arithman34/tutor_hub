@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     resend_api_key: str = ""
     from_email: str = ""
+    backup_bucket: str = ""
+    aws_region: str = "eu-west-2"
     embedding_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4o-mini"
     chunk_size: int = 800
