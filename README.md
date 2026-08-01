@@ -1,5 +1,8 @@
 # TutorHub
 
+[![Deploy](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml/badge.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
+[![coverage](https://arithman34.github.io/tutor_hub/badges/coverage.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
+
 A full-stack tutoring management platform. The backend is a FastAPI REST API with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. Integrates with Google Calendar and uses OpenAI to parse Zoom session summaries into structured notes.
 
 **Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login) | **API Docs:** [tutorhub.arithman.dev/docs](https://tutorhub.arithman.dev/docs)
