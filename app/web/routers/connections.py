@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.google_calendar_token import GoogleCalendarToken
 from app.models.user import User
+from app.services import google_calendar as google_calendar_service
 from app.web.deps import get_current_user_from_cookie
 
 router = APIRouter(prefix="/connections", tags=["Connections"])
@@ -23,7 +24,7 @@ async def connections_page(
         select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id)
     )
     token = result.scalar_one_or_none()
-    google_connected = token is not None
+    google_connected = google_calendar_service.is_connected(token)
 
     error = request.query_params.get("error")
     error_msg = None

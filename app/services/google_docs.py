@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.google_calendar_token import GoogleCalendarToken
-from app.services.google_calendar import _get_valid_access_token
+from app.services.google_calendar import _get_valid_access_token, is_connected
 
 _DRIVE_UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
 
@@ -14,7 +14,7 @@ _DRIVE_UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
 async def _get_token(user_id, db: AsyncSession) -> str:
     result = await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user_id))
     token = result.scalar_one_or_none()
-    if not token:
+    if not is_connected(token):
         raise ValueError("Google not connected — cannot update ILP.")
     return await _get_valid_access_token(token, db)
 

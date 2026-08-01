@@ -1,4 +1,49 @@
-from app.services.google_calendar import build_event_title, build_rrule, parse_event
+from urllib.parse import parse_qs, urlparse
+
+from app.services.google_calendar import (
+    build_connect_url,
+    build_event_title,
+    build_rrule,
+    is_connected,
+    parse_event,
+)
+
+
+def _requested_scopes() -> set[str]:
+    query = parse_qs(urlparse(build_connect_url("state")).query)
+    return set(query["scope"][0].split())
+
+
+def test_connect_url_requests_only_per_resource_scopes():
+    # Account-wide scopes would drag the app into sensitive scope verification.
+    assert _requested_scopes() == {
+        "https://www.googleapis.com/auth/calendar.app.created",
+        "https://www.googleapis.com/auth/drive.file",
+    }
+
+
+def test_connect_url_asks_for_offline_access():
+    query = parse_qs(urlparse(build_connect_url("state")).query)
+    assert query["access_type"] == ["offline"]
+    assert query["state"] == ["state"]
+
+
+class _FakeToken:
+    def __init__(self, refresh_token):
+        self.refresh_token = refresh_token
+
+
+def test_is_connected_requires_a_refresh_token():
+    assert is_connected(_FakeToken("refresh")) is True
+
+
+def test_is_connected_rejects_a_disconnected_row():
+    # disconnect_token leaves the row behind to preserve tutoring_calendar_id.
+    assert is_connected(_FakeToken(None)) is False
+
+
+def test_is_connected_rejects_missing_token():
+    assert is_connected(None) is False
 
 
 def test_build_event_title_appends_tuition_suffix():

@@ -32,7 +32,7 @@ async def calendar_create_page(
     user: User = Depends(get_current_user_from_cookie),
 ):
     result = await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id))
-    if not result.scalar_one_or_none():
+    if not google_calendar_service.is_connected(result.scalar_one_or_none()):
         return RedirectResponse(url="/connections?error=not_connected")
 
     students_result = await db.execute(
@@ -161,6 +161,5 @@ async def calendar_disconnect(
     result = await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user.id))
     token = result.scalar_one_or_none()
     if token:
-        await db.delete(token)
-        await db.commit()
+        await google_calendar_service.disconnect_token(token, db)
     return RedirectResponse(url="/connections", status_code=303)

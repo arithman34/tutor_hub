@@ -10,15 +10,16 @@ from app.models.google_calendar_token import GoogleCalendarToken
 
 _AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
-_CALENDAR_LIST_URL = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
 _CALENDARS_URL = "https://www.googleapis.com/calendar/v3/calendars"
 _EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
-_PRIMARY_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary"
 
+# Both scopes are per-resource rather than account-wide: calendar.app.created
+# reaches only calendars this app made, drive.file only files this app made.
+# Keeping them narrow is what keeps TutorHub off Google's sensitive scope
+# verification, and so off the "Google hasn't verified this app" screen.
 _SCOPE = " ".join(
     [
-        "https://www.googleapis.com/auth/calendar",
-        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/calendar.app.created",
         "https://www.googleapis.com/auth/drive.file",
     ]
 )
@@ -98,6 +99,27 @@ async def exchange_code(code: str, user_id, db: AsyncSession) -> None:
     await db.commit()
 
 
+def is_connected(token: GoogleCalendarToken | None) -> bool:
+    """A row alone doesn't mean connected — disconnect_token leaves it behind."""
+    return token is not None and token.refresh_token is not None
+
+
+async def disconnect_token(token: GoogleCalendarToken, db: AsyncSession) -> None:
+    """Clear the credentials but keep the row, so tutoring_calendar_id survives.
+
+    calendar.app.created can't search the user's calendarList, so the stored id
+    is our only handle on the Tutoring calendar. Deleting it would mean the next
+    reconnect silently created a second calendar and orphaned every event on the
+    first one.
+    """
+    now = datetime.now(timezone.utc)
+    token.access_token = ""
+    token.refresh_token = None
+    token.expires_at = now
+    token.updated_at = now
+    await db.commit()
+
+
 async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) -> str:
     if datetime.now(timezone.utc) < token.expires_at:
         return token.access_token
@@ -119,8 +141,7 @@ async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) 
     if resp.status_code == 400:
         # Refresh token was rejected (revoked, or expired — e.g. Google auto-expires
         # test-user refresh tokens after 7 days while the OAuth app is unpublished).
-        await db.delete(token)
-        await db.commit()
+        await disconnect_token(token, db)
         raise ValueError("Google Calendar connection expired — please reconnect.")
 
     resp.raise_for_status()
@@ -137,39 +158,15 @@ async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) 
 async def _resolve_token(user_id, db: AsyncSession) -> tuple[str, GoogleCalendarToken]:
     result = await db.execute(select(GoogleCalendarToken).where(GoogleCalendarToken.user_id == user_id))
     token = result.scalar_one_or_none()
-    if not token:
+    if not is_connected(token):
         raise ValueError("Google Calendar not connected.")
     return await _get_valid_access_token(token, db), token
 
 
-async def _fetch_timezone(client: httpx.AsyncClient, access_token: str) -> str:
-    resp = await client.get(
-        _PRIMARY_CALENDAR_URL,
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
-    if resp.status_code == 200:
-        return resp.json().get("timeZone", "UTC")
-    return "UTC"
-
-
-async def _get_tutoring_calendar_id(client: httpx.AsyncClient, headers: dict, *, create: bool) -> str | None:
-    """Return the id of the user's "Tutoring" calendar, creating it if missing.
-
-    When create is False (read paths) a missing calendar returns None instead of
-    creating one, so we never make an empty calendar just by listing sessions.
-    """
-    resp = await client.get(_CALENDAR_LIST_URL, headers=headers)
-    resp.raise_for_status()
-    for item in resp.json().get("items", []):
-        if item.get("summary") == _TUTORING_CALENDAR_NAME:
-            return item["id"]
-
-    if not create:
-        return None
-
+async def _create_tutoring_calendar(client: httpx.AsyncClient, headers: dict) -> str:
     resp = await client.post(
         _CALENDARS_URL,
-        json={"summary": _TUTORING_CALENDAR_NAME},
+        json={"summary": _TUTORING_CALENDAR_NAME, "timeZone": settings.google_calendar_timezone},
         headers=headers,
     )
     resp.raise_for_status()
@@ -184,18 +181,22 @@ async def _resolve_calendar_id(
     *,
     create: bool,
 ) -> str | None:
-    """Return the Tutoring calendar id, preferring the copy stored on the token.
+    """Return the Tutoring calendar id, creating the calendar on first use.
 
-    A calendar's id never changes, so caching it on the token row saves a
-    calendarList round trip on every calendar request.
+    The id stored on the token row is the only record of which calendar is ours:
+    calendar.app.created grants no calendarList access, so there is no way to
+    find the calendar again by name. When create is False (read paths) a missing
+    id returns None, so we never make an empty calendar just by listing sessions.
     """
     if token.tutoring_calendar_id:
         return token.tutoring_calendar_id
 
-    cal_id = await _get_tutoring_calendar_id(client, headers, create=create)
-    if cal_id:
-        token.tutoring_calendar_id = cal_id
-        await db.commit()
+    if not create:
+        return None
+
+    cal_id = await _create_tutoring_calendar(client, headers)
+    token.tutoring_calendar_id = cal_id
+    await db.commit()
     return cal_id
 
 
@@ -333,8 +334,8 @@ async def create_one_off_event(
 ) -> dict:
     access_token, token = await _resolve_token(user_id, db)
     headers = {"Authorization": f"Bearer {access_token}"}
+    tz = settings.google_calendar_timezone
     async with httpx.AsyncClient() as client:
-        tz = await _fetch_timezone(client, access_token)
         body = {
             "summary": summary,
             "start": {"dateTime": f"{date_str}T{start_time}:00", "timeZone": tz},
@@ -380,10 +381,10 @@ async def create_recurring_events(
     """
     access_token, token = await _resolve_token(user_id, db)
     start_date = date.fromisoformat(start_date_str)
+    tz = settings.google_calendar_timezone
 
     created: list[dict] = []
     async with httpx.AsyncClient() as client:
-        tz = await _fetch_timezone(client, access_token)
         headers = {"Authorization": f"Bearer {access_token}"}
 
         for config in day_configs:
