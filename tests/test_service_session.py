@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 
 from app.auth import hash_password
 from app.exceptions import ForbiddenError, NotFoundError
+from app.models.payee import Payee
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import User, UserRole
@@ -26,8 +28,8 @@ async def _make_user(db, email, role=UserRole.tutor):
     return user
 
 
-async def _make_student(db, user_id, first_name="Jane", last_name="Doe"):
-    student = Student(user_id=user_id, first_name=first_name, last_name=last_name)
+async def _make_student(db, user_id, first_name="Jane", last_name="Doe", **kwargs):
+    student = Student(user_id=user_id, first_name=first_name, last_name=last_name, **kwargs)
     db.add(student)
     await db.commit()
     await db.refresh(student)
@@ -74,7 +76,9 @@ async def test_update_session_no_show_nulls_content_fields(db):
     tutor = await _make_user(db, "tutor@test.com")
     student = await _make_student(db, tutor.id)
     session = await _make_session(
-        db, tutor.id, student.id,
+        db,
+        tutor.id,
+        student.id,
         work_covered="Some work",
         tutor_actions="Some actions",
         student_actions="Some student actions",
@@ -118,3 +122,79 @@ async def test_delete_session_forbidden_for_other_tutor(db):
         await session_service.delete_session(db, session.id, tutor2)
 
 
+async def _create_session(db, user_id, student_id):
+    return await session_service.create_session(
+        db,
+        user_id=user_id,
+        student_id=student_id,
+        session_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
+        session_start_time=datetime(2024, 1, 15, 9, 0, tzinfo=timezone.utc),
+        session_end_time=datetime(2024, 1, 15, 10, 0, tzinfo=timezone.utc),
+    )
+
+
+async def test_create_session_refreshes_ilp_document(db, monkeypatch):
+    tutor = await _make_user(db, "tutor@test.com")
+    payee = Payee(user_id=tutor.id, first_name="Pat", last_name="Payer")
+    db.add(payee)
+    await db.commit()
+    await db.refresh(payee)
+    student = await _make_student(db, tutor.id, google_doc_id="doc-123", payee_id=payee.id)
+
+    update = AsyncMock()
+    monkeypatch.setattr(session_service.gdocs_service, "update_ilp_document", update)
+
+    session = await _create_session(db, tutor.id, student.id)
+
+    assert session.ilp_generated_at is not None
+    args = update.await_args.args
+    assert args[0] == tutor.id
+    assert args[1] == "doc-123"
+    assert args[3].id == payee.id
+
+
+async def test_create_session_skips_ilp_without_google_doc(db, monkeypatch):
+    tutor = await _make_user(db, "tutor@test.com")
+    student = await _make_student(db, tutor.id)
+
+    update = AsyncMock()
+    monkeypatch.setattr(session_service.gdocs_service, "update_ilp_document", update)
+
+    session = await _create_session(db, tutor.id, student.id)
+
+    assert session.ilp_generated_at is None
+    update.assert_not_awaited()
+
+
+async def test_create_session_survives_ilp_failure(db, monkeypatch):
+    tutor = await _make_user(db, "tutor@test.com")
+    student = await _make_student(db, tutor.id, google_doc_id="doc-123")
+
+    update = AsyncMock(side_effect=RuntimeError("google is down"))
+    monkeypatch.setattr(session_service.gdocs_service, "update_ilp_document", update)
+
+    session = await _create_session(db, tutor.id, student.id)
+
+    assert session.id is not None
+    assert session.ilp_generated_at is None
+
+
+async def test_create_session_blanks_content_when_no_show(db):
+    tutor = await _make_user(db, "tutor@test.com")
+    student = await _make_student(db, tutor.id)
+
+    session = await session_service.create_session(
+        db,
+        user_id=tutor.id,
+        student_id=student.id,
+        session_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
+        session_start_time=datetime(2024, 1, 15, 9, 0, tzinfo=timezone.utc),
+        session_end_time=datetime(2024, 1, 15, 10, 0, tzinfo=timezone.utc),
+        is_no_show=True,
+        work_covered="Some work",
+        topic_tags="algebra",
+    )
+
+    assert session.is_no_show is True
+    assert session.work_covered is None
+    assert session.topic_tags is None

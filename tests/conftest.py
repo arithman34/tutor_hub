@@ -10,10 +10,9 @@ import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-
-from sqlalchemy import text
 
 from app.auth import create_access_token, hash_password
 from app.core.database import Base, get_db
@@ -44,7 +43,7 @@ TestingAsyncSessionLocal = async_sessionmaker(engine, autocommit=False, autoflus
 def create_test_database():
     async def _create():
         conn = await asyncpg.connect(
-            host="localhost",
+            host="127.0.0.1",
             port=5432,
             user=POSTGRES_USER,
             password=POSTGRES_PASSWORD,
@@ -72,10 +71,16 @@ def create_tables(create_test_database):
 
 @pytest_asyncio.fixture(autouse=True)
 async def clean_tables():
-    yield
+    """Truncate before each test rather than after.
+
+    Cleaning up front means a test starts from a known-empty database even if the
+    previous test crashed, or a previous run was interrupted before its teardown
+    ran. It also removes any ordering dependency on the `db` fixture's teardown.
+    """
     async with engine.begin() as conn:
         table_names = ", ".join(t.name for t in Base.metadata.sorted_tables)
         await conn.execute(text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
+    yield
 
 
 @pytest_asyncio.fixture()
@@ -131,8 +136,14 @@ async def tutor_user(db):
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return {"id": str(user.id), "email": user.email, "first_name": user.first_name,
-            "last_name": user.last_name, "role": user.role.value, "is_active": user.is_active}
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role.value,
+        "is_active": user.is_active,
+    }
 
 
 @pytest_asyncio.fixture()
@@ -171,8 +182,14 @@ async def second_tutor_user(db):
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return {"id": str(user.id), "email": user.email, "first_name": user.first_name,
-            "last_name": user.last_name, "role": user.role.value, "is_active": user.is_active}
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role.value,
+        "is_active": user.is_active,
+    }
 
 
 @pytest_asyncio.fixture()
@@ -193,6 +210,12 @@ async def student(db, tutor_user):
     db.add(s)
     await db.commit()
     await db.refresh(s)
-    return {"id": str(s.id), "first_name": s.first_name, "last_name": s.last_name,
-            "level": s.level, "hourly_rate": s.hourly_rate, "user_id": str(s.user_id),
-            "is_active": s.is_active}
+    return {
+        "id": str(s.id),
+        "first_name": s.first_name,
+        "last_name": s.last_name,
+        "level": s.level,
+        "hourly_rate": s.hourly_rate,
+        "user_id": str(s.user_id),
+        "is_active": s.is_active,
+    }

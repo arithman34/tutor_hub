@@ -1,9 +1,11 @@
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 
 from app.auth import hash_password
 from app.exceptions import ForbiddenError, NotFoundError
+from app.models.payee import Payee
 from app.models.student import Student
 from app.models.user import User, UserRole
 from app.services import student as student_service
@@ -110,3 +112,53 @@ async def test_delete_student_forbidden_for_tutor(db):
     student = await _make_student(db, tutor.id)
     with pytest.raises(ForbiddenError):
         await student_service.delete_student(db, student.id, tutor)
+
+
+async def test_create_student_generates_ilp_document(db, monkeypatch):
+    admin = await _make_user(db, "admin@test.com", UserRole.admin)
+    tutor = await _make_user(db, "tutor@test.com")
+    payee = Payee(user_id=tutor.id, first_name="Pat", last_name="Payer")
+    db.add(payee)
+    await db.commit()
+    await db.refresh(payee)
+
+    create = AsyncMock(return_value="new-doc-id")
+    monkeypatch.setattr(student_service.gdocs_service, "create_ilp_document", create)
+
+    student = await student_service.create_student(db, admin, user_id=tutor.id, first_name="jane", last_name="doe", payee_id=payee.id)
+
+    assert student.google_doc_id == "new-doc-id"
+    assert student.first_name == "Jane"
+    assert create.await_args.args[2].id == payee.id
+
+
+async def test_create_student_keeps_existing_google_doc(db, monkeypatch):
+    admin = await _make_user(db, "admin@test.com", UserRole.admin)
+    tutor = await _make_user(db, "tutor@test.com")
+
+    create = AsyncMock()
+    monkeypatch.setattr(student_service.gdocs_service, "create_ilp_document", create)
+
+    student = await student_service.create_student(db, admin, user_id=tutor.id, first_name="Jane", last_name="Doe", google_doc_id="existing-doc")
+
+    assert student.google_doc_id == "existing-doc"
+    create.assert_not_awaited()
+
+
+async def test_create_student_survives_ilp_failure(db, monkeypatch):
+    admin = await _make_user(db, "admin@test.com", UserRole.admin)
+    tutor = await _make_user(db, "tutor@test.com")
+
+    create = AsyncMock(side_effect=RuntimeError("google is down"))
+    monkeypatch.setattr(student_service.gdocs_service, "create_ilp_document", create)
+
+    student = await student_service.create_student(db, admin, user_id=tutor.id, first_name="Jane", last_name="Doe")
+
+    assert student.id is not None
+    assert student.google_doc_id is None
+
+
+async def test_create_student_forbidden_for_tutor(db):
+    tutor = await _make_user(db, "tutor@test.com")
+    with pytest.raises(ForbiddenError):
+        await student_service.create_student(db, tutor, user_id=tutor.id, first_name="Jane", last_name="Doe")
