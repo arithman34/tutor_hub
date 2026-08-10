@@ -1,5 +1,7 @@
+import logging
 import secrets
 import uuid
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -13,6 +15,8 @@ from app.models.student import Student
 from app.models.user import User
 from app.services import google_calendar as google_calendar_service
 from app.web.deps import get_current_user_from_cookie
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/calendar", tags=["Calendar"])
 templates = Jinja2Templates(directory="templates")
@@ -113,7 +117,12 @@ async def calendar_create(
                 location=location,
             )
     except Exception as exc:
-        return RedirectResponse(url=f"/calendar/create?error={exc}", status_code=303)
+        # Some exceptions stringify to "" (httpx.ReadTimeout is one), which used to
+        # render as a blank error banner. Fall back to the class name, and log the
+        # traceback — the redirect is all the user sees, so it can't be the only record.
+        logger.exception("Calendar event creation failed for user %s", user.id)
+        detail = str(exc) or type(exc).__name__
+        return RedirectResponse(url=f"/calendar/create?error={quote(detail)}", status_code=303)
 
     return RedirectResponse(url="/sessions?created=1", status_code=303)
 

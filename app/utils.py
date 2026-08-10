@@ -11,3 +11,10 @@ def cap_name(s: str) -> str:
 def generate_temp_password(length: int = 12) -> str:
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def pct_change(current: float, previous: float) -> float | None:
+    """Percentage change between two periods, or None when there is no baseline."""
+    if not previous:
+        return None
+    return round((current - previous) / previous * 100, 1)

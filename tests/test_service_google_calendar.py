@@ -1,6 +1,12 @@
+import uuid
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
+import pytest
+
+from app.services import google_calendar as gc
 from app.services.google_calendar import (
+    CalendarUnreachableError,
     build_connect_url,
     build_event_title,
     build_rrule,
@@ -114,3 +120,86 @@ def test_build_rrule_blank_end_date_repeats_forever():
 
 def test_build_rrule_none_end_date_repeats_forever():
     assert build_rrule(4, 3, None) == "RRULE:FREQ=WEEKLY;INTERVAL=3;BYDAY=FR"
+
+
+class _FakeResponse:
+    def __init__(self, status_code, payload=None):
+        self.status_code = status_code
+        self._payload = payload or {}
+
+    def json(self):
+        return self._payload
+
+
+class _FakeClient:
+    def __init__(self, responses):
+        self._responses = list(responses)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return False
+
+    async def get(self, url, params=None, headers=None):
+        return self._responses.pop(0)
+
+
+class _StoredToken:
+    def __init__(self, calendar_id):
+        self.tutoring_calendar_id = calendar_id
+        self.refresh_token = "refresh"
+
+
+def _stub_google(monkeypatch, token, responses):
+    async def _resolve_token(user_id, db):
+        return "access-token", token
+
+    monkeypatch.setattr(gc, "_resolve_token", _resolve_token)
+    monkeypatch.setattr(gc.httpx, "AsyncClient", lambda **kwargs: _FakeClient(responses))
+
+
+async def _fetch(token, responses, monkeypatch):
+    _stub_google(monkeypatch, token, responses)
+    now = datetime.now(timezone.utc)
+    return await gc.fetch_events(uuid.uuid4(), now, now + timedelta(days=7), None)
+
+
+async def test_fetch_events_reports_a_calendar_google_cannot_find(monkeypatch):
+    # Used to return [], making an unreachable calendar look like an empty week.
+    with pytest.raises(CalendarUnreachableError):
+        await _fetch(_StoredToken("cal-1"), [_FakeResponse(404)], monkeypatch)
+
+
+async def test_fetch_events_reports_denied_access(monkeypatch):
+    with pytest.raises(CalendarUnreachableError):
+        await _fetch(_StoredToken("cal-1"), [_FakeResponse(403)], monkeypatch)
+
+
+async def test_fetch_events_reports_unexpected_status(monkeypatch):
+    with pytest.raises(CalendarUnreachableError):
+        await _fetch(_StoredToken("cal-1"), [_FakeResponse(500)], monkeypatch)
+
+
+async def test_fetch_events_keeps_the_stored_calendar_id_when_google_rejects_it(monkeypatch):
+    # Clearing it is unrecoverable: calendar.app.created grants no calendarList
+    # access, so a forgotten id can never be looked up again.
+    token = _StoredToken("cal-1")
+    with pytest.raises(CalendarUnreachableError):
+        await _fetch(token, [_FakeResponse(404)], monkeypatch)
+    assert token.tutoring_calendar_id == "cal-1"
+
+
+async def test_fetch_events_returns_nothing_when_no_calendar_exists_yet(monkeypatch):
+    assert await _fetch(_StoredToken(None), [], monkeypatch) == []
+
+
+async def test_fetch_events_sorts_events_by_start_time(monkeypatch):
+    payload = {
+        "items": [
+            {"id": "b", "start": {"dateTime": "2026-06-16T09:00:00+01:00"}},
+            {"id": "a", "start": {"dateTime": "2026-06-15T09:00:00+01:00"}},
+        ]
+    }
+    events = await _fetch(_StoredToken("cal-1"), [_FakeResponse(200, payload)], monkeypatch)
+    assert [e["id"] for e in events] == ["a", "b"]

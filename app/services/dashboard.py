@@ -9,15 +9,10 @@ from app.models.payment import Payment
 from app.models.session import Session
 from app.models.student import Student
 from app.models.user import PayoutType, User, UserRole
+from app.utils import pct_change as _pct_change
 
 _mins = func.extract("epoch", Session.session_end_time - Session.session_start_time) / 60
 _s_hours = func.extract("epoch", Session.session_end_time - Session.session_start_time) / 3600
-
-
-def _pct_change(current: float, previous: float) -> float | None:
-    if not previous:
-        return None
-    return round((current - previous) / previous * 100, 1)
 
 
 async def get_tutor_stats(db: AsyncSession, user: User) -> dict:

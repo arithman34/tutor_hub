@@ -24,6 +24,10 @@ _SCOPE = " ".join(
     ]
 )
 
+# httpx defaults to a 5s read timeout, which calendar creation regularly exceeds
+# — the POST then raises ReadTimeout after Google has already made the calendar.
+_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+
 _DAY_RRULE = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
 
 # All tutoring events live on a dedicated "Tutoring" calendar (created on demand)
@@ -62,7 +66,7 @@ def build_connect_url(state: str) -> str:
 
 
 async def exchange_code(code: str, user_id, db: AsyncSession) -> None:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.post(
             _TOKEN_URL,
             data={
@@ -127,7 +131,7 @@ async def _get_valid_access_token(token: GoogleCalendarToken, db: AsyncSession) 
     if not token.refresh_token:
         raise ValueError("Google Calendar connection expired — please reconnect.")
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.post(
             _TOKEN_URL,
             data={
@@ -200,10 +204,26 @@ async def _resolve_calendar_id(
     return cal_id
 
 
-async def _forget_calendar_id(token: GoogleCalendarToken, db: AsyncSession) -> None:
-    """Drop the stored id after Google rejects it, so the next call re-looks it up."""
-    token.tutoring_calendar_id = None
+class CalendarUnreachableError(Exception):
+    """Google rejected the Tutoring calendar we have on record.
+
+    Raised rather than swallowed so the UI can say so. The stored id is kept: a
+    calendar we can't read today (expired grant, transient 404) is still the only
+    handle we have, and clearing it is unrecoverable — calendar.app.created grants
+    no calendarList access, so nothing can ever look the calendar up again.
+    """
+
+
+async def _rebind_calendar_id(client: httpx.AsyncClient, headers: dict, token: GoogleCalendarToken, db: AsyncSession) -> str:
+    """Point the token at a freshly created calendar, replacing an id Google rejected.
+
+    Create first and only then overwrite, so a failed create leaves the old id in
+    place instead of blanking it.
+    """
+    cal_id = await _create_tutoring_calendar(client, headers)
+    token.tutoring_calendar_id = cal_id
     await db.commit()
+    return cal_id
 
 
 async def _post_event(
@@ -218,8 +238,7 @@ async def _post_event(
     cal_id = await _resolve_calendar_id(client, headers, token, db, create=True)
     resp = await client.post(_EVENTS_URL.format(calendar_id=cal_id), json=body, headers=headers)
     if resp.status_code in (404, 410):
-        await _forget_calendar_id(token, db)
-        cal_id = await _resolve_calendar_id(client, headers, token, db, create=True)
+        cal_id = await _rebind_calendar_id(client, headers, token, db)
         resp = await client.post(_EVENTS_URL.format(calendar_id=cal_id), json=body, headers=headers)
     return resp
 
@@ -283,30 +302,30 @@ async def fetch_events(
     }
 
     all_events: list[dict] = []
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         cal_id = await _resolve_calendar_id(client, headers, token, db, create=False)
         if not cal_id:
             return []
 
         page_params = params
-        retried = False
         while True:
             ev_resp = await client.get(
                 _EVENTS_URL.format(calendar_id=cal_id),
                 params=page_params,
                 headers=headers,
             )
-            if ev_resp.status_code in (404, 410) and not retried:
-                retried = True
-                await _forget_calendar_id(token, db)
-                cal_id = await _resolve_calendar_id(client, headers, token, db, create=False)
-                if not cal_id:
-                    return []
-                all_events.clear()
-                page_params = params
-                continue
+            # Every failure here used to end as an empty list, so "no sessions
+            # yet" and "we can't reach your calendar at all" looked identical.
+            if ev_resp.status_code in (404, 410):
+                raise CalendarUnreachableError(
+                    "Google can no longer find the Tutoring calendar TutorHub created. "
+                    "Reconnecting Google Calendar issues a new grant, which can leave a "
+                    "calendar made under the previous one unreadable."
+                )
+            if ev_resp.status_code == 403:
+                raise CalendarUnreachableError("Google denied access to the Tutoring calendar — please reconnect Google Calendar.")
             if ev_resp.status_code != 200:
-                break
+                raise CalendarUnreachableError(f"Google Calendar returned HTTP {ev_resp.status_code} while listing events.")
             data = ev_resp.json()
             all_events.extend(data.get("items", []))
             next_token = data.get("nextPageToken")
@@ -335,7 +354,7 @@ async def create_one_off_event(
     access_token, token = await _resolve_token(user_id, db)
     headers = {"Authorization": f"Bearer {access_token}"}
     tz = settings.google_calendar_timezone
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         body = {
             "summary": summary,
             "start": {"dateTime": f"{date_str}T{start_time}:00", "timeZone": tz},
@@ -384,7 +403,7 @@ async def create_recurring_events(
     tz = settings.google_calendar_timezone
 
     created: list[dict] = []
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         for config in day_configs:

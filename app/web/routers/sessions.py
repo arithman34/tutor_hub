@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +19,8 @@ from app.services import google_calendar as google_calendar_service
 from app.services import session as session_service
 from app.services.ai import parse_zoom_summary
 from app.web.deps import get_current_user_from_cookie
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Web Sessions"])
 templates = Jinja2Templates(directory="templates")
@@ -95,7 +98,8 @@ async def sessions_list(
     try:
         events = await google_calendar_service.fetch_events(user.id, time_min, time_max, db)
     except Exception as exc:
-        error = str(exc)
+        logger.exception("Fetching Google Calendar events failed for user %s", user.id)
+        error = str(exc) or type(exc).__name__
 
     logged_rows = await db.execute(
         select(Session.calendar_event_id, Session.id).where(
