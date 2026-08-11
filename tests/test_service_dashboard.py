@@ -84,33 +84,11 @@ async def test_get_admin_stats_with_no_data(db):
     stats = await dashboard_service.get_admin_stats(db)
     assert stats["revenue_alltime"] == 0.0
     assert stats["revenue_this_month"] == 0.0
-    assert stats["active_tutors"] == 0
-    assert stats["active_students"] == 0
+    assert stats["revenue_this_year"] == 0.0
     assert stats["sessions_this_month"] == 0
-    assert stats["top_by_hours"] == []
-    assert stats["at_risk_students"] == []
-    assert stats["new_students"] == []
-
-
-async def test_get_admin_stats_counts_tutors_and_students(db):
-    tutor = User(
-        email="tutor@test.com",
-        hashed_password=hash_password("password"),
-        first_name="Test",
-        last_name="Tutor",
-        role=UserRole.tutor,
-        is_active=True,
-    )
-    db.add(tutor)
-    await db.commit()
-    await db.refresh(tutor)
-
-    db.add(Student(user_id=tutor.id, first_name="Test", last_name="Student", is_active=True))
-    await db.commit()
-
-    stats = await dashboard_service.get_admin_stats(db)
-    assert stats["active_tutors"] == 1
-    assert stats["active_students"] == 1
+    assert stats["hours_this_month"] == 0.0
+    assert stats["total_payout_obligations"] == 0.0
+    assert stats["profit_margin"] == 0.0
 
 
 async def test_get_admin_stats_revenue(db):
@@ -140,7 +118,7 @@ async def test_get_admin_stats_revenue(db):
     assert stats["revenue_this_month"] == 150.0
 
 
-async def test_get_admin_stats_top_by_hours(db):
+async def test_get_admin_stats_hours_and_payout_obligations(db):
     now = datetime.now(timezone.utc)
     tutor = User(
         email="tutor@test.com",
@@ -149,6 +127,8 @@ async def test_get_admin_stats_top_by_hours(db):
         last_name="Smith",
         role=UserRole.tutor,
         is_active=True,
+        payout_type=PayoutType.hourly,
+        payout_hourly_rate=20.0,
     )
     db.add(tutor)
     await db.commit()
@@ -170,6 +150,7 @@ async def test_get_admin_stats_top_by_hours(db):
     await db.commit()
 
     stats = await dashboard_service.get_admin_stats(db)
-    assert len(stats["top_by_hours"]) == 1
-    assert stats["top_by_hours"][0]["name"] == "Alice Smith"
-    assert stats["top_by_hours"][0]["hours"] == 2.0
+    assert stats["sessions_this_month"] == 1
+    assert stats["hours_this_month"] == 2.0
+    assert stats["total_payout_obligations"] == 40.0  # 2 hrs x £20 payout rate
+    assert stats["profit_margin"] == -40.0  # no revenue recorded
