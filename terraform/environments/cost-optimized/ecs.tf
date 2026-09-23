@@ -163,5 +163,13 @@ resource "aws_ecs_service" "app" {
     rollback = true
   }
 
+  # The deploy workflow registers a new revision of this family per commit,
+  # pinned to that commit's image, and points the service at it. Without this,
+  # the next apply would reset the service to the :latest revision above.
+  # Edits to the task definition here are picked up on the next deploy.
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   depends_on = [aws_ecs_cluster_capacity_providers.main]
 }
