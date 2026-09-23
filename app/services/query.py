@@ -60,7 +60,10 @@ async def answer_question(
                 "content": (
                     "You are a helpful tutor assistant. Answer the question using only "
                     "the context provided. If the answer is not in the context, say so. "
-                    "Be concise and accurate."
+                    "Be concise and accurate. The answer is displayed as plain text, so never "
+                    "use markdown: no ** or __ for bold, no # headings. For lists, start each "
+                    "item on a new line with a dash. Write mathematical expressions in LaTeX "
+                    "between \\( and \\) so they render as equations."
                 ),
             },
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},

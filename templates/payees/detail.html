@@ -17,7 +17,7 @@
     <div>
         <p class="text-sm text-gray-500">Current Balance</p>
         <p class="text-3xl font-bold mt-0.5 {% if balance < 0 %}text-red-600{% elif balance > 0 %}text-green-600{% else %}text-gray-700 dark:text-gray-300{% endif %}">
-            {% if balance >= 0 %}+{% endif %}£{{ "%.2f"|format(balance) }}
+            {% if balance >= 0 %}+{% else %}-{% endif %}£{{ "%.2f"|format(balance|abs) }}
         </p>
     </div>
     <p class="text-sm text-gray-400 max-w-xs text-right">

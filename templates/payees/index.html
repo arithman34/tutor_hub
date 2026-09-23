@@ -45,7 +45,7 @@
                 <td class="px-6 py-4">{{ payee.students | length }}</td>
                 {% set bal = balances[payee.id | string] %}
                 <td class="px-6 py-4 font-medium {% if bal < 0 %}text-red-600{% elif bal > 0 %}text-green-600{% else %}text-gray-500{% endif %}">
-                    {% if bal >= 0 %}+{% endif %}£{{ "%.2f"|format(bal) }}
+                    {% if bal >= 0 %}+{% else %}-{% endif %}£{{ "%.2f"|format(bal|abs) }}
                 </td>
                 {% if user.is_admin %}
                 <td class="px-6 py-4">{{ payee.user.first_name }} {{ payee.user.last_name }}</td>
