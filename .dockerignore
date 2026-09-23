@@ -27,3 +27,6 @@ celerybeat-schedule
 Dockerfile
 .dockerignore
 docker-compose*.yml
+
+# Local-only demo data seeding
+demo/
