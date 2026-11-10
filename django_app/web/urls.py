@@ -10,6 +10,7 @@ from . import (
     payments_views,
     profile_views,
     sessions_views,
+    setup_views,
     students_views,
     views,
 )
@@ -59,4 +60,5 @@ urlpatterns = [
     path("admin/data/import", admin_views.admin_import, name="web-admin-data-import"),
     path("analytics", analytics_views.analytics_page, name="web-analytics"),
     path("analytics/data", analytics_views.analytics_data, name="web-analytics-data"),
+    path("setup", setup_views.setup_index, name="web-setup"),
 ]

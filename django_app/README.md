@@ -45,8 +45,8 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`setup`) are not ported yet — `app/web` stays the live
-  daily-use app until this one has parity.
+  Every page the FastAPI web app has is now ported — `app/web` can retire
+  once this one has run in production long enough to trust it.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -144,6 +144,11 @@ All six planned apps are scaffolded, plus a frontend has started:
   resolution and filter-options logic the DRF `TrendsView`/
   `FilterOptionsView` already use — so there's no second implementation of
   that logic for the web layer.
+- `setup` (web) — `/setup`, the first-run page: GET shows a plain
+  "create your admin account" form (no sidebar, extends `base.html`
+  directly like `login.html`), POST creates it. Both redirect to `/login`
+  once the `users` table is non-empty, so the page is a no-op after the
+  very first run and needs no auth of its own.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
