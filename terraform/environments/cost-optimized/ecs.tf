@@ -28,7 +28,10 @@ locals {
     { name = "FROM_EMAIL", value = var.from_email },
     { name = "AWS_REGION", value = var.aws_region },
     { name = "DJANGO_DEBUG", value = "false" },
-    { name = "DJANGO_ALLOWED_HOSTS", value = var.domain_name },
+    # "localhost" is needed because the container's own health check hits
+    # http://localhost:8000/health — without it in ALLOWED_HOSTS, Django
+    # returns 400 for that request and ECS marks the task unhealthy.
+    { name = "DJANGO_ALLOWED_HOSTS", value = "${var.domain_name},localhost" },
     { name = "CSRF_TRUSTED_ORIGINS", value = "https://${var.domain_name}" },
     { name = "POSTGRES_HOST", value = local.foundation.rds_address },
     { name = "POSTGRES_PORT", value = "5432" },

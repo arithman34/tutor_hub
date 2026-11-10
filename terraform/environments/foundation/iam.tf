@@ -26,6 +26,7 @@ data "aws_iam_policy_document" "read_secrets" {
     actions = ["ssm:GetParameters"]
     resources = [
       aws_ssm_parameter.database_url.arn,
+      aws_ssm_parameter.db_password.arn,
       aws_ssm_parameter.secret_key.arn,
       aws_ssm_parameter.openai_api_key.arn,
       aws_ssm_parameter.resend_api_key.arn,
