@@ -43,7 +43,7 @@ jobs:
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
         run: |
-          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" django_app
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
           echo "image=$IMAGE:${{ github.sha }}" >> "$GITHUB_OUTPUT"
@@ -60,7 +60,7 @@ jobs:
         run: |
           aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --query taskDefinition \
             | jq --arg image "$IMAGE" '
-                .containerDefinitions |= map(if (.name | IN("api", "worker", "beat")) then .image = $image else . end)
+                .containerDefinitions |= map(if .name == "api" then .image = $image else . end)
                 | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities,
                       .registeredAt, .registeredBy, .deregisteredAt)' \
             > task-definition.json

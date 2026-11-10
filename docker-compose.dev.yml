@@ -1,12 +1,4 @@
 services:
   api:
     volumes:
-      - .:/app
-
-  worker:
-    volumes:
-      - .:/app
-
-  beat:
-    volumes:
-      - .:/app
+      - ./django_app:/app

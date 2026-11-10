@@ -20,20 +20,25 @@ resource "aws_cloudwatch_log_group" "ecs" {
 locals {
   image = "${local.foundation.ecr_repository_url}:latest"
 
-  # Broker now runs as a sidecar container in the same task, reachable over
-  # localhost since all containers share one ENI (awsvpc network mode).
+  # The Django rewrite is a plain synchronous web app — no Celery broker/
+  # worker/beat, so the redis sidecar from the FastAPI setup is gone too.
   container_environment = [
-    { name = "REDIS_URL", value = "redis://localhost:6379/0" },
     { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
     { name = "GOOGLE_REDIRECT_URI", value = "https://${var.domain_name}/calendar/callback" },
     { name = "FROM_EMAIL", value = var.from_email },
-    { name = "BACKUP_BUCKET", value = local.foundation.backup_bucket },
     { name = "AWS_REGION", value = var.aws_region },
+    { name = "DJANGO_DEBUG", value = "false" },
+    { name = "DJANGO_ALLOWED_HOSTS", value = var.domain_name },
+    { name = "CSRF_TRUSTED_ORIGINS", value = "https://${var.domain_name}" },
+    { name = "POSTGRES_HOST", value = local.foundation.rds_address },
+    { name = "POSTGRES_PORT", value = "5432" },
+    { name = "POSTGRES_USER", value = local.foundation.db_username },
+    { name = "POSTGRES_DB", value = local.foundation.db_name_django },
   ]
 
   container_secrets = [
-    { name = "DATABASE_URL", valueFrom = local.foundation.ssm_parameter_arns.database_url },
-    { name = "SECRET_KEY", valueFrom = local.foundation.ssm_parameter_arns.secret_key },
+    { name = "DJANGO_SECRET_KEY", valueFrom = local.foundation.ssm_parameter_arns.secret_key },
+    { name = "POSTGRES_PASSWORD", valueFrom = local.foundation.ssm_parameter_arns.db_password },
     { name = "OPENAI_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.openai_api_key },
     { name = "RESEND_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.resend_api_key },
     { name = "GOOGLE_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.google_client_secret },
@@ -65,11 +70,9 @@ resource "aws_ecs_task_definition" "app" {
       image     = local.image
       essential = true
       command = [
-        "uvicorn", "app.main:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--proxy-headers",
-        "--forwarded-allow-ips", "*",
+        "gunicorn", "config.wsgi:application",
+        "--bind", "0.0.0.0:8000",
+        "--workers", "2",
       ]
       portMappings = [{ containerPort = 8000, protocol = "tcp" }]
       environment  = local.container_environment
@@ -84,40 +87,6 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options   = merge(local.log_options, { awslogs-stream-prefix = "api" })
-      }
-    },
-    {
-      name        = "worker"
-      image       = local.image
-      essential   = true
-      command     = ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
-      environment = local.container_environment
-      secrets     = local.container_secrets
-      logConfiguration = {
-        logDriver = "awslogs"
-        options   = merge(local.log_options, { awslogs-stream-prefix = "worker" })
-      }
-    },
-    {
-      name        = "beat"
-      image       = local.image
-      essential   = true
-      command     = ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
-      environment = local.container_environment
-      secrets     = local.container_secrets
-      logConfiguration = {
-        logDriver = "awslogs"
-        options   = merge(local.log_options, { awslogs-stream-prefix = "beat" })
-      }
-    },
-    {
-      name         = "redis"
-      image        = "valkey/valkey:8-alpine"
-      essential    = true
-      portMappings = [{ containerPort = 6379, protocol = "tcp" }]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options   = merge(local.log_options, { awslogs-stream-prefix = "redis" })
       }
     },
     {
