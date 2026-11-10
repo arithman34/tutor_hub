@@ -16,7 +16,13 @@ repo root. It's being built incrementally, app by app; see the root
 - `billing` — `Payee`/`Payment` models/viewsets (admin-only), `/payees/{id}/balance`
   endpoint (payments received minus billable session cost). `students.payee`
   is now a real `ForeignKey` into this app. Tested.
-- `calendar_integration`, `rag`, `analytics` — not started yet.
+- `rag` — `Document`/`Chunk` models (`Chunk.embedding` via `pgvector.django.VectorField`),
+  PDF ingestion (`pdfplumber` + OpenAI embeddings), and a `/query` endpoint
+  doing cosine-distance retrieval + chat completion. Tutor-only. Tested —
+  note the cosine-distance query tests require a real Postgres + pgvector
+  backend and are skipped under the SQLite test database (see "Running
+  tests" below).
+- `calendar_integration`, `analytics` — not started yet.
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.
@@ -50,4 +56,10 @@ python manage.py test
 ```
 
 Test runs automatically use an in-memory SQLite database (see
-`RUNNING_TESTS` in `config/settings.py`), so no local Postgres is needed.
+`RUNNING_TESTS` in `config/settings.py`), so no local Postgres is needed —
+except for the two `rag` tests that exercise real cosine-distance
+retrieval, which are skipped unless `connection.vendor == "postgresql"`
+(they can't run against sqlite). To cover those too, temporarily remove
+the `RUNNING_TESTS` branch in `config/settings.py` so tests run against a
+real Postgres database with the `vector` extension available, then run
+`python manage.py test rag`.
