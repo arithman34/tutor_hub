@@ -2,7 +2,11 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # Django's own admin site is moved off /admin/ — the web app's own
+    # /admin/users and /admin/data pages (ported from the FastAPI app) use
+    # that path, and Django admin's catch-all view would otherwise swallow
+    # them with a login redirect before web.urls ever sees the request.
+    path("django-admin/", admin.site.urls),
     path("api/v1/auth/", include("accounts.urls")),
     path("api/v1/students/", include("students.urls")),
     path("api/v1/sessions/", include("tutoring_sessions.urls")),

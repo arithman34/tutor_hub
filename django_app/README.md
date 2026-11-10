@@ -45,8 +45,8 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`admin`, `analytics`, `setup`) are not ported yet —
-  `app/web` stays the live daily-use app until this one has parity.
+  Remaining pages (`analytics`, `setup`) are not ported yet — `app/web`
+  stays the live daily-use app until this one has parity.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -122,6 +122,21 @@ All six planned apps are scaffolded, plus a frontend has started:
   "role is managed by an administrator" UI for plain tutors),
   `POST /profile/password` (requires the current password via
   `user.check_password`).
+- `admin` (web) — `/admin/users` (admin-only list/create of tutors, toggle
+  active, edit payout config via a modal, delete — only when the tutor has
+  no linked students/sessions/payments/payees), `/admin/data` (full JSON
+  export of every table via `/admin/data/export`, and a destructive
+  wipe-and-replace `POST /admin/data/import`). Creating a tutor emails them
+  a generated temporary password via Resend (`RESEND_API_KEY`/`FROM_EMAIL`
+  settings) — a send failure is logged and swallowed, matching the
+  original FastAPI app, since the account is still usable without the
+  email. **Django's own admin site was moved from `/admin/` to
+  `/django-admin/`** (see `config/urls.py`) — the FastAPI app's `/admin/*`
+  web pages collide with it otherwise: `django.contrib.admin`'s URLconf
+  claims the whole `/admin/` prefix and its catch-all view intercepts
+  unmatched sub-paths with a login redirect before `web.urls` ever sees
+  the request, so `/admin/users` 302'd to the Django admin login instead
+  of reaching our view.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
