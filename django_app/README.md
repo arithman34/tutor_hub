@@ -49,6 +49,18 @@ All six planned apps are scaffolded, plus a frontend has started:
   `calendar`, `connections`, `profile`, `admin`, `analytics`, `setup`) are
   not ported yet — `app/web` stays the live daily-use app until this one has
   parity.
+- `students` (web) — `/students` (list/search), `/students/new` + `POST
+  /students` (admin-only create), `/students/<uuid>` detail with inline
+  update/toggle-active/delete forms. Same permission rules as the DRF
+  `StudentViewSet`.
+
+Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
+`Client` doesn't enforce CSRF by default, so a template missing it can pass
+every test while still 403ing for a real browser. Each page group's tests
+include a `Client(enforce_csrf_checks=True)` regression test for this
+(see `web/test_students.py:StudentFormsCsrfTests` for the pattern) — this
+bit me once already (caught by the manual browser check, not the test
+suite) and is worth repeating for every new page.
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.

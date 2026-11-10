@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -15,6 +15,29 @@ from . import services
 
 def make_user(email, role=UserRole.TUTOR, **extra):
     return User.objects.create_user(email=email, password="s3cret-pass", first_name="A", last_name="B", role=role, **extra)
+
+
+class AuthFormsCsrfTests(TestCase):
+    """Client() doesn't enforce CSRF, so these use a CSRF-enforcing client —
+    see web/test_students.py:StudentFormsCsrfTests for why."""
+
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+
+    def test_login_form_includes_working_csrf_token(self):
+        self.client.get("/login")
+        token = self.client.cookies["csrftoken"].value
+        user = make_user("tutor@example.com")
+        response = self.client.post("/login", {"email": user.email, "password": "s3cret-pass", "csrfmiddlewaretoken": token})
+        self.assertEqual(response.status_code, 302)
+
+    def test_logout_form_includes_working_csrf_token(self):
+        user = make_user("tutor@example.com")
+        self.client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
+        self.client.get("/dashboard")
+        token = self.client.cookies["csrftoken"].value
+        response = self.client.post("/logout", {"csrfmiddlewaretoken": token})
+        self.assertEqual(response.status_code, 302)
 
 
 class LoginPageTests(TestCase):
