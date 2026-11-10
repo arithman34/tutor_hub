@@ -157,12 +157,11 @@ def _serialize(value):
     return value
 
 
-@admin_required
-def admin_export(request):
+def build_export_data() -> dict:
     def rows(model):
         return [{f.attname: _serialize(getattr(obj, f.attname)) for f in model._meta.fields} for obj in model.objects.all()]
 
-    data = {
+    return {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "version": "1",
         "users": rows(User),
@@ -171,6 +170,11 @@ def admin_export(request):
         "sessions": rows(Session),
         "payments": rows(Payment),
     }
+
+
+@admin_required
+def admin_export(request):
+    data = build_export_data()
     filename = f"tutorhub_export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
     response = HttpResponse(json.dumps(data, indent=2), content_type="application/json")
     response["Content-Disposition"] = f"attachment; filename={filename}"

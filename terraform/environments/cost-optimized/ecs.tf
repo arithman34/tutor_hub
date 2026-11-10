@@ -37,6 +37,7 @@ locals {
     { name = "POSTGRES_PORT", value = "5432" },
     { name = "POSTGRES_USER", value = local.foundation.db_username },
     { name = "POSTGRES_DB", value = local.foundation.db_name_django },
+    { name = "BACKUP_BUCKET", value = local.foundation.backup_bucket },
   ]
 
   container_secrets = [

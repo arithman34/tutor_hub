@@ -3,9 +3,11 @@
 [![Deploy](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml/badge.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 [![coverage](https://raw.githubusercontent.com/arithman34/tutor_hub/gh-pages/badges/coverage.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 
-A full-stack tutoring management platform. The backend is a FastAPI REST API with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and answers questions over uploaded teaching documents using retrieval-augmented generation (RAG) on pgvector.
+A full-stack tutoring management platform. The backend is Django + Django REST Framework with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and answers questions over uploaded teaching documents using retrieval-augmented generation (RAG) on pgvector.
 
-**Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login) | **API Docs:** [tutorhub.arithman.dev/docs](https://tutorhub.arithman.dev/docs)
+**Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login)
+
+> The app started as a FastAPI project (still in [`app/`](app/) for reference, with its own tests and docs below) and was rewritten on Django + DRF, which is what's actually running in production now — see [`django_app/`](django_app) and its [README](django_app/README.md) for the current implementation. `app/`'s CI job was retired since nothing deploys it anymore; the code stays for reference.
 
 ## Screenshots
 
@@ -43,7 +45,7 @@ A full-stack tutoring management platform. The backend is a FastAPI REST API wit
 
 ## Document Q&A (RAG)
 
-Tutors upload PDFs from the **Documents** page and ask questions across them. Retrieval runs inside the main app, against the same PostgreSQL database, using pgvector.
+Tutors upload PDFs from the **Documents** page and ask questions across them. Retrieval runs inside the main app, against the same PostgreSQL database, using pgvector. (Described below as originally built in FastAPI; the live Django port works the same way — see [`django_app/rag/services.py`](django_app/rag/services.py).)
 
 **Ingestion** ([`app/services/ingestion.py`](app/services/ingestion.py))
 
@@ -70,11 +72,13 @@ The OpenAI calls are mocked. The similarity queries run against a real pgvector 
 
 ## Technical decisions
 
-**FastAPI over Django.** Most requests spend their time waiting on Postgres, OpenAI or Google. FastAPI with async SQLAlchemy and asyncpg handles that without tying up a worker per request. Pydantic schemas validate the REST API and generate the OpenAPI docs at `/docs`. The JSON API and the Jinja2 pages both call the same service layer. Django's main draws are its ORM and its built-in admin, and this project uses neither. The admin area is custom, and SQLAlchemy with Alembic gives direct control over schema changes such as the pgvector columns.
+**FastAPI → Django + DRF.** The project originally chose FastAPI over Django for the reason below, and that tradeoff was real. In practice, running this as the actual day-to-day tool for a real tutoring business for a while made Django's built-in admin, ORM/migrations, and batteries-included auth worth more than the async win, especially since this app's load is one tutor's worth of traffic, not a request volume where tying up a worker per request matters. The FastAPI app (`app/`) was fully ported feature-for-feature to Django + DRF (`django_app/`) and cut over to production; `app/` is kept in the repo for reference but nothing builds, tests or deploys it anymore.
 
-**Separate worker and beat processes.** Celery beat only schedules tasks, and exactly one instance must run, or the daily overdue alerts and the weekly export go out twice. Workers execute the tasks and can be restarted or scaled freely. Keeping both apart from the API means a slow email or export never holds up a web request. In the [`production`](terraform/environments/production) Terraform config they are three separate ECS services, each running a single task. The [`cost-optimized`](terraform/environments/cost-optimized) config, which is the one that runs live, keeps them as separate containers inside one Fargate task. The processes stay isolated, but only one task is billed.
+> Original rationale, kept for context: *"Most requests spend their time waiting on Postgres, OpenAI or Google. FastAPI with async SQLAlchemy and asyncpg handles that without tying up a worker per request. Pydantic schemas validate the REST API and generate the OpenAPI docs at `/docs`. The JSON API and the Jinja2 pages both call the same service layer. Django's main draws are its ORM and its built-in admin, and this project uses neither. The admin area is custom, and SQLAlchemy with Alembic gives direct control over schema changes such as the pgvector columns."*
 
-**Terraform, split into layers.** All AWS infrastructure is defined in Terraform as three root modules. `foundation` holds the parts that are costly or impossible to recreate: the VPC, RDS with pgvector, ECR, IAM, and SSM secrets. `production` and `cost-optimized` are interchangeable compute layers that read foundation's outputs. Switching between the load-balanced three-service design and the single-task Cloudflare Tunnel design therefore never touches the database. GitHub Actions authenticates to AWS through OIDC, so no long-lived access keys are stored.
+**Single container, no Celery.** The FastAPI app ran separate worker/beat/Redis processes for background email alerts and the weekly export. The Django app is a synchronous `gunicorn` process with no background task queue — simpler to run and reason about at this scale, at the cost of giving up true async background jobs (the weekly export now runs as its own scheduled ECS task; see `terraform/environments/cost-optimized`).
+
+**Terraform, split into layers.** All AWS infrastructure is defined in Terraform as three root modules. `foundation` holds the parts that are costly or impossible to recreate: the VPC, RDS with pgvector, ECR, IAM, and SSM secrets. `cost-optimized` is the compute layer that actually runs live — a single Fargate Spot task running the Django app plus a Cloudflare Tunnel sidecar, so the task has no inbound ports open. [`production`](terraform/environments/production) is an earlier, load-balanced + Celery/Redis design for the old FastAPI app; its state is empty (nothing is deployed from it) and it's kept only as a reference for that alternative shape. GitHub Actions authenticates to AWS through OIDC, so no long-lived access keys are stored.
 
 **RAG inside the app.** Document Q&A started as a separate service and was moved into the main app on pgvector. Chunks live in the same Postgres database as students and sessions. That leaves one database to back up and no second service to host or secure. Metadata filters are ordinary SQL against the same data. A document and its chunks commit in one transaction, so a failed upload never leaves a half-indexed document behind. The trade-off is that vector search shares the database with the transactional workload. That is fine at this scale, and because retrieval sits behind its own service module, it could be split out again later.
 
@@ -82,27 +86,38 @@ The OpenAI calls are mocked. The similarity queries run against a real pgvector 
 
 ```
 tutor_hub/
-├── app/
-│   ├── api/v1/routers/     # REST API endpoints
-│   ├── web/routers/        # Server-rendered web UI routes
+├── django_app/             # Current production backend (Django + DRF)
+│   ├── accounts/           # Custom User model, JWT auth
+│   ├── students/           # Student model/viewset
+│   ├── tutoring_sessions/  # Session model/viewset
+│   ├── billing/            # Payee/Payment models/viewsets
+│   ├── rag/                # Document Q&A: models, ingestion, query
+│   ├── calendar_integration/ # Google Calendar OAuth + events
+│   ├── analytics/          # Dashboard trend data
+│   ├── web/                # Server-rendered pages (reuses the Jinja2 templates below)
+│   ├── config/             # Settings, urls, wsgi
+│   ├── Dockerfile
+│   └── entrypoint.sh
+├── app/                    # Retired FastAPI app — kept for reference only, not built/tested/deployed
+│   ├── api/v1/routers/
+│   ├── web/routers/
 │   ├── models/             # SQLAlchemy ORM models
-│   ├── schemas/            # Pydantic request/response schemas
-│   ├── services/           # Business logic layer
+│   ├── schemas/             # Pydantic request/response schemas
+│   ├── services/
 │   ├── tasks/              # Celery background tasks
-│   ├── core/               # Config and database setup
+│   ├── core/
 │   ├── auth.py
-│   ├── worker.py           # Celery app and beat schedule
+│   ├── worker.py
 │   └── main.py
-├── alembic/                # Database migrations
-├── templates/              # Jinja2 HTML templates
+├── alembic/                # FastAPI app's database migrations
+├── templates/              # Jinja2 HTML templates (shared by both backends)
 ├── static/                 # CSS and JS assets
-├── tests/
-├── terraform/              # AWS infrastructure (foundation, production, cost-optimized)
+├── tests/                  # FastAPI app's tests
+├── terraform/              # AWS infrastructure (foundation, cost-optimized [live], production [legacy/unused])
 ├── docker/
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.prod.yml
-├── Dockerfile
 └── .env.example
 ```
 
@@ -130,8 +145,6 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 The app will be available at `http://localhost:8000`.
 
-Interactive API docs: `http://localhost:8000/docs`
-
 To stop:
 
 ```bash
@@ -140,7 +153,7 @@ docker compose down
 
 ## Deployment
 
-The app runs on AWS and is provisioned with Terraform. See [terraform/environments/README.md](terraform/environments/README.md) for the architecture and setup. The live setup is a single ECS Fargate Spot task that runs the API, the Celery worker, Celery beat, Valkey and a Cloudflare Tunnel sidecar. The database is RDS PostgreSQL with pgvector. Traffic reaches the app through the tunnel, so the task has no inbound ports open.
+The app runs on AWS and is provisioned with Terraform. See [terraform/environments/README.md](terraform/environments/README.md) for the architecture and setup. The live setup is a single ECS Fargate Spot task running the Django app (`gunicorn`) alongside a Cloudflare Tunnel sidecar — no Celery/Redis, since the Django app has no background task queue. The database is RDS PostgreSQL with pgvector. Traffic reaches the app through the tunnel, so the task has no inbound ports open.
 
 Every push to `main` runs the test suite, then the [deploy workflow](.github/workflows/deploy.yml):
 
@@ -159,50 +172,39 @@ aws ecs update-service --cluster tutorhub-lean --service app --task-definition t
 ## Running Tests
 
 ```bash
-pytest
+cd django_app && python manage.py test
 ```
 
-Coverage reports are written to `htmlcov/`. Open `htmlcov/index.html` in a browser to view line-by-line coverage.
+The retired FastAPI app's tests (`pytest`, at the repo root) still run locally if needed, but aren't part of CI anymore. Coverage reports for it are written to `htmlcov/`.
 
 ## Environment Variables
 
 | Variable | Description |
 |---|---|
-| `POSTGRES_USER` | PostgreSQL superuser name |
-| `POSTGRES_PASSWORD` | PostgreSQL superuser password |
-| `APP_DB_USER` | Application database user |
-| `APP_DB_PASSWORD` | Application database password |
-| `APP_DB_NAME` | Application database name |
-| `SECRET_KEY` | Secret used to sign JWTs |
+| `POSTGRES_HOST` / `POSTGRES_PORT` | Database host/port |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | Database credentials |
+| `POSTGRES_DB` | Database name |
+| `DJANGO_SECRET_KEY` | Django's `SECRET_KEY` |
+| `DJANGO_DEBUG` | `true`/`false` |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated allowed hosts (must include `localhost` in production — the container's own health check hits it) |
+| `CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins behind the Cloudflare Tunnel |
 | `OPENAI_API_KEY` | API key from platform.openai.com |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client credentials |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI |
-| `REDIS_URL` | Redis connection URL (default: `redis://redis:6379/0`) |
 | `RESEND_API_KEY` | API key from resend.com for outbound email |
 | `FROM_EMAIL` | Sender address for alert emails |
 
 ## API Endpoints
 
-All REST endpoints are under the `/api/v1` prefix.
+All REST endpoints are under the `/api/v1` prefix, served by Django REST Framework. User/tutor account management (create, activate/deactivate, role) moved to the admin-only web pages (`/admin/users`) rather than the API.
 
 ### Auth
 
 | Method | Endpoint | Description | Auth required |
 |---|---|---|---|
-| POST | `/auth/login` | Log in and receive a JWT token | No |
-
-### Users
-
-| Method | Endpoint | Description | Auth required |
-|---|---|---|---|
-| GET | `/users/` | List all users | Admin |
-| POST | `/users/` | Create a user | Admin |
-| GET | `/users/{user_id}` | Get user details | Yes |
-| PATCH | `/users/{user_id}/activate` | Activate a user | Admin |
-| PATCH | `/users/{user_id}/deactivate` | Deactivate a user | Admin |
-| GET | `/me/` | Get current user profile | Yes |
-| PATCH | `/me/` | Update own profile | Yes |
+| POST | `/auth/login` | Log in, get an access + refresh token pair | No |
+| POST | `/auth/refresh` | Exchange a refresh token for a new access token | No |
+| POST | `/auth/logout` | Blacklist a refresh token | No |
 
 ### Students
 
@@ -250,16 +252,18 @@ All REST endpoints are under the `/api/v1` prefix.
 
 | Layer | Technology |
 |---|---|
-| API | FastAPI, Uvicorn |
-| Database | PostgreSQL, pgvector, SQLAlchemy (async), Alembic |
-| Auth | JWT (python-jose), bcrypt (passlib) |
+| API | Django, Django REST Framework, Gunicorn |
+| Database | PostgreSQL, pgvector, Django ORM, migrations |
+| Auth | JWT (`djangorestframework-simplejwt`), bcrypt (for legacy password hashes) |
 | AI | OpenAI API (Zoom summary parsing, embeddings, document Q&A) |
 | PDF parsing | pdfplumber |
 | Calendar | Google OAuth 2.0, Google Calendar API |
-| Background tasks | Celery, Redis |
 | Email | Resend |
-| Templating | Jinja2, Tailwind CSS |
-| Testing | pytest, pytest-asyncio, httpx, pytest-cov |
+| Templating | Jinja2 (via Django's Jinja2 template backend), Tailwind CSS |
+| Static files | WhiteNoise |
+| Testing | Django's test runner (`manage.py test`) |
 | Containerisation | Docker, Docker Compose |
 | CI/CD | GitHub Actions |
 | Hosting | AWS (ECS Fargate, RDS), Cloudflare Tunnel, Terraform |
+
+*(The retired FastAPI app in `app/` used FastAPI/Uvicorn, async SQLAlchemy + Alembic, python-jose JWTs, and Celery + Redis for background tasks — see [`app/`](app) and [`tests/`](tests) if you want to see that version.)*

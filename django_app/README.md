@@ -1,8 +1,10 @@
-# TutorHub — Django rewrite (in progress)
+# TutorHub — Django backend (production)
 
-This is the Django + DRF rewrite of the FastAPI app living in `app/` at the
-repo root. It's being built incrementally, app by app; see the root
-`CLAUDE.md`/conversation history for the full migration plan.
+This is the Django + DRF rewrite of the FastAPI app that used to live at
+`app/` at the repo root. It's now the live production backend — cut over
+from FastAPI, including a full data migration of the real business's
+database. `app/` is kept in the repo for reference only; nothing builds,
+tests, or deploys it anymore.
 
 ## Apps
 
@@ -43,10 +45,10 @@ All six planned apps are scaffolded, plus a frontend has started:
   than rewriting them in Django's own template language. Auth is
   cookie-based but reuses the *same* SimpleJWT tokens the API issues
   (`access_token`/`refresh_token` httponly cookies instead of an
-  Authorization header) — see `web/auth.py`. Pages so far: `/login`,
-  `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Every page the FastAPI web app has is now ported — `app/web` can retire
-  once this one has run in production long enough to trust it.
+  Authorization header) — see `web/auth.py`. Pages: `/login`, `/logout`,
+  `/dashboard` (admin vs. tutor stats, `web/services.py`), and every other
+  page the FastAPI web app had — all ported and now the only one actually
+  serving traffic; `app/web` is retired.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -122,6 +124,11 @@ All six planned apps are scaffolded, plus a frontend has started:
   "role is managed by an administrator" UI for plain tutors),
   `POST /profile/password` (requires the current password via
   `user.check_password`).
+- `setup` (web) — `/setup`, the first-run page: GET shows a plain
+  "create your admin account" form (no sidebar, extends `base.html`
+  directly like `login.html`), POST creates it. Both redirect to `/login`
+  once the `users` table is non-empty, so the page is a no-op after the
+  very first run and needs no auth of its own.
 - `admin` (web) — `/admin/users` (admin-only list/create of tutors, toggle
   active, edit payout config via a modal, delete — only when the tutor has
   no linked students/sessions/payments/payees), `/admin/data` (full JSON
@@ -144,11 +151,6 @@ All six planned apps are scaffolded, plus a frontend has started:
   resolution and filter-options logic the DRF `TrendsView`/
   `FilterOptionsView` already use — so there's no second implementation of
   that logic for the web layer.
-- `setup` (web) — `/setup`, the first-run page: GET shows a plain
-  "create your admin account" form (no sidebar, extends `base.html`
-  directly like `login.html`), POST creates it. Both redirect to `/login`
-  once the `users` table is non-empty, so the page is a no-op after the
-  very first run and needs no auth of its own.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
@@ -184,9 +186,9 @@ POSTGRES_PASSWORD=postgres -e POSTGRES_DB=tutorhub_dev -p 127.0.0.1:5432:5432
 pgvector/pgvector:pg17` gives you one with the `vector` extension image
 already baked in; point `.env`'s `POSTGRES_*` vars at it.
 
-The FastAPI app's `/setup` first-run page (create the first admin when the
-`users` table is empty) isn't ported yet — create your first user with
-`python manage.py createsuperuser` or the Django admin instead.
+The `/setup` first-run page (create the first admin when the `users` table
+is empty) is ported too — visit it once, or use
+`python manage.py createsuperuser` / the Django admin instead.
 
 ## Auth endpoints
 
