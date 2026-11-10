@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import (
     admin_views,
+    analytics_views,
     calendar_views,
     connections_views,
     documents_views,
@@ -56,4 +57,6 @@ urlpatterns = [
     path("admin/data", admin_views.admin_data, name="web-admin-data"),
     path("admin/data/export", admin_views.admin_export, name="web-admin-data-export"),
     path("admin/data/import", admin_views.admin_import, name="web-admin-data-import"),
+    path("analytics", analytics_views.analytics_page, name="web-analytics"),
+    path("analytics/data", analytics_views.analytics_data, name="web-analytics-data"),
 ]
