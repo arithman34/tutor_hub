@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "billing",
     "rag",
     "calendar_integration",
+    "analytics",
 ]
 
 MIDDLEWARE = [

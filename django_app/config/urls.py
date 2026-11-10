@@ -9,4 +9,5 @@ urlpatterns = [
     path("api/v1/", include("billing.urls")),
     path("api/v1/", include("rag.urls")),
     path("api/v1/calendar/", include("calendar_integration.urls")),
+    path("api/v1/analytics/", include("analytics.urls")),
 ]

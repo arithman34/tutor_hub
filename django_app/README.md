@@ -28,7 +28,16 @@ repo root. It's being built incrementally, app by app; see the root
   session): `state` is a signed, short-lived token embedding the user id
   (`django.core.signing`), since the browser's redirect to Google and back
   can't carry an Authorization header. Tested (httpx calls mocked).
-- `analytics` — not started yet.
+- `analytics` — admin dashboard trend data (`/trends`, `/filters`): new/taught/
+  churned/roster student series, session counts/hours/no-shows, payment
+  totals, bucketed by day/week/month with prior-period % change. Admin-only.
+  Deliberately aggregates in Python rather than via Postgres `date_trunc`
+  (the FastAPI version's approach) — see the module docstring in
+  `analytics/services.py` for why. Tested.
+
+All six planned apps are now scaffolded. What's left: delete `app/web` once
+this API has frontend parity, and decide on a frontend (SPA, or keep a
+server-rendered admin via Django templates for the dashboard).
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.
