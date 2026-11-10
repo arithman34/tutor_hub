@@ -45,8 +45,8 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`profile`, `admin`, `analytics`, `setup`) are not ported
-  yet — `app/web` stays the live daily-use app until this one has parity.
+  Remaining pages (`admin`, `analytics`, `setup`) are not ported yet —
+  `app/web` stays the live daily-use app until this one has parity.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -116,6 +116,12 @@ All six planned apps are scaffolded, plus a frontend has started:
   payload with `django.core.signing` instead), the web flow has real cookies
   available, so it mirrors the original FastAPI app's plain cookie-based
   state check rather than reusing the signed-state approach.
+- `profile` (web) — `/profile` (own account details + account status),
+  `POST /profile/update` (name/email/address, and — only for an admin or
+  admin_tutor — their own `role`, matching the original FastAPI app's
+  "role is managed by an administrator" UI for plain tutors),
+  `POST /profile/password` (requires the current password via
+  `user.check_password`).
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import calendar_views, connections_views, documents_views, payees_views, payments_views, sessions_views, students_views, views
+from . import calendar_views, connections_views, documents_views, payees_views, payments_views, profile_views, sessions_views, students_views, views
 
 urlpatterns = [
     path("login", views.login_view, name="web-login"),
@@ -34,4 +34,7 @@ urlpatterns = [
     path("calendar/connect", calendar_views.calendar_connect, name="web-calendar-connect"),
     path("calendar/callback", calendar_views.calendar_callback, name="web-calendar-callback"),
     path("calendar/disconnect", calendar_views.calendar_disconnect, name="web-calendar-disconnect"),
+    path("profile", profile_views.profile_page, name="web-profile"),
+    path("profile/update", profile_views.profile_update, name="web-profile-update"),
+    path("profile/password", profile_views.profile_password, name="web-profile-password"),
 ]
