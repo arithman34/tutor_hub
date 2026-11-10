@@ -45,9 +45,9 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`documents`, `calendar`, `connections`, `profile`,
-  `admin`, `analytics`, `setup`) are not ported yet — `app/web` stays the
-  live daily-use app until this one has parity.
+  Remaining pages (`calendar`, `connections`, `profile`, `admin`,
+  `analytics`, `setup`) are not ported yet — `app/web` stays the live
+  daily-use app until this one has parity.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -87,6 +87,15 @@ All six planned apps are scaffolded, plus a frontend has started:
   `?payee_id=` prefill used by the "Add Payment" link on a payee's detail
   page). No update/delete UI, matching the original FastAPI app — only the
   DRF `PaymentViewSet` supports those.
+- `documents` (web) — `/documents` (tutor-only, two tabs: "Library" lists
+  uploaded PDFs with a delete action, "Ask" runs a RAG query), `POST
+  /documents/upload` (PDF ingestion via `rag.services.ingest_document`),
+  `POST /documents/<uuid>/delete`, `POST /documents/query` (via
+  `rag.services.answer_question`, re-rendering the same page with the
+  answer/sources or an error message). Both tabs post to the same
+  `/documents` page and are toggled client-side by JS, not separate routes.
+  Reuses the RAG app's services directly rather than duplicating ingestion/
+  query logic for the web layer.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
