@@ -22,7 +22,13 @@ repo root. It's being built incrementally, app by app; see the root
   note the cosine-distance query tests require a real Postgres + pgvector
   backend and are skipped under the SQLite test database (see "Running
   tests" below).
-- `calendar_integration`, `analytics` — not started yet.
+- `calendar_integration` — `GoogleCalendarToken` model, OAuth connect/callback/
+  disconnect, upcoming/one-off/recurring event endpoints against the
+  "Tutoring" calendar. The connect/callback handshake is JWT-only (no Django
+  session): `state` is a signed, short-lived token embedding the user id
+  (`django.core.signing`), since the browser's redirect to Google and back
+  can't carry an Authorization header. Tested (httpx calls mocked).
+- `analytics` — not started yet.
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.

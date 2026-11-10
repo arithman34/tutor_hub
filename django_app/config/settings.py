@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "tutoring_sessions",
     "billing",
     "rag",
+    "calendar_integration",
 ]
 
 MIDDLEWARE = [
@@ -135,3 +136,10 @@ RAG_CHAT_MODEL = os.environ.get("RAG_CHAT_MODEL", "gpt-4o-mini")
 RAG_CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE", "800"))
 RAG_CHUNK_OVERLAP = int(os.environ.get("RAG_CHUNK_OVERLAP", "100"))
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
+
+# Google Calendar integration
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/calendar/callback")
+GOOGLE_CALENDAR_TIMEZONE = os.environ.get("GOOGLE_CALENDAR_TIMEZONE", "Europe/London")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
