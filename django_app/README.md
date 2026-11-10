@@ -7,9 +7,16 @@ repo root. It's being built incrementally, app by app; see the root
 ## Apps
 
 - `accounts` — custom email-based `User` model, JWT auth (login/refresh/logout
-  via `djangorestframework-simplejwt`), Django admin registration. Scaffolded.
-- `students`, `sessions`, `billing`, `calendar_integration`, `rag`,
-  `analytics` — not started yet.
+  via `djangorestframework-simplejwt`), Django admin registration. Tested.
+- `students` — `Student` model/viewset, admin-only create/update/delete/
+  toggle-active, tutors scoped to their own students. Tested.
+- `tutoring_sessions` — `Session` model/viewset (served at `/api/v1/sessions/`;
+  app is named `tutoring_sessions` to avoid clashing with
+  `django.contrib.sessions`), owner-or-admin access. Tested.
+- `billing`, `calendar_integration`, `rag`, `analytics` — not started yet.
+
+Each app ships its tests alongside it (`tests.py`) rather than as a
+follow-up — run them as you go, not just before a PR.
 
 ## Local setup
 
@@ -32,3 +39,12 @@ root FastAPI app's `POSTGRES_*` settings, plus `DJANGO_SECRET_KEY`,
 - `POST /api/v1/auth/refresh` — `{"refresh": ...}` → new access token
   (rotates/blacklists the old refresh token).
 - `POST /api/v1/auth/logout` — `{"refresh": ...}` → blacklists the token.
+
+## Running tests
+
+```bash
+python manage.py test
+```
+
+Test runs automatically use an in-memory SQLite database (see
+`RUNNING_TESTS` in `config/settings.py`), so no local Postgres is needed.
