@@ -45,14 +45,34 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`students`, `sessions`, `payees`, `payments`, `documents`,
-  `calendar`, `connections`, `profile`, `admin`, `analytics`, `setup`) are
-  not ported yet — `app/web` stays the live daily-use app until this one has
-  parity.
+  Remaining pages (`payees`, `payments`, `documents`, `calendar`,
+  `connections`, `profile`, `admin`, `analytics`, `setup`) are not ported
+  yet — `app/web` stays the live daily-use app until this one has parity.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
   `StudentViewSet`.
+- `sessions` (web) — `/sessions/new` + `POST /sessions` (manual entry or
+  "paste Zoom AI summary" → `POST /sessions/zoom-parse`, OpenAI call in
+  `web/ai.py`), `/sessions/<uuid>` detail with separate "Details"
+  (date/time/no-show) and "Notes" forms, delete. `/sessions` itself is the
+  same simple logged-sessions list for both tutors and admins (filtered to
+  "own" unless admin) — the FastAPI app's tutor-only view here instead
+  fetches and merges live Google Calendar events (`sessions/google.html`,
+  ~500 lines between the router and template), which depends on the
+  `/connections` and `/calendar` web pages not being ported yet. That
+  Calendar-merged view is deferred to when those pages exist.
+
+  **Fixed a real bug while porting**: the original's session-update route
+  binds all form fields (including the notes fields) with FastAPI
+  `Form(default="")` regardless of which of the two `<form>`s on the detail
+  page submitted — so editing just the date/time via the "Details" form
+  (which has no notes inputs) silently blanked `work_covered` and the other
+  notes fields to `None`. The Django port only touches a field when it's
+  actually present in the POST body, so fixing a session's time no longer
+  wipes its notes. Covered by
+  `web/test_sessions.py:test_update_details_does_not_wipe_notes` and
+  verified by hand in the browser.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
