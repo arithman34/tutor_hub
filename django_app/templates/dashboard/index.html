@@ -1,0 +1,98 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Dashboard — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="mb-5">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {{ user.first_name }}</h1>
+</div>
+
+{% if user.is_admin %}
+
+{# ── FINANCIAL & OPERATIONS ───────────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue All-Time</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_alltime) }}</p>
+    </div>
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Month</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_this_month) }}</p>
+        {% if mom_trend is not none %}
+        <p class="text-sm mt-2 {% if mom_trend >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+            {% if mom_trend >= 0 %}▲{% else %}▼{% endif %} {{ mom_trend|abs }}% vs last month
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+        {% endif %}
+    </div>
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Year</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_this_year) }}</p>
+    </div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Tutor Payouts (Month)</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(total_payout_obligations) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border {% if profit_margin >= 0 %}border-green-100{% else %}border-red-200{% endif %} p-6 dark:bg-gray-800 dark:border-gray-700">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Profit Margin (Month)</p>
+        <p class="text-3xl font-bold {% if profit_margin >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            £{{ "%.2f"|format(profit_margin) }}
+        </p>
+    </div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Sessions This Month</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ sessions_this_month }}</p>
+        {% if sessions_pct_change is not none %}
+        <p class="text-sm mt-2 {% if sessions_pct_change >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+            {% if sessions_pct_change >= 0 %}▲{% else %}▼{% endif %} {{ sessions_pct_change|abs }}% vs last month
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+        {% endif %}
+    </div>
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Hours Taught (Month)</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ hours_this_month }}h</p>
+        {% if hours_pct_change is not none %}
+        <p class="text-sm mt-2 {% if hours_pct_change >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+            {% if hours_pct_change >= 0 %}▲{% else %}▼{% endif %} {{ hours_pct_change|abs }}% vs last month
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-400 mt-2">No prior month data</p>
+        {% endif %}
+    </div>
+    <div class="bg-white rounded-xl border border-green-100 p-6 dark:bg-gray-800 dark:border-green-900">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Completion Rate</p>
+        <p class="text-3xl font-bold text-green-600">{{ completion_rate }}%</p>
+        <p class="text-xs text-gray-400 mt-2">Sessions with minutes logged</p>
+    </div>
+</div>
+
+{% else %}
+{# ── TUTOR DASHBOARD ─────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 gap-6 mb-8 lg:grid-cols-4">
+    <div class="th-card p-6">
+        <p class="text-sm text-gray-500 mb-1">Active Students</p>
+        <p class="text-3xl font-bold">{{ active_students }}</p>
+    </div>
+    <div class="th-card p-6">
+        <p class="text-sm text-gray-500 mb-1">Sessions This Week</p>
+        <p class="text-3xl font-bold">{{ sessions_this_week }}</p>
+    </div>
+    <div class="th-card p-6">
+        <p class="text-sm text-gray-500 mb-1">Sessions This Month</p>
+        <p class="text-3xl font-bold">{{ sessions_this_month }}</p>
+    </div>
+    <div class="th-card p-6">
+        <p class="text-sm text-gray-500 mb-1">Amount Owed</p>
+        <p class="text-3xl font-bold text-blue-600">£{{ "%.2f"|format(amount_owed) }}</p>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "rag",
     "calendar_integration",
     "analytics",
+    "web",
 ]
 
 MIDDLEWARE = [
@@ -65,6 +66,20 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+    {
+        # Reuses the FastAPI app's Jinja2 templates (extends/block/macros/`abs`
+        # filter all work unchanged) instead of rewriting them in Django's own
+        # template language.
+        "BACKEND": "django.template.backends.jinja2.Jinja2",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": False,
+        "OPTIONS": {
+            "environment": "config.jinja2_env.environment",
+            "context_processors": [
+                "django.template.context_processors.request",
             ],
         },
     },
@@ -127,6 +142,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

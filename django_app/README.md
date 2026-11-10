@@ -35,12 +35,27 @@ repo root. It's being built incrementally, app by app; see the root
   (the FastAPI version's approach) — see the module docstring in
   `analytics/services.py` for why. Tested.
 
-All six planned apps are now scaffolded. What's left: delete `app/web` once
-this API has frontend parity, and decide on a frontend (SPA, or keep a
-server-rendered admin via Django templates for the dashboard).
+All six planned apps are scaffolded, plus a frontend has started:
+
+- `web` — server-rendered pages, reusing the FastAPI app's Jinja2 templates
+  almost unchanged (Django's `django.template.backends.jinja2.Jinja2` backend
+  — see `config/jinja2_env.py` and the second entry in `TEMPLATES`), rather
+  than rewriting them in Django's own template language. Auth is
+  cookie-based but reuses the *same* SimpleJWT tokens the API issues
+  (`access_token`/`refresh_token` httponly cookies instead of an
+  Authorization header) — see `web/auth.py`. Pages so far: `/login`,
+  `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
+  Remaining pages (`students`, `sessions`, `payees`, `payments`, `documents`,
+  `calendar`, `connections`, `profile`, `admin`, `analytics`, `setup`) are
+  not ported yet — `app/web` stays the live daily-use app until this one has
+  parity.
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.
+
+The plan is to eventually move the frontend to a separate React + Tailwind
+app once this is stable; Django stays as a pure DRF API at that point and
+`web`/its templates get retired.
 
 ## Local setup
 
@@ -55,6 +70,15 @@ python manage.py runserver
 Reads config from a `.env` file in this directory (same variables as the
 root FastAPI app's `POSTGRES_*` settings, plus `DJANGO_SECRET_KEY`,
 `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`).
+
+No standalone Postgres handy? `docker run -d -e POSTGRES_USER=postgres -e
+POSTGRES_PASSWORD=postgres -e POSTGRES_DB=tutorhub_dev -p 127.0.0.1:5432:5432
+pgvector/pgvector:pg17` gives you one with the `vector` extension image
+already baked in; point `.env`'s `POSTGRES_*` vars at it.
+
+The FastAPI app's `/setup` first-run page (create the first admin when the
+`users` table is empty) isn't ported yet — create your first user with
+`python manage.py createsuperuser` or the Django admin instead.
 
 ## Auth endpoints
 
