@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "django-rewrite",
+      "runtimeExecutable": "django_app/.venv/Scripts/python.exe",
+      "runtimeArgs": ["django_app/manage.py", "runserver", "0.0.0.0:8001"],
+      "port": 8001
+    }
+  ]
+}

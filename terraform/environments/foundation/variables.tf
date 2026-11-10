@@ -17,9 +17,15 @@ variable "db_instance_class" {
 }
 
 variable "db_name" {
-  description = "Application database name."
+  description = "Application database name (FastAPI app)."
   type        = string
   default     = "tutor_hub"
+}
+
+variable "db_name_django" {
+  description = "Django rewrite's database name — a separate database on the same RDS instance, created manually (CREATE DATABASE), not by Terraform."
+  type        = string
+  default     = "tutor_hub_django"
 }
 
 variable "db_username" {

@@ -1,0 +1,253 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Analytics — TutorHub{% endblock %}
+
+{% block page_content %}
+<div class="mb-5 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+    <p id="range-summary" class="text-sm text-gray-400"></p>
+</div>
+
+{# ── FILTER BAR ───────────────────────────────────────────────────────────────── #}
+<div class="th-card p-5 mb-5">
+    <div class="flex flex-wrap items-end gap-4">
+        <div>
+            <span class="th-label">Period</span>
+            <div class="th-tabs" id="range-tabs">
+                {% for value, label in [('3m','3M'),('6m','6M'),('12m','12M'),('ytd','YTD'),('all','All')] %}
+                <button type="button" data-range="{{ value }}"
+                    class="px-3 py-1.5 text-sm font-medium rounded-md {% if value == '12m' %}th-tab-active{% else %}th-tab-inactive{% endif %}">{{ label }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="w-32">
+            <label class="th-label" for="granularity">Group by</label>
+            <select id="granularity" class="th-input">
+                {% for value in granularities %}
+                <option value="{{ value }}" {% if value == 'month' %}selected{% endif %}>{{ value|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="w-40">
+            <label class="th-label" for="start">From</label>
+            <input type="date" id="start" class="th-input" />
+        </div>
+        <div class="w-40">
+            <label class="th-label" for="end">To</label>
+            <input type="date" id="end" class="th-input" />
+        </div>
+
+        <div class="w-44">
+            <label class="th-label" for="tutor_id">Tutor</label>
+            <select id="tutor_id" class="th-input">
+                <option value="">All tutors</option>
+                {% for t in tutors %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="w-44">
+            <label class="th-label" for="student_id">Student</label>
+            <select id="student_id" class="th-input">
+                <option value="">All students</option>
+                {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="w-44">
+            <label class="th-label" for="payee_id">Payee</label>
+            <select id="payee_id" class="th-input">
+                <option value="">All payees</option>
+                {% for p in payees %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+            </select>
+        </div>
+
+        <button type="button" id="reset"
+            class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400">Reset</button>
+    </div>
+    <p id="granularity-note" class="hidden mt-3 text-xs text-amber-600 dark:text-amber-400"></p>
+</div>
+
+{# ── CHARTS ───────────────────────────────────────────────────────────────────── #}
+<div id="charts" class="space-y-5"></div>
+
+<p id="empty-state" class="hidden th-card p-8 text-center text-gray-400 text-sm">No data in this period.</p>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+    const PALETTE = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981'];
+    const charts = {};
+
+    const $ = id => document.getElementById(id);
+    const controls = ['granularity', 'start', 'end', 'tutor_id', 'student_id', 'payee_id'];
+    let activeRange = '12m';
+
+    function format(value, unit) {
+        if (unit === 'currency') return '£' + value.toFixed(2);
+        if (unit === 'hours') return value.toFixed(1) + 'h';
+        return Number.isInteger(value) ? String(value) : value.toFixed(1);
+    }
+
+    function labelFor(iso, granularity) {
+        const dt = new Date(iso);
+        if (granularity === 'month') return dt.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    }
+
+    function query() {
+        const params = new URLSearchParams({ range: activeRange });
+        controls.forEach(id => { if ($(id).value) params.set(id, $(id).value); });
+        return params.toString();
+    }
+
+    // Each chart gets a card with a KPI row above the canvas. Cards are built once
+    // and reused, so re-filtering only swaps the numbers and the Chart.js data.
+    function cardFor(spec) {
+        let card = $('card-' + spec.key);
+        if (card) return card;
+        card = document.createElement('div');
+        card.id = 'card-' + spec.key;
+        card.className = 'th-card p-6';
+        card.innerHTML = `
+            <h2 class="th-section-title">${spec.title}</h2>
+            <p id="note-${spec.key}" class="hidden mb-3 text-xs text-gray-400"></p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5 mt-4" id="kpis-${spec.key}"></div>
+            <canvas id="canvas-${spec.key}" height="90"></canvas>`;
+        $('charts').appendChild(card);
+        return card;
+    }
+
+    function renderKpis(spec) {
+        $('kpis-' + spec.key).innerHTML = spec.series.map(s => {
+            let delta = '<span class="text-xs text-gray-400">no prior data</span>';
+            if (s.change !== null) {
+                const up = s.change >= 0;
+                delta = `<span class="text-xs ${up ? 'text-green-600' : 'text-red-500'}">${up ? '▲' : '▼'} ${Math.abs(s.change)}% vs prior period</span>`;
+            }
+            return `<div>
+                <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${s.label}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">${format(s.total, s.unit)}</p>
+                ${delta}
+            </div>`;
+        }).join('');
+    }
+
+    function renderChart(spec, labels, granularity) {
+        const datasets = spec.series.map((s, i) => ({
+            label: s.label,
+            data: s.data,
+            type: s.type,
+            yAxisID: s.axis,
+            borderColor: PALETTE[i % PALETTE.length],
+            backgroundColor: s.type === 'bar' ? PALETTE[i % PALETTE.length] + '99' : PALETTE[i % PALETTE.length] + '20',
+            borderWidth: 2,
+            tension: 0.35,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            unit: s.unit,
+        }));
+
+        const usesRight = spec.series.some(s => s.axis === 'y1');
+        const config = {
+            data: { labels: labels.map(l => labelFor(l, granularity)), datasets },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${format(ctx.parsed.y, ctx.dataset.unit)}` } },
+                },
+                scales: {
+                    y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(128,128,128,0.12)' } },
+                    y1: { beginAtZero: true, position: 'right', display: usesRight, grid: { drawOnChartArea: false } },
+                    x: { grid: { display: false } },
+                },
+            },
+        };
+
+        if (charts[spec.key]) {
+            charts[spec.key].data = config.data;
+            charts[spec.key].options = config.options;
+            charts[spec.key].update();
+        } else {
+            charts[spec.key] = new Chart($('canvas-' + spec.key), { type: 'bar', ...config });
+        }
+    }
+
+    async function load() {
+        const response = await fetch('/analytics/data?' + query(), { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) return;
+        const payload = await response.json();
+
+        const from = new Date(payload.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const to = new Date(payload.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        $('range-summary').textContent = `${from} — ${to}`;
+
+        // The server coarsens the granularity when a range would produce too many
+        // buckets; say so rather than silently ignoring the dropdown.
+        const requested = $('granularity').value;
+        const note = $('granularity-note');
+        if (payload.granularity !== requested) {
+            note.textContent = `Range too long to group by ${requested} — grouped by ${payload.granularity} instead.`;
+            note.classList.remove('hidden');
+        } else {
+            note.classList.add('hidden');
+        }
+
+        const empty = payload.charts.every(c => c.series.every(s => s.data.every(v => v === 0)));
+        $('empty-state').classList.toggle('hidden', !empty);
+
+        payload.charts.forEach(spec => {
+            cardFor(spec);
+            renderKpis(spec);
+            renderChart(spec, payload.labels, payload.granularity);
+        });
+        renderPaymentsCaveat();
+    }
+
+    // Payments are recorded against a payee, never a tutor or a student, so those
+    // two filters resolve through the payee. A family whose children see two
+    // different tutors therefore counts towards both — say so rather than let the
+    // number be read as per-tutor revenue.
+    function renderPaymentsCaveat() {
+        const note = $('note-payments');
+        if (!note) return;
+        const via = $('tutor_id').value ? 'tutor' : ($('student_id').value ? 'student' : null);
+        note.textContent = via
+            ? `Payments are recorded per payee, so this ${via} filter matches every payment from that ${via}'s payees — a payee shared with someone else is counted here too.`
+            : '';
+        note.classList.toggle('hidden', !via);
+    }
+
+    $('range-tabs').addEventListener('click', e => {
+        const button = e.target.closest('[data-range]');
+        if (!button) return;
+        activeRange = button.dataset.range;
+        // A preset and explicit dates are mutually exclusive; the preset wins.
+        $('start').value = '';
+        $('end').value = '';
+        $('range-tabs').querySelectorAll('button').forEach(b => {
+            const on = b === button;
+            b.classList.toggle('th-tab-active', on);
+            b.classList.toggle('th-tab-inactive', !on);
+        });
+        load();
+    });
+
+    controls.forEach(id => $(id).addEventListener('change', () => {
+        if (id === 'start' || id === 'end') {
+            $('range-tabs').querySelectorAll('button').forEach(b => {
+                b.classList.remove('th-tab-active');
+                b.classList.add('th-tab-inactive');
+            });
+        }
+        load();
+    }));
+
+    $('reset').addEventListener('click', () => {
+        controls.forEach(id => { $(id).value = id === 'granularity' ? 'month' : ''; });
+        $('range-tabs').querySelector('[data-range="12m"]').click();
+    });
+
+    load();
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "components/forms.html" import password_input %}
+
+{% block title %}Setup — TutorHub{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-xl shadow w-full max-w-md dark:bg-gray-800">
+        <h1 class="text-2xl font-bold mb-2 text-center">Welcome to TutorHub</h1>
+        <p class="text-gray-500 text-sm text-center mb-6 dark:text-gray-400">Create your admin account to get started.</p>
+
+        <form method="POST" action="/setup" class="space-y-4" id="setup-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div>
+                <label class="block text-sm font-medium mb-1">First Name</label>
+                <input type="text" name="first_name" required
+                    class="th-input" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Last Name</label>
+                <input type="text" name="last_name" required
+                    class="th-input" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Email</label>
+                <input type="email" name="email" required
+                    class="th-input" />
+            </div>
+            {{ password_input("Password", id="password", name="password") }}
+            {{ password_input("Confirm Password", id="confirm_password") }}
+            <p id="password-error" class="text-red-500 text-xs hidden">Passwords do not match</p>
+            <button type="submit"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+                Create Admin Account
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('setup-form').addEventListener('submit', function (e) {
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirm_password').value;
+        const error = document.getElementById('password-error');
+        if (password !== confirm) {
+            e.preventDefault();
+            error.classList.remove('hidden');
+        } else {
+            error.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

@@ -19,64 +19,22 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    container_name: redis_container
-    image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    ports:
-      - "127.0.0.1:6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     container_name: api_container
-    build: .
+    build: ./django_app
     env_file:
-      - .env
+      - ./django_app/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${APP_DB_USER}:${APP_DB_PASSWORD}@db:5432/${APP_DB_NAME}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${APP_DB_NAME}
+      POSTGRES_USER: ${APP_DB_USER}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-  worker:
-    container_name: worker_container
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${APP_DB_USER}:${APP_DB_PASSWORD}@db:5432/${APP_DB_NAME}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A app.worker.celery_app worker --loglevel=info
-
-  beat:
-    container_name: beat_container
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${APP_DB_USER}:${APP_DB_PASSWORD}@db:5432/${APP_DB_NAME}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A app.worker.celery_app beat --loglevel=info
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
 
 volumes:
   postgres_data:
