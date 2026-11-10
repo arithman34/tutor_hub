@@ -13,7 +13,10 @@ repo root. It's being built incrementally, app by app; see the root
 - `tutoring_sessions` — `Session` model/viewset (served at `/api/v1/sessions/`;
   app is named `tutoring_sessions` to avoid clashing with
   `django.contrib.sessions`), owner-or-admin access. Tested.
-- `billing`, `calendar_integration`, `rag`, `analytics` — not started yet.
+- `billing` — `Payee`/`Payment` models/viewsets (admin-only), `/payees/{id}/balance`
+  endpoint (payments received minus billable session cost). `students.payee`
+  is now a real `ForeignKey` into this app. Tested.
+- `calendar_integration`, `rag`, `analytics` — not started yet.
 
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.

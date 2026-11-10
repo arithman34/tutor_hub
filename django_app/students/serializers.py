@@ -1,10 +1,13 @@
 from rest_framework import serializers
 
+from billing.models import Payee
+
 from .models import Student
 
 
 class StudentSerializer(serializers.ModelSerializer):
     tutor_id = serializers.UUIDField(source="user_id", read_only=True)
+    payee_id = serializers.PrimaryKeyRelatedField(source="payee", queryset=Payee.objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = Student
