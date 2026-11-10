@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User, UserRole
+from calendar_integration.models import GoogleCalendarToken
 from students.models import Student
 from tutoring_sessions.models import Session
 
@@ -20,26 +21,78 @@ def login(client, user):
     client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
 
 
-class SessionsListPageTests(TestCase):
-    def test_tutor_sees_only_own_sessions(self):
-        tutor = make_user("tutor@example.com")
-        other = make_user("other@example.com")
-        s1 = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
-        s2 = Student.objects.create(user=other, first_name="Pat", last_name="Jones")
-        now = timezone.now()
-        Session.objects.create(user=tutor, student=s1, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1))
-        Session.objects.create(user=other, student=s2, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1))
+def connected_token(user):
+    return GoogleCalendarToken.objects.create(user=user, access_token="x", refresh_token="y", expires_at=timezone.now())
 
+
+def make_event(summary="Sam - Tuition", event_id="evt-1", date="2026-06-15", start="09:00", end="10:00"):
+    return {
+        "id": event_id,
+        "summary": summary,
+        "start": {"dateTime": f"{date}T{start}:00Z"},
+        "end": {"dateTime": f"{date}T{end}:00Z"},
+        "htmlLink": "https://calendar.google.com/event?eid=1",
+    }
+
+
+class SessionsListPageTests(TestCase):
+    def test_tutor_without_connection_redirects_to_connections(self):
+        tutor = make_user("tutor@example.com")
         login(self.client, tutor)
+        response = self.client.get("/sessions")
+        self.assertRedirects(response, "/connections?error=not_connected", fetch_redirect_response=False)
+
+    def test_tutor_sees_calendar_events_merged_with_logged_state(self):
+        tutor = make_user("tutor@example.com")
+        connected_token(tutor)
+        login(self.client, tutor)
+        with patch("calendar_integration.services.fetch_events", return_value=[make_event()]):
+            response = self.client.get("/sessions")
+        self.assertContains(response, "Sam - Tuition")
+        self.assertContains(response, "Log Session")
+
+    def test_tutor_sees_logged_event_as_logged(self):
+        tutor = make_user("tutor@example.com")
+        connected_token(tutor)
+        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
+        now = timezone.now()
+        session = Session.objects.create(
+            user=tutor,
+            student=student,
+            session_date=now,
+            session_start_time=now,
+            session_end_time=now + timedelta(hours=1),
+            calendar_event_id="evt-1",
+        )
+        login(self.client, tutor)
+        with patch("calendar_integration.services.fetch_events", return_value=[make_event(event_id="evt-1")]):
+            response = self.client.get("/sessions")
+        self.assertContains(response, "Logged")
+        self.assertContains(response, f"/sessions/{session.id}")
+
+    def test_fetch_failure_shows_error_banner(self):
+        tutor = make_user("tutor@example.com")
+        connected_token(tutor)
+        login(self.client, tutor)
+        with patch("calendar_integration.services.fetch_events", side_effect=RuntimeError("boom")):
+            response = self.client.get("/sessions")
+        self.assertContains(response, "boom")
+
+    def test_admin_sees_only_calendar_linked_sessions(self):
+        admin = make_user("admin@example.com", UserRole.ADMIN)
+        tutor = make_user("tutor@example.com")
+        s1 = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
+        s2 = Student.objects.create(user=tutor, first_name="Pat", last_name="Jones")
+        now = timezone.now()
+        Session.objects.create(
+            user=tutor, student=s1, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1), calendar_event_id="evt-1"
+        )
+        Session.objects.create(user=tutor, student=s2, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1))
+
+        login(self.client, admin)
         response = self.client.get("/sessions")
         self.assertContains(response, "Sam")
         self.assertNotContains(response, "Pat")
-
-    def test_tutor_sees_log_session_link(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        response = self.client.get("/sessions")
-        self.assertContains(response, "Log Session")
 
     def test_admin_does_not_see_log_session_link(self):
         admin = make_user("admin@example.com", UserRole.ADMIN)

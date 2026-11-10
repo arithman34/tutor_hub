@@ -45,9 +45,8 @@ All six planned apps are scaffolded, plus a frontend has started:
   (`access_token`/`refresh_token` httponly cookies instead of an
   Authorization header) — see `web/auth.py`. Pages so far: `/login`,
   `/logout`, `/dashboard` (admin vs. tutor stats, `web/services.py`).
-  Remaining pages (`calendar`, `connections`, `profile`, `admin`,
-  `analytics`, `setup`) are not ported yet — `app/web` stays the live
-  daily-use app until this one has parity.
+  Remaining pages (`profile`, `admin`, `analytics`, `setup`) are not ported
+  yet — `app/web` stays the live daily-use app until this one has parity.
 - `students` (web) — `/students` (list/search), `/students/new` + `POST
   /students` (admin-only create), `/students/<uuid>` detail with inline
   update/toggle-active/delete forms. Same permission rules as the DRF
@@ -55,13 +54,19 @@ All six planned apps are scaffolded, plus a frontend has started:
 - `sessions` (web) — `/sessions/new` + `POST /sessions` (manual entry or
   "paste Zoom AI summary" → `POST /sessions/zoom-parse`, OpenAI call in
   `web/ai.py`), `/sessions/<uuid>` detail with separate "Details"
-  (date/time/no-show) and "Notes" forms, delete. `/sessions` itself is the
-  same simple logged-sessions list for both tutors and admins (filtered to
-  "own" unless admin) — the FastAPI app's tutor-only view here instead
-  fetches and merges live Google Calendar events (`sessions/google.html`,
-  ~500 lines between the router and template), which depends on the
-  `/connections` and `/calendar` web pages not being ported yet. That
-  Calendar-merged view is deferred to when those pages exist.
+  (date/time/no-show) and "Notes" forms, delete. `/sessions` itself now
+  matches the original FastAPI app: admins get the simple logged-sessions
+  list filtered to `calendar_event_id__isnull=False` (sessions that came
+  from a calendar event), while tutors get the live Calendar-merged view
+  (`sessions/google.html`) — their upcoming/past Google Calendar
+  ("Tutoring" calendar) events merged with which ones are already logged,
+  with search, status/period filters (persisted in `sessions_status`/
+  `sessions_period` cookies), and pagination. Redirects to
+  `/connections?error=not_connected` if the tutor has no
+  `GoogleCalendarToken` row at all; a stale/expired token instead renders
+  the page with an error banner and a "Reconnect" link, since Google
+  errors (expired refresh token, deleted calendar) are expected steady-state,
+  not exceptional.
 
   **Fixed a real bug while porting**: the original's session-update route
   binds all form fields (including the notes fields) with FastAPI
@@ -96,6 +101,21 @@ All six planned apps are scaffolded, plus a frontend has started:
   `/documents` page and are toggled client-side by JS, not separate routes.
   Reuses the RAG app's services directly rather than duplicating ingestion/
   query logic for the web layer.
+- `connections` (web) — `/connections` shows Google Calendar connect/
+  disconnect status (connected = the stored `GoogleCalendarToken` has a
+  `refresh_token`; disconnect clears credentials but keeps the row, since
+  `tutoring_calendar_id` is the only record of which calendar is ours), with
+  flash/error messages for the OAuth outcomes.
+- `calendar` (web) — `/calendar/create` (GET form / `POST` to create a
+  one-off or weekly-recurring Google Calendar event for a student, title
+  built as `"<First name> - Tuition"`), `/calendar/connect` (redirects to
+  Google, sets a short-lived `gcal_state` cookie), `/calendar/callback`
+  (verifies the cookie against Google's `state` param, then
+  `calendar_integration.services.exchange_code`), `/calendar/disconnect`.
+  Unlike the DRF API's OAuth endpoints (JWT-only, so they sign the `state`
+  payload with `django.core.signing` instead), the web flow has real cookies
+  available, so it mirrors the original FastAPI app's plain cookie-based
+  state check rather than reusing the signed-state approach.
 
 Every POST form needs a `{{ csrf_token }}` hidden input — Django's test
 `Client` doesn't enforce CSRF by default, so a template missing it can pass
