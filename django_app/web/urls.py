@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import sessions_views, students_views, views
+from . import payees_views, payments_views, sessions_views, students_views, views
 
 urlpatterns = [
     path("login", views.login_view, name="web-login"),
@@ -18,4 +18,10 @@ urlpatterns = [
     path("sessions/<uuid:session_id>", sessions_views.session_detail, name="web-session-detail"),
     path("sessions/<uuid:session_id>/update", sessions_views.session_update, name="web-session-update"),
     path("sessions/<uuid:session_id>/delete", sessions_views.session_delete, name="web-session-delete"),
+    path("payees", payees_views.payees_index, name="web-payees-list"),
+    path("payees/new", payees_views.payees_new, name="web-payees-new"),
+    path("payees/<uuid:payee_id>", payees_views.payee_detail, name="web-payee-detail"),
+    path("payees/<uuid:payee_id>/update", payees_views.payee_update, name="web-payee-update"),
+    path("payments", payments_views.payments_index, name="web-payments-list"),
+    path("payments/new", payments_views.payments_new, name="web-payments-new"),
 ]
