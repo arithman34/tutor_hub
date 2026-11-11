@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     "students",
     "tutoring_sessions",
     "billing",
-    "rag",
     "calendar_integration",
     "analytics",
     "assistant",
