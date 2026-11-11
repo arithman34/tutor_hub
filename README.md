@@ -3,7 +3,7 @@
 [![Deploy](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml/badge.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 [![coverage](https://raw.githubusercontent.com/arithman34/tutor_hub/gh-pages/badges/coverage.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 
-A full-stack tutoring management platform. The backend is Django + Django REST Framework with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and answers questions over uploaded teaching documents using retrieval-augmented generation (RAG) on pgvector.
+A full-stack tutoring management platform. The backend is Django + Django REST Framework with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and includes TutorHub AI, a chat assistant that answers questions about the tutor's own students, sessions and payments by calling read-only tools.
 
 **Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login)
 
@@ -11,11 +11,11 @@ A full-stack tutoring management platform. The backend is Django + Django REST F
 
 ## Screenshots
 
-| Analytics | Document Q&A |
+| Analytics | Session notes from a Zoom summary |
 |---|---|
-| ![Weekly sessions, no-shows and hours taught](docs/screenshots/admin-analytics-sessions.png) | ![Document Q&A answer with source pages](docs/screenshots/documents-query.png) |
-| **Session notes from a Zoom summary** | **Admin overview** |
-| ![Session detail with AI-generated notes](docs/screenshots/session-detail.png) | ![Admin financial and operations overview](docs/screenshots/admin-dashboard.png) |
+| ![Weekly sessions, no-shows and hours taught](docs/screenshots/admin-analytics-sessions.png) | ![Session detail with AI-generated notes](docs/screenshots/session-detail.png) |
+| **Admin overview** | |
+| ![Admin financial and operations overview](docs/screenshots/admin-dashboard.png) | |
 
 <details>
 <summary><strong>Admin pages</strong></summary>
@@ -36,7 +36,7 @@ A full-stack tutoring management platform. The backend is Django + Django REST F
 - "My data" JSON export and import of your own records
 - Student profiles with Zoom, Google Docs, and OneDrive links
 - Session logging with AI-powered Zoom summary parsing via OpenAI
-- Document library: upload PDFs (past papers, textbooks, notes) and ask questions across them, filtered by subject, level, document type and exam board, with answers citing source pages (see [Document Q&A](#document-qa-rag))
+- TutorHub AI: ask questions in plain English such as "does any payee owe me money?" or "summarise last week's classes for Lok", answered from your own data (see [TutorHub AI](#tutorhub-ai))
 - Payment and payee management
 - Google Calendar integration (OAuth 2.0) for session scheduling
 - Dashboard with analytics and KPIs
@@ -44,32 +44,20 @@ A full-stack tutoring management platform. The backend is Django + Django REST F
 - Dark mode
 - Alembic database migrations
 
-## Document Q&A (RAG)
+## TutorHub AI
 
-Tutors upload PDFs from the **Documents** page and ask questions across them. Retrieval runs inside the main app, against the same PostgreSQL database, using pgvector. (Described below as originally built in FastAPI; the live Django port works the same way — see [`django_app/rag/services.py`](django_app/rag/services.py).)
+TutorHub AI is a chat page (`/assistant`) where a tutor asks questions about their own records: "how many sessions has Lok had this term?", "does any payee owe me money?", "summarise last week's classes". It replaced an earlier Document Q&A feature (RAG over uploaded PDFs), which answered questions about teaching material rather than the business itself.
 
-**Ingestion** ([`app/services/ingestion.py`](app/services/ingestion.py))
+**How it works** ([`django_app/assistant/`](django_app/assistant))
 
-1. pdfplumber extracts the text page by page. Blank pages are skipped. A PDF with no extractable text, such as a scan without an OCR layer, is rejected.
-2. Each page is split into 800-character chunks that overlap by 100 characters, so text cut at a boundary still appears in context in the next chunk. Chunks never span two pages, so each one keeps an exact page number.
-3. All of a document's chunks are embedded in one batched call to OpenAI `text-embedding-3-small`, which returns 1536-dimensional vectors.
-4. The document row (title, type, subject, level, optional exam board) and its chunks are written in a single transaction. Each chunk's embedding goes in a `vector(1536)` column.
+1. The model gets the question, the last 10 turns of the conversation, and a system prompt with today's date in UK time. The prompt tells it to answer only from tool results and to ask when a name matches more than one student.
+2. It can call five read-only tools ([`tools.py`](django_app/assistant/tools.py)): `find_students`, `count_sessions`, `get_sessions`, `list_payee_balances` and `get_payments`. Each runs a normal Django query scoped to the signed-in user, so another account's ids are reported as not found. Payee balances reuse the same calculation as the Payees page.
+3. The agent loop ([`agent.py`](django_app/assistant/agent.py)) runs the requested tools and feeds the results back, for up to 5 rounds within a 45-second budget. Bad arguments come back to the model as errors it can correct, never as exceptions.
+4. Only [`llm.py`](django_app/assistant/llm.py) knows the provider is OpenAI. Everything else uses provider-neutral message and tool-call types, so switching provider touches one file.
 
-**Querying** ([`app/services/query.py`](app/services/query.py))
+Tool output is kept to what answers need. Payee contact details, bank and payment references, raw Zoom transcripts and calendar ids never reach the model. Each account has a daily question allowance (default 1, or unlimited), editable in the Django admin. A question is reserved before the model is called and refunded if the provider fails.
 
-1. The question is embedded with the same model.
-2. One SQL query ranks chunks by cosine distance (pgvector's `<=>` operator) and returns the top 5. Any filters on document type, subject, level or exam board are `WHERE` clauses in that same query. The top 5 therefore always come from the filtered set; results are never trimmed after ranking.
-3. The retrieved chunks go to `gpt-4o-mini`, each labelled with its document title and page number. The system prompt tells the model to answer only from that context and to say so when the answer isn't there.
-4. The response lists the source document and page for every retrieved chunk, with duplicate pages removed. The UI renders LaTeX in answers with MathJax, so equations display properly.
-
-Search is exact, with no approximate-nearest-neighbour index. For a single tutoring business's library, a sequential scan is fast and returns exact results. If the library grows, an HNSW index is the next step. Models, chunk size, overlap and `top_k` are set in [`app/core/config.py`](app/core/config.py) and can be overridden with environment variables (`EMBEDDING_MODEL`, `CHAT_MODEL`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `TOP_K`).
-
-**Tests**
-
-- [`tests/test_service_ingestion.py`](tests/test_service_ingestion.py) covers chunk boundaries and the 100-character overlap, rejection of PDFs with no text, and saving documents with and without the optional metadata.
-- [`tests/test_service_query.py`](tests/test_service_query.py) covers the fallback when nothing matches, answers with sources, merging of sources that share a page, and metadata filters that exclude non-matching documents.
-
-The OpenAI calls are mocked. The similarity queries run against a real pgvector database (the `pgvector/pgvector:pg17` service in CI), so the retrieval SQL is tested exactly as it runs in production.
+**Tests** cover each tool's results and account scoping, date boundaries in UK time, the agent loop against a scripted fake model, the quota, and the chat page, including CSRF-enforcing tests.
 
 ## Technical decisions
 
@@ -79,9 +67,9 @@ The OpenAI calls are mocked. The similarity queries run against a real pgvector 
 
 **Single container, no Celery.** The FastAPI app ran separate worker/beat/Redis processes for background email alerts and the weekly export. The Django app is a synchronous `gunicorn` process with no background task queue — simpler to run and reason about at this scale, at the cost of giving up true async background jobs (the weekly export now runs as its own scheduled ECS task; see `terraform/environments/cost-optimized`).
 
-**Terraform, split into layers.** All AWS infrastructure is defined in Terraform as three root modules. `foundation` holds the parts that are costly or impossible to recreate: the VPC, RDS with pgvector, ECR, IAM, and SSM secrets. `cost-optimized` is the compute layer that actually runs live — a single Fargate Spot task running the Django app plus a Cloudflare Tunnel sidecar, so the task has no inbound ports open. [`production`](terraform/environments/production) is an earlier, load-balanced + Celery/Redis design for the old FastAPI app; its state is empty (nothing is deployed from it) and it's kept only as a reference for that alternative shape. GitHub Actions authenticates to AWS through OIDC, so no long-lived access keys are stored.
+**Terraform, split into layers.** All AWS infrastructure is defined in Terraform as three root modules. `foundation` holds the parts that are costly or impossible to recreate: the VPC, RDS, ECR, IAM, and SSM secrets. `cost-optimized` is the compute layer that actually runs live — a single Fargate Spot task running the Django app plus a Cloudflare Tunnel sidecar, so the task has no inbound ports open. [`production`](terraform/environments/production) is an earlier, load-balanced + Celery/Redis design for the old FastAPI app; its state is empty (nothing is deployed from it) and it's kept only as a reference for that alternative shape. GitHub Actions authenticates to AWS through OIDC, so no long-lived access keys are stored.
 
-**RAG inside the app.** Document Q&A started as a separate service and was moved into the main app on pgvector. Chunks live in the same Postgres database as students and sessions. That leaves one database to back up and no second service to host or secure. Metadata filters are ordinary SQL against the same data. A document and its chunks commit in one transaction, so a failed upload never leaves a half-indexed document behind. The trade-off is that vector search shares the database with the transactional workload. That is fine at this scale, and because retrieval sits behind its own service module, it could be split out again later.
+**Tool calling, not RAG, for TutorHub AI.** The questions a tutor actually asks about their business are counts, balances and date-range filters over structured rows. Retrieving similar-looking text and letting the model add it up would miscount. Instead the model chooses from a few read-only tools, and the database does the counting. The model never writes SQL and can't change anything. This replaced the earlier Document Q&A feature, a pgvector RAG pipeline over uploaded PDFs, which answered a different question (what's in my teaching material) and saw little use.
 
 ## Project Structure
 
@@ -92,7 +80,7 @@ tutor_hub/
 │   ├── students/           # Student model/viewset
 │   ├── tutoring_sessions/  # Session model/viewset
 │   ├── billing/            # Payee/Payment models/viewsets
-│   ├── rag/                # Document Q&A: models, ingestion, query
+│   ├── assistant/          # TutorHub AI: read-only tools, agent loop, LLM client, daily quota
 │   ├── calendar_integration/ # Google Calendar OAuth + events
 │   ├── analytics/          # Dashboard trend data
 │   ├── web/                # Server-rendered pages (reuses the Jinja2 templates below)
@@ -154,7 +142,7 @@ docker compose down
 
 ## Deployment
 
-The app runs on AWS and is provisioned with Terraform. See [terraform/environments/README.md](terraform/environments/README.md) for the architecture and setup. The live setup is a single ECS Fargate Spot task running the Django app (`gunicorn`) alongside a Cloudflare Tunnel sidecar — no Celery/Redis, since the Django app has no background task queue. The database is RDS PostgreSQL with pgvector. Traffic reaches the app through the tunnel, so the task has no inbound ports open.
+The app runs on AWS and is provisioned with Terraform. See [terraform/environments/README.md](terraform/environments/README.md) for the architecture and setup. The live setup is a single ECS Fargate Spot task running the Django app (`gunicorn`) alongside a Cloudflare Tunnel sidecar — no Celery/Redis, since the Django app has no background task queue. The database is RDS PostgreSQL. Traffic reaches the app through the tunnel, so the task has no inbound ports open.
 
 Every push to `main` runs the test suite, then the [deploy workflow](.github/workflows/deploy.yml):
 
@@ -190,6 +178,7 @@ The retired FastAPI app's tests (`pytest`, at the repo root) still run locally i
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated allowed hosts (must include `localhost` in production — the container's own health check hits it) |
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins behind the Cloudflare Tunnel |
 | `OPENAI_API_KEY` | API key from platform.openai.com |
+| `ASSISTANT_MODEL` | Chat model for TutorHub AI (optional, default `gpt-4o-mini`) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client credentials |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI |
 | `RESEND_API_KEY` | API key from resend.com for outbound email |
@@ -254,10 +243,9 @@ All REST endpoints are under the `/api/v1` prefix, served by Django REST Framewo
 | Layer | Technology |
 |---|---|
 | API | Django, Django REST Framework, Gunicorn |
-| Database | PostgreSQL, pgvector, Django ORM, migrations |
+| Database | PostgreSQL, Django ORM, migrations |
 | Auth | JWT (`djangorestframework-simplejwt`), bcrypt (for legacy password hashes) |
-| AI | OpenAI API (Zoom summary parsing, embeddings, document Q&A) |
-| PDF parsing | pdfplumber |
+| AI | OpenAI API (TutorHub AI tool calling, Zoom summary parsing) |
 | Calendar | Google OAuth 2.0, Google Calendar API |
 | Email | Resend |
 | Templating | Jinja2 (via Django's Jinja2 template backend), Tailwind CSS |

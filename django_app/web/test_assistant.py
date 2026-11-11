@@ -212,3 +212,11 @@ class AssistantConversationTests(TestCase):
             ],
         )
         self.assertContains(self.client.get("/assistant"), "No one else.")
+
+
+class DocumentsRemovedTests(TestCase):
+    def test_documents_pages_and_api_are_gone(self):
+        login(self.client, make_user("tutor@example.com"))
+        for path in ("/documents", "/api/v1/documents/", "/api/v1/query"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 404)

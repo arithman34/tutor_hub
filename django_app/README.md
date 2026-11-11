@@ -18,12 +18,15 @@ tests, or deploys it anymore.
 - `billing` — `Payee`/`Payment` models/viewsets (admin-only), `/payees/{id}/balance`
   endpoint (payments received minus billable session cost). `students.payee`
   is now a real `ForeignKey` into this app. Tested.
-- `rag` — `Document`/`Chunk` models (`Chunk.embedding` via `pgvector.django.VectorField`),
-  PDF ingestion (`pdfplumber` + OpenAI embeddings), and a `/query` endpoint
-  doing cosine-distance retrieval + chat completion. Tutor-only. Tested —
-  note the cosine-distance query tests require a real Postgres + pgvector
-  backend and are skipped under the SQLite test database (see "Running
-  tests" below).
+- `assistant` — TutorHub AI. `tools.py` holds five read-only, user-scoped
+  query tools plus their JSON-schema specs; `agent.py` runs the tool-calling
+  loop (5 rounds, 45s budget, last 10 turns of history); `llm.py` is the only
+  module that knows the provider (OpenAI); `quota.py` enforces each
+  account's daily question allowance (`User.assistant_daily_limit`, blank =
+  unlimited) with the `AssistantUsage` model. Tested with a fake model client.
+- `rag` — the retired Document Q&A feature. Now just an empty app whose
+  migration `0002` drops the `documents` and `chunks` tables; it is deleted
+  once that migration has run in production.
 - `calendar_integration` — `GoogleCalendarToken` model, OAuth connect/callback/
   disconnect, upcoming/one-off/recurring event endpoints against the
   "Tutoring" calendar. The connect/callback handshake is JWT-only (no Django
@@ -94,15 +97,11 @@ All six planned apps are scaffolded, plus a frontend has started:
   `?payee_id=` prefill used by the "Add Payment" link on a payee's detail
   page). No update/delete UI, matching the original FastAPI app — only the
   DRF `PaymentViewSet` supports those.
-- `documents` (web) — `/documents` (tutor-only, two tabs: "Library" lists
-  uploaded PDFs with a delete action, "Ask" runs a RAG query), `POST
-  /documents/upload` (PDF ingestion via `rag.services.ingest_document`),
-  `POST /documents/<uuid>/delete`, `POST /documents/query` (via
-  `rag.services.answer_question`, re-rendering the same page with the
-  answer/sources or an error message). Both tabs post to the same
-  `/documents` page and are toggled client-side by JS, not separate routes.
-  Reuses the RAG app's services directly rather than duplicating ingestion/
-  query logic for the web layer.
+- `assistant` (web) — `/assistant` (TutorHub AI chat), `POST
+  /assistant/ask` (checks the daily allowance, then calls
+  `assistant.agent.answer`) and `POST /assistant/reset` ("New chat").
+  History lives in the Django session under a per-user key, so a shared
+  browser never shows one account's chat to another.
 - `connections` (web) — `/connections` shows Google Calendar connect/
   disconnect status (connected = the stored `GoogleCalendarToken` has a
   `refresh_token`; disconnect clears credentials but keeps the row, since
@@ -205,10 +204,4 @@ python manage.py test
 ```
 
 Test runs automatically use an in-memory SQLite database (see
-`RUNNING_TESTS` in `config/settings.py`), so no local Postgres is needed —
-except for the two `rag` tests that exercise real cosine-distance
-retrieval, which are skipped unless `connection.vendor == "postgresql"`
-(they can't run against sqlite). To cover those too, temporarily remove
-the `RUNNING_TESTS` branch in `config/settings.py` so tests run against a
-real Postgres database with the `vector` extension available, then run
-`python manage.py test rag`.
+`RUNNING_TESTS` in `config/settings.py`), so no local Postgres is needed.

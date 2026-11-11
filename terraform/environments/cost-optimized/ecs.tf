@@ -77,8 +77,9 @@ resource "aws_ecs_task_definition" "app" {
         "gunicorn", "config.wsgi:application",
         "--bind", "0.0.0.0:8000",
         "--workers", "2",
-        # TutorHub AI answers can take several LLM round trips (agent budget 45s);
-        # stay under the ALB's 60s idle timeout.
+        # TutorHub AI answers can take several LLM round trips (agent budget
+        # 45s). Gunicorn's default 30s would kill those workers; 55s still sits
+        # well inside Cloudflare's 100s proxy timeout.
         "--timeout", "55",
       ]
       portMappings = [{ containerPort = 8000, protocol = "tcp" }]

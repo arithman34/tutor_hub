@@ -173,14 +173,9 @@ CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").sp
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# OpenAI: TutorHub AI and the legacy Documents (RAG) feature
+# OpenAI: TutorHub AI and Zoom summary parsing
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 ASSISTANT_MODEL = os.environ.get("ASSISTANT_MODEL", "gpt-4o-mini")
-RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "text-embedding-3-small")
-RAG_CHAT_MODEL = os.environ.get("RAG_CHAT_MODEL", "gpt-4o-mini")
-RAG_CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE", "800"))
-RAG_CHUNK_OVERLAP = int(os.environ.get("RAG_CHUNK_OVERLAP", "100"))
-RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
 
 # Google Calendar integration
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
