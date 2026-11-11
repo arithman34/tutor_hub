@@ -7,14 +7,14 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 from . import services
 from .models import GoogleCalendarToken
 
 
 def make_user(email="tutor@example.com"):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=UserRole.TUTOR)
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B")
 
 
 def fake_response(json_data, status_code=200):
@@ -206,3 +206,19 @@ class ViewTests(APITestCase):
         response = self.client.get(reverse("calendar-callback"), {"code": "auth-code", "state": state})
         self.assertIn("connected=1", response.url)
         mock_exchange.assert_called_once()
+
+
+class TokenAdminTests(APITestCase):
+    def test_admin_never_exposes_oauth_tokens(self):
+        from django.contrib import admin
+        from django.test import RequestFactory
+
+        superuser = User.objects.create_superuser(email="ops@example.com", password="x", first_name="O", last_name="P")
+        request = RequestFactory().get("/")
+        request.user = superuser
+        model_admin = admin.site._registry[GoogleCalendarToken]
+
+        fields = set(model_admin.get_fields(request)) | set(model_admin.get_form(request).base_fields)
+        self.assertNotIn("access_token", fields)
+        self.assertNotIn("refresh_token", fields)
+        self.assertFalse({"access_token", "refresh_token"} & set(model_admin.list_display))

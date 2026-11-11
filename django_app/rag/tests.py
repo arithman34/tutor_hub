@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 from . import services
 from .models import Chunk, Document
@@ -16,8 +16,8 @@ requires_postgres = unittest.skipUnless(
 )
 
 
-def make_user(email, role=UserRole.TUTOR):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role)
+def make_user(email):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B")
 
 
 class ChunkTextTests(APITestCase):
@@ -71,19 +71,13 @@ class IngestDocumentTests(APITestCase):
 
 class DocumentViewPermissionTests(APITestCase):
     def setUp(self):
-        self.tutor = make_user("tutor@example.com", UserRole.TUTOR)
-        self.admin_only = make_user("admin@example.com", UserRole.ADMIN)
+        self.tutor = make_user("tutor@example.com")
         self.url = reverse("document-list")
 
     def test_tutor_can_list_documents(self):
         self.client.force_authenticate(self.tutor)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_non_tutor_admin_cannot_list_documents(self):
-        self.client.force_authenticate(self.admin_only)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_cannot_list_documents(self):
         response = self.client.get(self.url)
@@ -110,7 +104,7 @@ class DocumentViewPermissionTests(APITestCase):
 
 class QueryViewTests(APITestCase):
     def setUp(self):
-        self.tutor = make_user("tutor@example.com", UserRole.TUTOR)
+        self.tutor = make_user("tutor@example.com")
         self.url = reverse("rag-query")
 
     @requires_postgres
@@ -121,12 +115,6 @@ class QueryViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["answer"], "No relevant content found for your question.")
         self.assertEqual(response.data["sources"], [])
-
-    def test_query_requires_tutor_role(self):
-        admin_only = make_user("admin@example.com", UserRole.ADMIN)
-        self.client.force_authenticate(admin_only)
-        response = self.client.post(self.url, {"question": "x"})
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @requires_postgres
     @patch("rag.services.get_client")

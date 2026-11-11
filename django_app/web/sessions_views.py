@@ -2,7 +2,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
@@ -33,37 +32,29 @@ def _parse_dt(date_str: str, time_str: str) -> datetime:
     return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
 
 
-def _visible_session_or_none(session_id, user) -> Session | None:
+def _owned_session_or_none(session_id, user) -> Session | None:
+    return Session.objects.select_related("student").filter(id=session_id, user=user).first()
+
+
+def _owned_student_id(raw: str | None, user):
+    """The student id from a form, or None if blank or not one of the user's students."""
+    if not raw:
+        return None
     try:
-        session = Session.objects.select_related("student", "user").get(id=session_id)
-    except (Session.DoesNotExist, ValueError, TypeError):
+        student_id = uuid.UUID(raw)
+    except ValueError:
         return None
-    if not user.is_admin and session.user_id != user.id:
-        return None
-    return session
+    return student_id if Student.objects.filter(id=student_id, user=user).exists() else None
 
 
 @login_required
 def sessions_list(request):
-    user = request.user
-    q = request.GET.get("q", "")
-
-    if not user.is_tutor:
-        # Admins only see sessions that originated from a Google Calendar
-        # event — the simple logged-sessions list, not the live calendar view.
-        qs = Session.objects.select_related("student", "user").filter(calendar_event_id__isnull=False)
-        if q:
-            qs = qs.filter(Q(student__first_name__icontains=q) | Q(student__last_name__icontains=q))
-        sessions = qs.order_by("-session_date")
-        return render(request, "sessions/index.html", {"user": user, "active_page": "sessions", "sessions": sessions, "q": q})
-
-    return _sessions_calendar_view(request, user, q)
+    return _sessions_calendar_view(request, request.user, request.GET.get("q", ""))
 
 
 def _sessions_calendar_view(request, user, q):
-    """Tutors see their live Google Calendar ("Tutoring") events merged with
-    which ones have already been logged as a Session — not the plain
-    logged-sessions list admins get."""
+    """The live Google Calendar ("Tutoring") events merged with which ones
+    have already been logged as a Session."""
     token = GoogleCalendarToken.objects.filter(user=user).first()
     if not token:
         return redirect("/connections?error=not_connected")
@@ -169,9 +160,6 @@ def _sessions_calendar_view(request, user, q):
 @login_required
 def sessions_new(request):
     user = request.user
-    if not user.is_tutor:
-        return redirect("/sessions")
-
     students = Student.objects.filter(user=user, is_active=True).order_by("first_name")
     return render(
         request,
@@ -192,15 +180,16 @@ def sessions_new(request):
 
 def sessions_create(request):
     user = request.user
-    if not user.is_tutor:
-        return redirect("/sessions")
+    student_id = _owned_student_id(request.POST.get("student_id"), user)
+    if student_id is None:
+        return redirect("/sessions/new")
 
     start_dt = _parse_dt(request.POST["session_date"], request.POST["start_time"])
     end_dt = _parse_dt(request.POST["session_date"], request.POST["end_time"])
 
     Session.objects.create(
         user=user,
-        student_id=uuid.UUID(request.POST["student_id"]),
+        student_id=student_id,
         session_date=start_dt,
         session_start_time=start_dt,
         session_end_time=end_dt,
@@ -229,9 +218,6 @@ def sessions_index(request):
 @login_required
 @require_http_methods(["POST"])
 def sessions_zoom_parse(request):
-    if not request.user.is_tutor:
-        return JsonResponse({"error": "Admins cannot log sessions"}, status=403)
-
     zoom_summary = request.POST.get("zoom_summary", "")
     try:
         parsed = ai.parse_zoom_summary(zoom_summary)
@@ -252,11 +238,11 @@ def sessions_zoom_parse(request):
 @login_required
 def session_detail(request, session_id):
     user = request.user
-    session = _visible_session_or_none(session_id, user)
+    session = _owned_session_or_none(session_id, user)
     if session is None:
         return redirect("/sessions")
 
-    students = Student.objects.filter(user=user, is_active=True).order_by("first_name") if user.is_tutor else []
+    students = Student.objects.filter(user=user, is_active=True).order_by("first_name")
 
     return render(
         request, "sessions/detail.html", {"user": user, "active_page": "sessions", "session": session, "students": students}
@@ -267,15 +253,16 @@ def session_detail(request, session_id):
 @require_http_methods(["POST"])
 def session_update(request, session_id):
     user = request.user
-    session = _visible_session_or_none(session_id, user)
+    session = _owned_session_or_none(session_id, user)
     if session is None:
         return redirect("/sessions")
 
     data = request.POST
     session.is_no_show = bool(data.get("is_no_show"))
 
-    if data.get("student_id"):
-        session.student_id = uuid.UUID(data["student_id"])
+    student_id = _owned_student_id(data.get("student_id"), user)
+    if student_id is not None:
+        session.student_id = student_id
     if data.get("session_date") and data.get("start_time") and data.get("end_time"):
         start_dt = _parse_dt(data["session_date"], data["start_time"])
         end_dt = _parse_dt(data["session_date"], data["end_time"])
@@ -297,7 +284,7 @@ def session_update(request, session_id):
 @login_required
 @require_http_methods(["POST"])
 def session_delete(request, session_id):
-    session = _visible_session_or_none(session_id, request.user)
+    session = _owned_session_or_none(session_id, request.user)
     if session is not None:
         session.delete()
     return redirect("/sessions")

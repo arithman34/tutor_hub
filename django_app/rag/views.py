@@ -2,8 +2,6 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsTutor
-
 from . import services
 from .models import Document
 from .serializers import DocumentSerializer, DocumentUploadSerializer, QuerySerializer
@@ -11,7 +9,7 @@ from .serializers import DocumentSerializer, DocumentUploadSerializer, QuerySeri
 
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTutor]
+    permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["get", "post", "delete"]
 
     def get_queryset(self):
@@ -40,7 +38,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
 
 class QueryView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsTutor]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         serializer = QuerySerializer(data=request.data)

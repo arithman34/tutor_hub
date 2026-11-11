@@ -27,9 +27,6 @@ def _list_documents():
 @login_required
 def documents_page(request):
     user = request.user
-    if not user.is_tutor:
-        return redirect("/dashboard")
-
     return render(
         request,
         "documents/index.html",
@@ -46,10 +43,6 @@ def documents_page(request):
 @login_required
 @require_http_methods(["POST"])
 def upload_document(request):
-    user = request.user
-    if not user.is_tutor:
-        return redirect("/dashboard")
-
     file = request.FILES.get("file")
     try:
         services.ingest_document(
@@ -70,10 +63,6 @@ def upload_document(request):
 @login_required
 @require_http_methods(["POST"])
 def delete_document(request, document_id):
-    user = request.user
-    if not user.is_tutor:
-        return redirect("/dashboard")
-
     try:
         Document.objects.filter(id=uuid.UUID(str(document_id))).delete()
     except (ValueError, TypeError):
@@ -86,9 +75,6 @@ def delete_document(request, document_id):
 @require_http_methods(["POST"])
 def query_documents(request):
     user = request.user
-    if not user.is_tutor:
-        return redirect("/dashboard")
-
     question = request.POST.get("question", "")
     subject = request.POST.get("subject", "")
     level = request.POST.get("level", "")

@@ -3,34 +3,23 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdmin
+from accounts.ownership import OwnedQuerysetMixin
 
 from .models import Student
 from .serializers import StudentSerializer
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
+    model = Student
     serializer_class = StudentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        qs = Student.objects.all() if user.is_admin else Student.objects.filter(user=user)
-
+        qs = super().get_queryset()
         q = self.request.query_params.get("q")
         if q:
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
         return qs
-
-    def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy", "toggle_active"):
-            return [permissions.IsAuthenticated(), IsAdmin()]
-        return [permissions.IsAuthenticated()]
-
-    def perform_create(self, serializer):
-        requested_tutor_id = self.request.data.get("tutor_id")
-        user_id = requested_tutor_id if requested_tutor_id else self.request.user.id
-        serializer.save(user_id=user_id)
 
     @action(detail=True, methods=["post"], url_path="toggle-active")
     def toggle_active(self, request, pk=None):

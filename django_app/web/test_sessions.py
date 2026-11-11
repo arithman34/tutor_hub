@@ -5,7 +5,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from calendar_integration.models import GoogleCalendarToken
 from students.models import Student
 from tutoring_sessions.models import Session
@@ -13,8 +13,8 @@ from tutoring_sessions.models import Session
 from .ai import ParsedSession
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", **extra)
 
 
 def login(client, user):
@@ -78,27 +78,24 @@ class SessionsListPageTests(TestCase):
             response = self.client.get("/sessions")
         self.assertContains(response, "boom")
 
-    def test_admin_sees_only_calendar_linked_sessions(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
+    def test_another_accounts_logged_event_is_not_shown_as_logged(self):
         tutor = make_user("tutor@example.com")
-        s1 = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
-        s2 = Student.objects.create(user=tutor, first_name="Pat", last_name="Jones")
+        other = make_user("other@example.com")
+        connected_token(tutor)
+        other_student = Student.objects.create(user=other, first_name="Pat", last_name="Jones")
         now = timezone.now()
-        Session.objects.create(
-            user=tutor, student=s1, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1), calendar_event_id="evt-1"
+        other_session = Session.objects.create(
+            user=other,
+            student=other_student,
+            session_date=now,
+            session_start_time=now,
+            session_end_time=now + timedelta(hours=1),
+            calendar_event_id="evt-1",
         )
-        Session.objects.create(user=tutor, student=s2, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1))
-
-        login(self.client, admin)
-        response = self.client.get("/sessions")
-        self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
-
-    def test_admin_does_not_see_log_session_link(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.get("/sessions")
-        self.assertNotContains(response, "Log Session")
+        login(self.client, tutor)
+        with patch("calendar_integration.services.fetch_events", return_value=[make_event(event_id="evt-1")]):
+            response = self.client.get("/sessions")
+        self.assertNotContains(response, f"/sessions/{other_session.id}")
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/sessions")
@@ -106,20 +103,16 @@ class SessionsListPageTests(TestCase):
 
 
 class SessionsNewPageTests(TestCase):
-    def test_admin_redirected_away(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.get("/sessions/new")
-        self.assertRedirects(response, "/sessions", fetch_redirect_response=False)
-
     def test_tutor_sees_own_active_students_only(self):
         tutor = make_user("tutor@example.com")
         Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", is_active=True)
         Student.objects.create(user=tutor, first_name="Old", last_name="Student", is_active=False)
+        Student.objects.create(user=make_user("other@example.com"), first_name="Pat", last_name="Jones", is_active=True)
         login(self.client, tutor)
         response = self.client.get("/sessions/new")
         self.assertContains(response, "Sam")
         self.assertNotContains(response, "Old Student")
+        self.assertNotContains(response, "Pat Jones")
 
 
 class SessionCreateTests(TestCase):
@@ -146,10 +139,10 @@ class SessionCreateTests(TestCase):
         self.assertEqual(session.user, self.tutor)
         self.assertEqual(session.work_covered, "fractions")
 
-    def test_admin_cannot_create_session(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        self.client.post("/sessions", self._payload(student_id=str(self.student.id)))
+    def test_cannot_log_session_for_another_accounts_student(self):
+        login(self.client, make_user("other@example.com"))
+        response = self.client.post("/sessions", self._payload())
+        self.assertRedirects(response, "/sessions/new", fetch_redirect_response=False)
         self.assertEqual(Session.objects.count(), 0)
 
     def test_no_show_session_created(self):
@@ -174,12 +167,6 @@ class ZoomParseTests(TestCase):
             response = self.client.post("/sessions/zoom-parse", {"zoom_summary": "raw summary text"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["work_covered"], "covered fractions")
-
-    def test_admin_forbidden(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.post("/sessions/zoom-parse", {"zoom_summary": "x"})
-        self.assertEqual(response.status_code, 403)
 
     def test_parse_failure_returns_502(self):
         tutor = make_user("tutor@example.com")
@@ -257,6 +244,19 @@ class SessionDetailAndMutationTests(TestCase):
         login(self.client, self.other_tutor)
         self.client.post(f"/sessions/{self.session.id}/delete")
         self.assertTrue(Session.objects.filter(id=self.session.id).exists())
+
+    def test_other_tutor_cannot_update(self):
+        login(self.client, self.other_tutor)
+        self.client.post(f"/sessions/{self.session.id}/update", {"work_covered": "hacked"})
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.work_covered, "fractions")
+
+    def test_cannot_move_session_to_another_accounts_student(self):
+        foreign = Student.objects.create(user=self.other_tutor, first_name="Pat", last_name="Jones")
+        login(self.client, self.tutor)
+        self.client.post(f"/sessions/{self.session.id}/update", {"student_id": str(foreign.id)})
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.student, self.student)
 
 
 class SessionFormsCsrfTests(TestCase):

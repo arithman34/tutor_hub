@@ -7,7 +7,7 @@
 <div class="min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded-xl shadow w-full max-w-md dark:bg-gray-800">
         <h1 class="text-2xl font-bold mb-2 text-center">Welcome to TutorHub</h1>
-        <p class="text-gray-500 text-sm text-center mb-6 dark:text-gray-400">Create your admin account to get started.</p>
+        <p class="text-gray-500 text-sm text-center mb-6 dark:text-gray-400">Create your account to get started.</p>
 
         <form method="POST" action="/setup" class="space-y-4" id="setup-form">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -31,7 +31,7 @@
             <p id="password-error" class="text-red-500 text-xs hidden">Passwords do not match</p>
             <button type="submit"
                 class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-                Create Admin Account
+                Create Account
             </button>
         </form>
     </div>

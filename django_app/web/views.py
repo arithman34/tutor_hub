@@ -44,5 +44,5 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     user = request.user
-    stats = services.get_admin_stats() if user.is_admin else services.get_tutor_stats(user)
+    stats = services.get_dashboard_stats(user)
     return render(request, "dashboard/index.html", {"user": user, "active_page": "dashboard", **stats})

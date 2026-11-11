@@ -4,10 +4,9 @@ from django.urls import include, path
 
 urlpatterns = [
     path("health", lambda request: HttpResponse("ok")),
-    # Django's own admin site is moved off /admin/ — the web app's own
-    # /admin/users and /admin/data pages (ported from the FastAPI app) use
-    # that path, and Django admin's catch-all view would otherwise swallow
-    # them with a login redirect before web.urls ever sees the request.
+    # Django's admin is the platform operator's view across all accounts
+    # (superuser only). It lives off the conventional /admin/ path so it
+    # isn't the first URL a scanner tries.
     path("django-admin/", admin.site.urls),
     path("api/v1/auth/", include("accounts.urls")),
     path("api/v1/students/", include("students.urls")),

@@ -11,12 +11,8 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "role",
             "is_active",
             "address",
-            "payout_type",
-            "payout_percentage",
-            "payout_hourly_rate",
             "created_at",
             "updated_at",
         ]

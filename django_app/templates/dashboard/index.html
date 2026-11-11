@@ -7,14 +7,8 @@
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {{ user.first_name }}</h1>
 </div>
 
-{% if user.is_admin %}
-
-{# ── FINANCIAL & OPERATIONS ───────────────────────────────────────────────────── #}
+{# ── MONEY ───────────────────────────────────────────────────────────────────── #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
-    <div class="th-card p-6">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue All-Time</p>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_alltime) }}</p>
-    </div>
     <div class="th-card p-6">
         <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Month</p>
         <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_this_month) }}</p>
@@ -30,20 +24,29 @@
         <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue This Year</p>
         <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_this_year) }}</p>
     </div>
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
     <div class="th-card p-6">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Tutor Payouts (Month)</p>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(total_payout_obligations) }}</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue All-Time</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_alltime) }}</p>
     </div>
-    <div class="bg-white rounded-xl border {% if profit_margin >= 0 %}border-green-100{% else %}border-red-200{% endif %} p-6 dark:bg-gray-800 dark:border-gray-700">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Profit Margin (Month)</p>
-        <p class="text-3xl font-bold {% if profit_margin >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-            £{{ "%.2f"|format(profit_margin) }}
+    <a href="/payees" class="block bg-white rounded-xl border {% if outstanding_payees %}border-red-200{% else %}border-green-100{% endif %} p-6 hover:shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Outstanding</p>
+        <p class="text-3xl font-bold {% if outstanding_payees %}text-red-600{% else %}text-green-600{% endif %}">£{{ "%.2f"|format(outstanding_total) }}</p>
+        <p class="text-xs text-gray-400 mt-2">
+            {% if outstanding_payees %}Owed by {{ outstanding_payees }} payee{% if outstanding_payees != 1 %}s{% endif %}{% else %}Nobody owes you anything{% endif %}
         </p>
-    </div>
+    </a>
 </div>
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+{# ── TEACHING ────────────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Active Students</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ active_students }}</p>
+    </div>
+    <div class="th-card p-6">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Sessions This Week</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ sessions_this_week }}</p>
+    </div>
     <div class="th-card p-6">
         <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Sessions This Month</p>
         <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ sessions_this_month }}</p>
@@ -66,33 +69,5 @@
         <p class="text-xs text-gray-400 mt-2">No prior month data</p>
         {% endif %}
     </div>
-    <div class="bg-white rounded-xl border border-green-100 p-6 dark:bg-gray-800 dark:border-green-900">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Completion Rate</p>
-        <p class="text-3xl font-bold text-green-600">{{ completion_rate }}%</p>
-        <p class="text-xs text-gray-400 mt-2">Sessions with minutes logged</p>
-    </div>
 </div>
-
-{% else %}
-{# ── TUTOR DASHBOARD ─────────────────────────────────────────────────────────── #}
-<div class="grid grid-cols-2 gap-6 mb-8 lg:grid-cols-4">
-    <div class="th-card p-6">
-        <p class="text-sm text-gray-500 mb-1">Active Students</p>
-        <p class="text-3xl font-bold">{{ active_students }}</p>
-    </div>
-    <div class="th-card p-6">
-        <p class="text-sm text-gray-500 mb-1">Sessions This Week</p>
-        <p class="text-3xl font-bold">{{ sessions_this_week }}</p>
-    </div>
-    <div class="th-card p-6">
-        <p class="text-sm text-gray-500 mb-1">Sessions This Month</p>
-        <p class="text-3xl font-bold">{{ sessions_this_month }}</p>
-    </div>
-    <div class="th-card p-6">
-        <p class="text-sm text-gray-500 mb-1">Amount Owed</p>
-        <p class="text-3xl font-bold text-blue-600">£{{ "%.2f"|format(amount_owed) }}</p>
-    </div>
-</div>
-
-{% endif %}
 {% endblock %}

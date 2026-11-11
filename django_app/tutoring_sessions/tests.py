@@ -5,14 +5,14 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from students.models import Student
 
 from .models import Session
 
 
-def make_user(email, role=UserRole.TUTOR):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role)
+def make_user(email):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B")
 
 
 class SessionModelTests(APITestCase):
@@ -47,6 +47,13 @@ class SessionCreateTests(APITestCase):
         payload.update(overrides)
         return payload
 
+    def test_cannot_create_session_for_another_accounts_student(self):
+        other = make_user("other@example.com")
+        self.client.force_authenticate(other)
+        response = self.client.post(self.url, self._payload())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Session.objects.exists())
+
     def test_authenticated_user_creates_session_for_self(self):
         self.client.force_authenticate(self.tutor)
         response = self.client.post(self.url, self._payload())
@@ -66,7 +73,6 @@ class SessionCreateTests(APITestCase):
 
 class SessionAccessTests(APITestCase):
     def setUp(self):
-        self.admin = make_user("admin@example.com", UserRole.ADMIN)
         self.tutor = make_user("tutor@example.com")
         self.other_tutor = make_user("other@example.com")
         self.student = Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith")
@@ -82,11 +88,6 @@ class SessionAccessTests(APITestCase):
 
     def test_owner_can_retrieve(self):
         self.client.force_authenticate(self.tutor)
-        response = self.client.get(self.detail_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_admin_can_retrieve(self):
-        self.client.force_authenticate(self.admin)
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -111,11 +112,25 @@ class SessionAccessTests(APITestCase):
         response = self.client.delete(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-    def test_list_filters_by_owner_unless_admin(self):
+    def test_other_tutor_cannot_delete(self):
+        self.client.force_authenticate(self.other_tutor)
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Session.objects.filter(id=self.session.id).exists())
+
+    def test_list_only_shows_own_sessions(self):
         self.client.force_authenticate(self.other_tutor)
         response = self.client.get(reverse("session-list"))
         self.assertEqual(response.data["count"], 0)
 
-        self.client.force_authenticate(self.admin)
+        self.client.force_authenticate(self.tutor)
         response = self.client.get(reverse("session-list"))
         self.assertEqual(response.data["count"], 1)
+
+    def test_cannot_move_session_to_another_accounts_student(self):
+        foreign_student = Student.objects.create(user=self.other_tutor, first_name="Pat", last_name="Jones")
+        self.client.force_authenticate(self.tutor)
+        response = self.client.patch(self.detail_url, {"student": str(foreign_student.id)})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.student, self.student)

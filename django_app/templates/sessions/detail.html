@@ -18,11 +18,10 @@
 </div>
 
 <div class="grid grid-cols-3 gap-6">
-    <!-- Session details (editable for tutors) -->
+    <!-- Session details -->
     <div class="col-span-1 space-y-4">
         <div class="th-card p-6">
             <h2 class="th-section-title mb-4">Details</h2>
-            {% if user.is_tutor %}
             <form method="POST" action="/sessions/{{ session.id }}/update" class="space-y-4">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 <div>
@@ -70,36 +69,6 @@
                 </div>
                 <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Changes</button>
             </form>
-            {% else %}
-            <dl class="space-y-3 text-sm">
-                <div>
-                    <dt class="text-gray-500">Student</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">
-                        <a href="/students/{{ session.student.id }}" class="hover:text-blue-600">
-                            {{ session.student.first_name }} {{ session.student.last_name }}
-                        </a>
-                    </dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Date</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.session_date.strftime("%d/%m/%Y") }}</dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Time</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.session_start_time.strftime("%H:%M") }} – {{ session.session_end_time.strftime("%H:%M") }}</dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Duration</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{% if session.is_no_show %}—{% else %}{{ session.minutes }} min{% endif %}</dd>
-                </div>
-                {% if session.topic_tags %}
-                <div>
-                    <dt class="text-gray-500">Topics</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{{ session.topic_tags }}</dd>
-                </div>
-                {% endif %}
-            </dl>
-            {% endif %}
         </div>
 
         <!-- Delete -->
@@ -154,9 +123,7 @@
                     <input type="text" name="topic_tags" value="{{ session.topic_tags or '' }}"
                         class="th-input" />
                 </div>
-                {% if user.is_tutor %}
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Save Notes</button>
-                {% endif %}
             </form>
             {% endif %}
         </div>

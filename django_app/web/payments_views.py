@@ -20,11 +20,8 @@ def payments_index(request):
 
 def payments_list(request):
     user = request.user
-    if not user.is_admin:
-        return redirect("/dashboard")
-
     q = request.GET.get("q", "")
-    qs = Payment.objects.select_related("payee", "user").order_by("-payment_date")
+    qs = Payment.objects.filter(user=user).select_related("payee").order_by("-payment_date")
     if q:
         qs = qs.filter(Q(payee__first_name__icontains=q) | Q(payee__last_name__icontains=q))
     payments = qs[:20]
@@ -34,10 +31,7 @@ def payments_list(request):
 
 @login_required
 def payments_new(request):
-    if not request.user.is_admin:
-        return redirect("/dashboard")
-
-    payees = Payee.objects.order_by("first_name")
+    payees = Payee.objects.filter(user=request.user).order_by("first_name")
     return render(
         request,
         "payments/new.html",
@@ -52,13 +46,15 @@ def payments_new(request):
 
 def payments_create(request):
     user = request.user
-    if not user.is_admin:
-        return redirect("/dashboard")
+    try:
+        payee = Payee.objects.get(id=uuid.UUID(request.POST.get("payee_id", "")), user=user)
+    except (Payee.DoesNotExist, ValueError):
+        return redirect("/payments/new")
 
     payment_date = datetime.strptime(request.POST["payment_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
     Payment.objects.create(
         user=user,
-        payee_id=uuid.UUID(request.POST["payee_id"]),
+        payee=payee,
         amount=request.POST["amount"],
         payment_date=payment_date,
         payment_reference=request.POST.get("payment_reference") or None,

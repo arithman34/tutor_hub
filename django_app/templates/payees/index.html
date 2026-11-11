@@ -31,7 +31,6 @@
                 <th class="px-6 py-3">Bank Reference</th>
                 <th class="px-6 py-3">Students</th>
                 <th class="px-6 py-3">Balance</th>
-                {% if user.is_admin %}<th class="px-6 py-3">Tutor</th>{% endif %}
                 <th class="px-6 py-3"></th>
             </tr>
         </thead>
@@ -47,9 +46,6 @@
                 <td class="px-6 py-4 font-medium {% if bal < 0 %}text-red-600{% elif bal > 0 %}text-green-600{% else %}text-gray-500{% endif %}">
                     {% if bal >= 0 %}+{% else %}-{% endif %}£{{ "%.2f"|format(bal|abs) }}
                 </td>
-                {% if user.is_admin %}
-                <td class="px-6 py-4">{{ payee.user.first_name }} {{ payee.user.last_name }}</td>
-                {% endif %}
                 <td class="px-6 py-4 text-right">
                     <a href="/payees/{{ payee.id }}" class="text-blue-600 hover:underline text-xs">View</a>
                 </td>

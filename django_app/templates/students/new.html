@@ -28,16 +28,6 @@
             </div>
         </div>
         <div>
-            <label class="th-label">Assign to Tutor</label>
-            <select name="tutor_id" required
-                class="th-input">
-                <option value="">— Select tutor —</option>
-                {% for tutor in tutors %}
-                <option value="{{ tutor.id }}">{{ tutor.first_name }} {{ tutor.last_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
             <label class="th-label">Level</label>
             <input type="text" name="level" placeholder="e.g. GCSE, A-Level, KS3"
                 class="th-input" />
