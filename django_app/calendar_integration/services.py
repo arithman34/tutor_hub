@@ -11,14 +11,10 @@ _TOKEN_URL = "https://oauth2.googleapis.com/token"
 _CALENDARS_URL = "https://www.googleapis.com/calendar/v3/calendars"
 _EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
 
-# Both scopes are per-resource rather than account-wide: calendar.app.created
-# reaches only calendars this app made, drive.file only files this app made.
-_SCOPE = " ".join(
-    [
-        "https://www.googleapis.com/auth/calendar.app.created",
-        "https://www.googleapis.com/auth/drive.file",
-    ]
-)
+# Per-resource rather than account-wide: calendar.app.created reaches only
+# calendars this app made. Request nothing the app doesn't use, since every
+# scope shows on Google's consent screen and in OAuth verification.
+_SCOPE = "https://www.googleapis.com/auth/calendar.app.created"
 
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 from rest_framework_simplejwt.exceptions import TokenError
@@ -6,7 +7,26 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
 
 from . import services
-from .auth import clear_auth_cookies, login_required, set_auth_cookies
+from .auth import clear_auth_cookies, get_current_user, login_required, set_auth_cookies
+
+
+@require_http_methods(["GET"])
+def home_view(request):
+    """Public landing page. Signed-in users go straight to their dashboard."""
+    user, refreshed = get_current_user(request)
+    if user is None:
+        return render(request, "public/home.html")
+
+    response = redirect("/dashboard")
+    if refreshed:
+        set_auth_cookies(response, *refreshed)
+    return response
+
+
+@require_http_methods(["GET"])
+def privacy_view(request):
+    """Public privacy policy, linked from Google's OAuth consent screen."""
+    return render(request, "public/privacy.html", {"contact_email": settings.CONTACT_EMAIL})
 
 
 @require_http_methods(["GET", "POST"])

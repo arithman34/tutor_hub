@@ -1,0 +1,33 @@
+{% extends "layouts/public.html" %}
+
+{% block title %}TutorHub{% endblock %}
+
+{% block page %}
+<section class="max-w-2xl">
+    <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Run a tutoring business from one place.</h1>
+    <p class="mt-4 text-lg text-gray-600 dark:text-gray-300">
+        TutorHub keeps track of students, lessons and payments for an independent tutor,
+        and schedules lessons straight into Google Calendar.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-4">
+        <a href="/login" class="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700">Log in</a>
+        <span class="text-sm text-gray-500 dark:text-gray-400">Accounts are created by invitation.</span>
+    </div>
+</section>
+
+<section class="mt-16 grid gap-4 sm:grid-cols-2">
+    {% for title, body in [
+        ("Students and sessions", "Log each lesson with what was covered, follow-up actions and the next lesson's focus, or paste a Zoom meeting summary and have it filled in for you."),
+        ("Payments", "Record who pays for which students and see at a glance who owes what."),
+        ("Google Calendar", "Book one-off or weekly lessons into a dedicated Tutoring calendar, and log sessions from it later."),
+        ("Analytics", "Revenue, hours taught and student activity over time, filterable by student or payee."),
+        ("TutorHub AI", "Ask questions about your own records in plain English, like \"how many hours did I teach in March?\""),
+        ("Your data", "Export everything as a single JSON file at any time, and import it back."),
+    ] %}
+    <div class="th-card p-5">
+        <h2 class="th-section-title">{{ title }}</h2>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ body }}</p>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

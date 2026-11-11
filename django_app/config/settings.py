@@ -180,6 +180,10 @@ CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").sp
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # OpenAI: TutorHub AI and Zoom summary parsing
+# Shown on the public privacy policy. Falls back to the developer's GitHub
+# profile when unset.
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "")
+
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 ASSISTANT_MODEL = os.environ.get("ASSISTANT_MODEL", "gpt-4o-mini")
 
