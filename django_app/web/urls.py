@@ -16,6 +16,8 @@ from . import (
 )
 
 urlpatterns = [
+    path("", views.home_view, name="web-home"),
+    path("privacy", views.privacy_view, name="web-privacy"),
     path("login", views.login_view, name="web-login"),
     path("logout", views.logout_view, name="web-logout"),
     path("dashboard", views.dashboard_view, name="web-dashboard"),

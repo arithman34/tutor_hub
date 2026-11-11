@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col">
+    <header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+            <a href="/" class="text-lg font-bold text-blue-600 dark:text-blue-400">TutorHub</a>
+            <a href="/login"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Log in</a>
+        </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-4xl flex-1 px-4 py-12">
+        {% block page %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-gray-200 dark:border-gray-800">
+        <div class="mx-auto flex max-w-4xl flex-wrap gap-x-6 gap-y-2 px-4 py-6 text-sm text-gray-500 dark:text-gray-400">
+            <span>TutorHub</span>
+            <a href="/privacy" class="hover:text-gray-900 dark:hover:text-white">Privacy policy</a>
+        </div>
+    </footer>
+</div>
+{% endblock %}

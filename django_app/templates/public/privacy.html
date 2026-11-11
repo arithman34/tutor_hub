@@ -1,0 +1,100 @@
+{% extends "layouts/public.html" %}
+
+{% block title %}Privacy policy — TutorHub{% endblock %}
+
+{% block page %}
+<article class="max-w-2xl space-y-8 text-gray-700 dark:text-gray-300 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 dark:[&_h2]:text-white [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5 [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400">
+    <header>
+        <h1 class="th-page-title">Privacy policy</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last updated 11 November 2026</p>
+    </header>
+
+    <section class="space-y-3">
+        <p>
+            TutorHub is a tool an independent tutor uses to manage their own tutoring business.
+            Accounts are created by invitation. This policy explains what TutorHub stores,
+            what it does with Google account data, and how to remove it.
+        </p>
+    </section>
+
+    <section class="space-y-3">
+        <h2>What TutorHub stores</h2>
+        <ul>
+            <li>Your account: name, email address, postal address (optional) and a hashed password.</li>
+            <li>Records you enter: students, payees, lesson sessions and their notes, and payments.</li>
+            <li>A daily count of TutorHub AI questions, used to enforce a usage limit.</li>
+            <li>If you connect Google: the OAuth tokens needed to reach your calendar, and the ID of the calendar TutorHub created.</li>
+        </ul>
+        <p>
+            Data is stored in an encrypted database on Amazon Web Services in London (eu-west-2), with encrypted backups.
+            Traffic reaches TutorHub over HTTPS through Cloudflare. Each account can only see its own records.
+        </p>
+    </section>
+
+    <section class="space-y-3">
+        <h2>Google account data</h2>
+        <p>
+            If you connect a Google account, TutorHub asks for one permission, <strong>Calendar
+            (<code>calendar.app.created</code>)</strong>. It lets TutorHub create one secondary calendar called "Tutoring",
+            and create and read events on that calendar only. TutorHub cannot see or change your other calendars,
+            and does not access Gmail, Drive or any other Google data.
+        </p>
+        <p>
+            Events are read from Google when you open the sessions page and are not stored. If you log a lesson
+            from a calendar event, that lesson becomes one of your TutorHub records.
+        </p>
+        <p>
+            TutorHub's use and transfer of information received from Google APIs adheres to the
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>,
+            including the Limited Use requirements. Google data is used only to provide TutorHub's calendar features to you.
+            It is not sold, not used for advertising, not shared with third parties, not sent to AI services,
+            and not used to train AI models. No person reads it except where you ask for help, for security purposes, or where the law requires.
+        </p>
+    </section>
+
+    <section class="space-y-3">
+        <h2>AI features</h2>
+        <p>
+            TutorHub AI and Zoom summary parsing use the OpenAI API. When you use them, your question,
+            the relevant TutorHub records it looks up (such as student names, sessions and payments), or
+            the Zoom summary you paste are sent to OpenAI to generate a response. Google account data is never sent.
+            Under OpenAI's API terms, data sent through the API is not used to train their models.
+        </p>
+    </section>
+
+    <section class="space-y-3">
+        <h2>Cookies</h2>
+        <p>
+            TutorHub sets only the cookies it needs to work: sign-in cookies, a CSRF protection cookie, and a session cookie
+            that holds your current TutorHub AI conversation. Your light or dark mode choice is kept in your browser's local storage.
+            There are no analytics or advertising cookies.
+        </p>
+    </section>
+
+    <section class="space-y-3">
+        <h2>Your choices</h2>
+        <ul>
+            <li><strong>Export:</strong> download all your records as a JSON file from the My Data page.</li>
+            <li>
+                <strong>Disconnect Google:</strong> use the Connections page to delete TutorHub's Google tokens. You can also remove
+                TutorHub's access at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.
+                The "Tutoring" calendar stays in your Google account until you delete it.
+            </li>
+            <li><strong>Delete your account:</strong> ask using the contact below, and your account and all its records will be deleted.</li>
+        </ul>
+    </section>
+
+    <section class="space-y-3">
+        <h2>Changes and contact</h2>
+        <p>If this policy changes, the date at the top will be updated.</p>
+        <p>
+            Questions about this policy or your data:
+            {% if contact_email %}
+            <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+            {% else %}
+            contact the developer through <a href="https://github.com/arithman34" rel="noopener">GitHub</a>.
+            {% endif %}
+        </p>
+    </section>
+</article>
+{% endblock %}
