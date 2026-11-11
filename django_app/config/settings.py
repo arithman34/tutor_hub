@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "rag",
     "calendar_integration",
     "analytics",
+    "assistant",
     "web",
 ]
 
@@ -172,8 +173,9 @@ CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").sp
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# RAG / OpenAI
+# OpenAI: TutorHub AI and the legacy Documents (RAG) feature
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+ASSISTANT_MODEL = os.environ.get("ASSISTANT_MODEL", "gpt-4o-mini")
 RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "text-embedding-3-small")
 RAG_CHAT_MODEL = os.environ.get("RAG_CHAT_MODEL", "gpt-4o-mini")
 RAG_CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE", "800"))

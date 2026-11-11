@@ -77,6 +77,9 @@ resource "aws_ecs_task_definition" "app" {
         "gunicorn", "config.wsgi:application",
         "--bind", "0.0.0.0:8000",
         "--workers", "2",
+        # TutorHub AI answers can take several LLM round trips (agent budget 45s);
+        # stay under the ALB's 60s idle timeout.
+        "--timeout", "55",
       ]
       portMappings = [{ containerPort = 8000, protocol = "tcp" }]
       environment  = local.container_environment
