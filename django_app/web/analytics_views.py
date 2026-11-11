@@ -6,7 +6,7 @@ from django.shortcuts import render
 
 from analytics import services as analytics_service
 
-from .auth import admin_required
+from .auth import login_required
 
 
 def _uuid_or_none(value: str | None):
@@ -28,9 +28,9 @@ def _date_or_none(value: str | None):
         return None
 
 
-@admin_required
+@login_required
 def analytics_page(request):
-    options = analytics_service.get_filter_options()
+    options = analytics_service.get_filter_options(request.user.id)
     return render(
         request,
         "analytics/index.html",
@@ -43,7 +43,7 @@ def analytics_page(request):
     )
 
 
-@admin_required
+@login_required
 def analytics_data(request):
     range_ = request.GET.get("range", "12m")
     granularity = request.GET.get("granularity", "month")
@@ -51,14 +51,14 @@ def analytics_data(request):
     end = _date_or_none(request.GET.get("end"))
 
     now = datetime.now(timezone.utc)
-    earliest = analytics_service.get_earliest_activity() if range_ == "all" else None
+    earliest = analytics_service.get_earliest_activity(request.user.id) if range_ == "all" else None
     preset, window_start, window_end = analytics_service.resolve_range(range_, start, end, earliest, now)
 
     filters = analytics_service.Filters(
         start=window_start,
         end=window_end,
+        user_id=request.user.id,
         granularity=granularity if granularity in analytics_service.GRANULARITIES else "month",
-        tutor_id=_uuid_or_none(request.GET.get("tutor_id")),
         student_id=_uuid_or_none(request.GET.get("student_id")),
         payee_id=_uuid_or_none(request.GET.get("payee_id")),
     )

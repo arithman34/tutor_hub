@@ -5,7 +5,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from billing.models import Payee, Payment
 from students.models import Student
 from tutoring_sessions.models import Session
@@ -13,8 +13,8 @@ from tutoring_sessions.models import Session
 from . import services
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="s3cret-pass", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="s3cret-pass", first_name="A", last_name="B", **extra)
 
 
 class AuthFormsCsrfTests(TestCase):
@@ -115,47 +115,53 @@ class DashboardAccessTests(TestCase):
 
 
 class DashboardStatsTests(TestCase):
-    def test_tutor_stats_reflect_their_own_data_only(self):
-        tutor = make_user("tutor@example.com", payout_hourly_rate=20)
-        other_tutor = make_user("other@example.com")
-        Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", is_active=True)
-        Student.objects.create(user=other_tutor, first_name="Pat", last_name="Jones", is_active=True)
+    def test_stats_reflect_own_data_only(self):
+        tutor = make_user("tutor@example.com")
+        other = make_user("other@example.com")
+        payee = Payee.objects.create(user=tutor, first_name="Jo", last_name="Payer")
+        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", payee=payee, hourly_rate=30)
+        other_payee = Payee.objects.create(user=other, first_name="Lee", last_name="Other")
+        other_student = Student.objects.create(user=other, first_name="Pat", last_name="Jones", payee=other_payee, hourly_rate=99)
 
         now = timezone.now()
-        Session.objects.create(
-            user=tutor,
-            student=Student.objects.get(user=tutor),
-            session_date=now,
-            session_start_time=now,
-            session_end_time=now + timedelta(hours=1),
-        )
+        for owner, s in ((tutor, student), (other, other_student), (other, other_student)):
+            Session.objects.create(
+                user=owner, student=s, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=2)
+            )
+        Payment.objects.create(user=tutor, payee=payee, amount=Decimal("100.00"), payment_date=now)
+        Payment.objects.create(user=other, payee=other_payee, amount=Decimal("500.00"), payment_date=now)
 
-        stats = services.get_tutor_stats(tutor)
+        stats = services.get_dashboard_stats(tutor)
         self.assertEqual(stats["active_students"], 1)
         self.assertEqual(stats["sessions_this_month"], 1)
-        self.assertEqual(stats["amount_owed"], 20.0)
-
-    def test_admin_stats_compute_revenue_and_profit_margin(self):
-        tutor = make_user("tutor@example.com", payout_hourly_rate=20, payout_type="hourly")
-        payee = Payee.objects.create(user=tutor, first_name="Jo", last_name="Payer")
-        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", payee=payee)
-
-        now = timezone.now()
-        Session.objects.create(
-            user=tutor, student=student, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=2)
-        )
-        Payment.objects.create(user=tutor, payee=payee, amount=Decimal("100.00"), payment_date=now)
-
-        stats = services.get_admin_stats()
+        self.assertEqual(stats["hours_this_month"], 2.0)
         self.assertEqual(stats["revenue_this_month"], 100.0)
-        # 2 hours * £20/hr = £40 obligation, profit = 100 - 40 = 60
-        self.assertEqual(stats["total_payout_obligations"], 40.0)
-        self.assertEqual(stats["profit_margin"], 60.0)
+        self.assertEqual(stats["revenue_alltime"], 100.0)
+        # 2h * £30 = £60 billed, £100 paid: Jo is in credit, nobody owes.
+        self.assertEqual(stats["outstanding_total"], 0)
+        self.assertEqual(stats["outstanding_payees"], 0)
 
-    def test_admin_sees_admin_dashboard_not_tutor_dashboard(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        refresh = RefreshToken.for_user(admin)
-        self.client.cookies["access_token"] = str(refresh.access_token)
+    def test_outstanding_sums_only_payees_who_owe(self):
+        tutor = make_user("tutor@example.com")
+        now = timezone.now()
+        for name, rate, paid in (("Owes", 40, "10.00"), ("Also", 20, "0.00"), ("Credit", 10, "100.00")):
+            payee = Payee.objects.create(user=tutor, first_name=name, last_name="P")
+            student = Student.objects.create(user=tutor, first_name=name, last_name="S", payee=payee, hourly_rate=rate)
+            Session.objects.create(
+                user=tutor, student=student, session_date=now, session_start_time=now, session_end_time=now + timedelta(hours=1)
+            )
+            Payment.objects.create(user=tutor, payee=payee, amount=Decimal(paid), payment_date=now)
+
+        stats = services.get_dashboard_stats(tutor)
+        # Owes: 40 - 10 = 30, Also: 20 - 0 = 20, Credit is +90 and excluded.
+        self.assertEqual(stats["outstanding_total"], 50.0)
+        self.assertEqual(stats["outstanding_payees"], 2)
+
+    def test_dashboard_renders_business_stats(self):
+        user = make_user("tutor@example.com")
+        self.client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
 
         response = self.client.get("/dashboard")
         self.assertContains(response, "Revenue All-Time")
+        self.assertContains(response, "Outstanding")
+        self.assertNotContains(response, "Tutor Payouts")

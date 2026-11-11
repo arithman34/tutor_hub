@@ -29,7 +29,6 @@
                 <th class="px-6 py-3">Date</th>
                 <th class="px-6 py-3 text-right">Amount</th>
                 <th class="px-6 py-3">Reference</th>
-                {% if user.is_admin %}<th class="px-6 py-3">Tutor</th>{% endif %}
             </tr>
         </thead>
         <tbody>
@@ -39,12 +38,9 @@
                 <td class="px-6 py-4">{{ payment.payment_date.strftime("%d/%m/%Y") }}</td>
                 <td class="px-6 py-4 text-right font-medium text-green-600">+£{{ "%.2f"|format(payment.amount) }}</td>
                 <td class="px-6 py-4">{{ payment.payment_reference or "—" }}</td>
-                {% if user.is_admin %}
-                <td class="px-6 py-4">{{ payment.user.first_name }} {{ payment.user.last_name }}</td>
-                {% endif %}
             </tr>
             {% else %}
-            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No payments yet</td></tr>
+            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No payments yet</td></tr>
             {% endfor %}
         </tbody>
     </table>

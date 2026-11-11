@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from billing.models import Payee, Payment
-from billing.views import payee_balance
+from billing.services import payee_balance, payee_balances
 
 from .auth import login_required
 
@@ -19,15 +19,12 @@ def payees_index(request):
 
 def payees_list(request):
     user = request.user
-    if not user.is_admin:
-        return redirect("/dashboard")
-
     q = request.GET.get("q", "")
-    qs = Payee.objects.select_related("user").order_by("first_name")
+    qs = Payee.objects.filter(user=user).order_by("first_name")
     if q:
         qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
     payees = list(qs)
-    balances = {str(p.id): payee_balance(p) for p in payees}
+    balances = {str(payee_id): balance for payee_id, balance in payee_balances(payees).items()}
 
     return render(
         request,
@@ -38,16 +35,11 @@ def payees_list(request):
 
 @login_required
 def payees_new(request):
-    if not request.user.is_admin:
-        return redirect("/dashboard")
     return render(request, "payees/new.html", {"user": request.user, "active_page": "payees"})
 
 
 def payees_create(request):
     user = request.user
-    if not user.is_admin:
-        return redirect("/dashboard")
-
     Payee.objects.create(
         user=user,
         first_name=request.POST.get("first_name", "").strip().title(),
@@ -62,16 +54,12 @@ def payees_create(request):
 @login_required
 def payee_detail(request, payee_id):
     user = request.user
-    if not user.is_admin:
-        return redirect("/dashboard")
-
-    try:
-        payee = Payee.objects.prefetch_related("students").get(id=payee_id)
-    except (Payee.DoesNotExist, ValueError, TypeError):
+    payee = Payee.objects.prefetch_related("students").filter(id=payee_id, user=user).first()
+    if payee is None:
         return redirect("/payees")
 
     balance = payee_balance(payee)
-    payments = Payment.objects.filter(payee_id=payee_id).order_by("-payment_date")
+    payments = Payment.objects.filter(payee=payee, user=user).order_by("-payment_date")
 
     return render(
         request,
@@ -83,10 +71,7 @@ def payee_detail(request, payee_id):
 @login_required
 @require_http_methods(["POST"])
 def payee_update(request, payee_id):
-    if not request.user.is_admin:
-        return redirect("/dashboard")
-
-    payee = get_object_or_404(Payee, id=payee_id)
+    payee = get_object_or_404(Payee, id=payee_id, user=request.user)
 
     first_name = request.POST.get("first_name", "").strip()
     last_name = request.POST.get("last_name", "").strip()

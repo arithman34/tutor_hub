@@ -4,13 +4,13 @@ from django.test import Client, TestCase
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from calendar_integration.models import GoogleCalendarToken
 from students.models import Student
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", **extra)
 
 
 def login(client, user):

@@ -1,33 +1,33 @@
 from django.test import Client, TestCase
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 
 class SetupPageTests(TestCase):
     def test_shows_form_when_no_users_exist(self):
         response = self.client.get("/setup")
-        self.assertContains(response, "Create your admin account")
+        self.assertContains(response, "Create your account")
 
     def test_redirects_to_login_when_users_already_exist(self):
-        User.objects.create_user(email="existing@example.com", password="x", first_name="A", last_name="B", role=UserRole.ADMIN)
+        User.objects.create_user(email="existing@example.com", password="x", first_name="A", last_name="B")
         response = self.client.get("/setup")
         self.assertRedirects(response, "/login", fetch_redirect_response=False)
 
 
 class SetupSubmitTests(TestCase):
-    def test_creates_first_admin_and_redirects_to_login(self):
+    def test_creates_first_account_and_redirects_to_login(self):
         response = self.client.post(
             "/setup",
             {"first_name": "jane", "last_name": "doe", "email": "jane@example.com", "password": "secret123"},
         )
         self.assertRedirects(response, "/login", fetch_redirect_response=False)
-        admin = User.objects.get(email="jane@example.com")
-        self.assertEqual(admin.first_name, "Jane")
-        self.assertEqual(admin.role, UserRole.ADMIN)
-        self.assertTrue(admin.check_password("secret123"))
+        user = User.objects.get(email="jane@example.com")
+        self.assertEqual(user.first_name, "Jane")
+        self.assertTrue(user.check_password("secret123"))
+        self.assertFalse(user.is_staff)
 
     def test_rejected_when_users_already_exist(self):
-        User.objects.create_user(email="existing@example.com", password="x", first_name="A", last_name="B", role=UserRole.ADMIN)
+        User.objects.create_user(email="existing@example.com", password="x", first_name="A", last_name="B")
         response = self.client.post(
             "/setup",
             {"first_name": "jane", "last_name": "doe", "email": "jane@example.com", "password": "secret123"},

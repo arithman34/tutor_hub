@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from accounts.ownership import OwnedPrimaryKeyRelatedField
+
 from .models import Payee, Payment
 
 
@@ -26,6 +28,8 @@ class PayeeSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    payee = OwnedPrimaryKeyRelatedField(queryset=Payee.objects.all())
+
     class Meta:
         model = Payment
         fields = [

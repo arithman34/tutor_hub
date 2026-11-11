@@ -40,13 +40,6 @@
         </div>
 
         <div class="w-44">
-            <label class="th-label" for="tutor_id">Tutor</label>
-            <select id="tutor_id" class="th-input">
-                <option value="">All tutors</option>
-                {% for t in tutors %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
-            </select>
-        </div>
-        <div class="w-44">
             <label class="th-label" for="student_id">Student</label>
             <select id="student_id" class="th-input">
                 <option value="">All students</option>
@@ -78,7 +71,7 @@
     const charts = {};
 
     const $ = id => document.getElementById(id);
-    const controls = ['granularity', 'start', 'end', 'tutor_id', 'student_id', 'payee_id'];
+    const controls = ['granularity', 'start', 'end', 'student_id', 'payee_id'];
     let activeRange = '12m';
 
     function format(value, unit) {
@@ -204,14 +197,14 @@
         renderPaymentsCaveat();
     }
 
-    // Payments are recorded against a payee, never a tutor or a student, so those
-    // two filters resolve through the payee. A family whose children see two
-    // different tutors therefore counts towards both — say so rather than let the
-    // number be read as per-tutor revenue.
+    // Payments are recorded against a payee, never a student, so the student
+    // filter resolves through the payee. A payee paying for several students
+    // therefore counts towards each of them — say so rather than let the
+    // number be read as per-student revenue.
     function renderPaymentsCaveat() {
         const note = $('note-payments');
         if (!note) return;
-        const via = $('tutor_id').value ? 'tutor' : ($('student_id').value ? 'student' : null);
+        const via = $('student_id').value ? 'student' : null;
         note.textContent = via
             ? `Payments are recorded per payee, so this ${via} filter matches every payment from that ${via}'s payees — a payee shared with someone else is counted here too.`
             : '';

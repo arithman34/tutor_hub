@@ -1,19 +1,18 @@
 from rest_framework import serializers
 
+from accounts.ownership import OwnedPrimaryKeyRelatedField
 from billing.models import Payee
 
 from .models import Student
 
 
 class StudentSerializer(serializers.ModelSerializer):
-    tutor_id = serializers.UUIDField(source="user_id", read_only=True)
-    payee_id = serializers.PrimaryKeyRelatedField(source="payee", queryset=Payee.objects.all(), allow_null=True, required=False)
+    payee_id = OwnedPrimaryKeyRelatedField(source="payee", queryset=Payee.objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = Student
         fields = [
             "id",
-            "tutor_id",
             "payee_id",
             "first_name",
             "last_name",

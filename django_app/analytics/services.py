@@ -18,7 +18,6 @@ from billing.models import Payee, Payment
 from students.models import Student
 from tutoring_sessions.models import Session
 
-from accounts.models import User, UserRole
 
 GRANULARITIES = ("day", "week", "month")
 
@@ -69,10 +68,13 @@ def pct_change(current: float, previous: float) -> float | None:
 
 @dataclass(frozen=True)
 class Filters:
+    """`user_id` is the account whose data is charted. It is required: every
+    query below is scoped to it, so one account never sees another's rows."""
+
     start: datetime
     end: datetime
+    user_id: uuid.UUID
     granularity: str = "month"
-    tutor_id: uuid.UUID | None = None
     student_id: uuid.UUID | None = None
     payee_id: uuid.UUID | None = None
 
@@ -154,12 +156,12 @@ def resolve_range(
     return "12m", _months_back(now, 11), end_of_today
 
 
-def get_earliest_activity() -> datetime | None:
+def get_earliest_activity(user_id: uuid.UUID) -> datetime | None:
     """Oldest timestamp across the three tracked entities, for the "all time" preset."""
     moments = [
-        Student.objects.order_by("created_at").values_list("created_at", flat=True).first(),
-        Session.objects.order_by("session_date").values_list("session_date", flat=True).first(),
-        Payment.objects.order_by("payment_date").values_list("payment_date", flat=True).first(),
+        Student.objects.filter(user_id=user_id).order_by("created_at").values_list("created_at", flat=True).first(),
+        Session.objects.filter(user_id=user_id).order_by("session_date").values_list("session_date", flat=True).first(),
+        Payment.objects.filter(user_id=user_id).order_by("payment_date").values_list("payment_date", flat=True).first(),
     ]
     found = [m for m in moments if m is not None]
     return min(found) if found else None
@@ -169,9 +171,7 @@ def get_earliest_activity() -> datetime | None:
 
 
 def _student_filter_kwargs(filters: Filters) -> dict:
-    kwargs = {}
-    if filters.tutor_id:
-        kwargs["user_id"] = filters.tutor_id
+    kwargs = {"user_id": filters.user_id}
     if filters.student_id:
         kwargs["id"] = filters.student_id
     if filters.payee_id:
@@ -180,9 +180,7 @@ def _student_filter_kwargs(filters: Filters) -> dict:
 
 
 def _session_filter_kwargs(filters: Filters) -> dict:
-    kwargs = {}
-    if filters.tutor_id:
-        kwargs["user_id"] = filters.tutor_id
+    kwargs = {"user_id": filters.user_id}
     if filters.student_id:
         kwargs["student_id"] = filters.student_id
     if filters.payee_id:
@@ -191,7 +189,7 @@ def _session_filter_kwargs(filters: Filters) -> dict:
 
 
 def _payment_filters(filters: Filters) -> list:
-    """Payments hang off a payee, so tutor/student filters resolve through students.
+    """Payments hang off a payee, so a student filter resolves through students.
 
     Each condition narrows to payee ids via a subquery rather than joining
     through the reverse `students` relation, so a payee with several matching
@@ -199,13 +197,13 @@ def _payment_filters(filters: Filters) -> list:
     in the original) rather than mutually exclusive, so combining filters
     still ANDs them.
     """
-    conditions = []
+    conditions = [Q(user_id=filters.user_id)]
     if filters.payee_id:
         conditions.append(Q(payee_id=filters.payee_id))
     if filters.student_id:
-        conditions.append(Q(payee_id__in=Student.objects.filter(id=filters.student_id, payee_id__isnull=False).values("payee_id")))
-    if filters.tutor_id:
-        conditions.append(Q(payee_id__in=Student.objects.filter(user_id=filters.tutor_id, payee_id__isnull=False).values("payee_id")))
+        conditions.append(
+            Q(payee_id__in=Student.objects.filter(id=filters.student_id, user_id=filters.user_id, payee_id__isnull=False).values("payee_id"))
+        )
     return conditions
 
 
@@ -372,13 +370,12 @@ def get_trends(filters: Filters, now: datetime | None = None) -> dict:
     }
 
 
-def get_filter_options() -> dict:
+def get_filter_options(user_id: uuid.UUID) -> dict:
     """Dropdown contents for the filter bar."""
-    tutors = User.objects.filter(role__in=(UserRole.TUTOR, UserRole.ADMIN_TUTOR)).order_by("first_name", "last_name")
-    students = Student.objects.order_by("first_name", "last_name")
-    payees = Payee.objects.order_by("first_name", "last_name")
+    students = Student.objects.filter(user_id=user_id).order_by("first_name", "last_name")
+    payees = Payee.objects.filter(user_id=user_id).order_by("first_name", "last_name")
 
     def _options(rows):
         return [{"id": str(row.id), "name": f"{row.first_name} {row.last_name}"} for row in rows]
 
-    return {"tutors": _options(tutors), "students": _options(students), "payees": _options(payees)}
+    return {"students": _options(students), "payees": _options(payees)}

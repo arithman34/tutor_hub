@@ -1,9 +1,13 @@
 from rest_framework import serializers
 
+from accounts.ownership import OwnedPrimaryKeyRelatedField
+from students.models import Student
+
 from .models import Session
 
 
 class SessionSerializer(serializers.ModelSerializer):
+    student = OwnedPrimaryKeyRelatedField(queryset=Student.objects.all())
     minutes = serializers.IntegerField(read_only=True)
 
     class Meta:

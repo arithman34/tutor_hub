@@ -1,7 +1,7 @@
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 
 def _has_users() -> bool:
@@ -9,7 +9,7 @@ def _has_users() -> bool:
 
 
 def setup_index(request):
-    """GET shows the first-run form, POST creates the first admin — matches
+    """GET shows the first-run form, POST creates the first account — matches
     the single `/setup` path the original FastAPI router and the template's
     form action both use. No auth is required: this page only does
     anything while the `users` table is empty."""
@@ -34,7 +34,6 @@ def setup_submit(request):
         password=request.POST.get("password", ""),
         first_name=request.POST.get("first_name", "").strip().title(),
         last_name=request.POST.get("last_name", "").strip().title(),
-        role=UserRole.ADMIN,
         is_active=True,
     )
     return redirect("/login")

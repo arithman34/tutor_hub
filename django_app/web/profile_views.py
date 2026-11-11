@@ -1,7 +1,7 @@
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 from .auth import login_required
 
@@ -28,10 +28,6 @@ def profile_update(request):
 
     if email != user.email and User.objects.filter(email=email).exists():
         return redirect("/profile?error=email_taken")
-
-    role = request.POST.get("role", "")
-    if user.is_admin and role in (UserRole.ADMIN, UserRole.ADMIN_TUTOR):
-        user.role = role
 
     user.email = email
     user.first_name = request.POST.get("first_name", "")

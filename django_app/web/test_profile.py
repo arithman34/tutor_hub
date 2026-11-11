@@ -1,11 +1,11 @@
 from django.test import Client, TestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", **extra)
 
 
 def login(client, user):
@@ -19,17 +19,12 @@ class ProfilePageTests(TestCase):
         response = self.client.get("/profile")
         self.assertContains(response, "tutor@example.com")
 
-    def test_tutor_cannot_see_role_select(self):
+    def test_no_role_controls(self):
         tutor = make_user("tutor@example.com")
         login(self.client, tutor)
         response = self.client.get("/profile")
-        self.assertNotContains(response, "<select name=\"role\"")
-
-    def test_admin_sees_role_select(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.get("/profile")
-        self.assertContains(response, "<select name=\"role\"")
+        self.assertNotContains(response, "name=\"role\"")
+        self.assertNotContains(response, "administrator")
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/profile")
@@ -67,24 +62,16 @@ class ProfileUpdateTests(TestCase):
         tutor.refresh_from_db()
         self.assertEqual(tutor.email, "tutor@example.com")
 
-    def test_non_admin_cannot_change_own_role(self):
+    def test_cannot_grant_self_staff_access(self):
         tutor = make_user("tutor@example.com")
         login(self.client, tutor)
         self.client.post(
-            "/profile/update", {"first_name": "A", "last_name": "B", "email": "tutor@example.com", "role": "admin_tutor"}
+            "/profile/update",
+            {"first_name": "A", "last_name": "B", "email": "tutor@example.com", "is_staff": "on", "is_superuser": "on"},
         )
         tutor.refresh_from_db()
-        self.assertEqual(tutor.role, UserRole.TUTOR)
-
-    def test_admin_tutor_can_change_own_role(self):
-        admin_tutor = make_user("admin@example.com", UserRole.ADMIN_TUTOR)
-        login(self.client, admin_tutor)
-        self.client.post(
-            "/profile/update",
-            {"first_name": "A", "last_name": "B", "email": "admin@example.com", "role": "admin_tutor"},
-        )
-        admin_tutor.refresh_from_db()
-        self.assertEqual(admin_tutor.role, UserRole.ADMIN_TUTOR)
+        self.assertFalse(tutor.is_staff)
+        self.assertFalse(tutor.is_superuser)
 
 
 class ProfilePasswordTests(TestCase):

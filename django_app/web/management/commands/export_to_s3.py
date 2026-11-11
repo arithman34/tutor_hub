@@ -5,12 +5,13 @@ from datetime import datetime, timezone
 import boto3
 from django.core.management.base import BaseCommand, CommandError
 
-from web.admin_views import build_export_data
+from web.data_transfer import build_full_backup
 
 
 class Command(BaseCommand):
-    """Writes the same JSON export the admin "Download export" button
-    produces to the backups S3 bucket, under exports/. Intended to run on a
+    """Writes a full backup (every account and row, see
+    web.data_transfer.build_full_backup) to the backups S3 bucket, under
+    exports/. Intended to run on a
     schedule (see terraform/environments/cost-optimized/backup.tf) rather
     than interactively.
     """
@@ -22,7 +23,7 @@ class Command(BaseCommand):
         if not bucket:
             raise CommandError("BACKUP_BUCKET is not set")
 
-        data = build_export_data()
+        data = build_full_backup()
         key = f"exports/tutorhub_export_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
 
         s3 = boto3.client("s3", region_name=os.environ.get("AWS_REGION"))

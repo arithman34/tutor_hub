@@ -4,12 +4,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from rag.models import Document
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", **extra)
 
 
 def login(client, user):
@@ -24,11 +24,6 @@ class DocumentsPageTests(TestCase):
         response = self.client.get("/documents")
         self.assertContains(response, "Algebra Basics")
 
-    def test_admin_redirected_away(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.get("/documents")
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/documents")
@@ -58,16 +53,6 @@ class UploadDocumentTests(TestCase):
         self.assertRedirects(response, "/documents?flash=uploaded", fetch_redirect_response=False)
         self.assertEqual(Document.objects.count(), 1)
 
-    def test_admin_cannot_upload(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        upload = SimpleUploadedFile("notes.pdf", b"%PDF-1.4 fake", content_type="application/pdf")
-        response = self.client.post(
-            "/documents/upload",
-            {"file": upload, "title": "Notes", "document_type": "worksheet", "subject": "maths", "level": "GCSE"},
-        )
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
-        self.assertEqual(Document.objects.count(), 0)
 
     @patch("rag.services.extract_pages")
     def test_ingestion_failure_redirects_with_error_flash(self, mock_extract_pages):
@@ -93,14 +78,6 @@ class DeleteDocumentTests(TestCase):
         self.assertRedirects(response, "/documents?flash=deleted", fetch_redirect_response=False)
         self.assertFalse(Document.objects.filter(id=document.id).exists())
 
-    def test_admin_cannot_delete(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        document = Document.objects.create(title="Notes", document_type="worksheet", subject="maths", level="GCSE")
-        login(self.client, admin)
-        response = self.client.post(f"/documents/{document.id}/delete")
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
-        self.assertTrue(Document.objects.filter(id=document.id).exists())
-
 
 class QueryDocumentsTests(TestCase):
     def test_tutor_gets_answer_rendered_on_page(self):
@@ -119,12 +96,6 @@ class QueryDocumentsTests(TestCase):
             response = self.client.post("/documents/query", {"question": "x"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Could not get an answer")
-
-    def test_admin_redirected_away(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
-        response = self.client.post("/documents/query", {"question": "x"})
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
 
 
 class DocumentsFormsCsrfTests(TestCase):

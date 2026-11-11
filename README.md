@@ -32,7 +32,8 @@ A full-stack tutoring management platform. The backend is Django + Django REST F
 
 ## Features
 
-- Role-based access control (admin, tutor, admin\_tutor)
+- One account per tutor: every student, session, payee and payment belongs to the account that created it, and no account can see another's data
+- "My data" JSON export and import of your own records
 - Student profiles with Zoom, Google Docs, and OneDrive links
 - Session logging with AI-powered Zoom summary parsing via OpenAI
 - Document library: upload PDFs (past papers, textbooks, notes) and ask questions across them, filtered by subject, level, document type and exam board, with answers citing source pages (see [Document Q&A](#document-qa-rag))
@@ -196,7 +197,7 @@ The retired FastAPI app's tests (`pytest`, at the repo root) still run locally i
 
 ## API Endpoints
 
-All REST endpoints are under the `/api/v1` prefix, served by Django REST Framework. User/tutor account management (create, activate/deactivate, role) moved to the admin-only web pages (`/admin/users`) rather than the API.
+All REST endpoints are under the `/api/v1` prefix, served by Django REST Framework. Every endpoint except auth requires a logged-in user and only ever reads or writes that user's own rows: another account's ids return 404, and related ids in a payload (a session's `student`, a payment's `payee`, a student's `payee_id`) must belong to the same account or the request is rejected with 400. The platform operator sees across accounts only through Django's admin at `/django-admin/` (superuser only).
 
 ### Auth
 
@@ -215,7 +216,7 @@ All REST endpoints are under the `/api/v1` prefix, served by Django REST Framewo
 | GET | `/students/{student_id}` | Get student details | Yes |
 | PATCH | `/students/{student_id}` | Update a student | Yes |
 | POST | `/students/{student_id}/toggle-active` | Toggle active status | Yes |
-| DELETE | `/students/{student_id}` | Delete a student | Admin |
+| DELETE | `/students/{student_id}` | Delete a student | Yes |
 
 ### Sessions
 
@@ -231,22 +232,22 @@ All REST endpoints are under the `/api/v1` prefix, served by Django REST Framewo
 
 | Method | Endpoint | Description | Auth required |
 |---|---|---|---|
-| GET | `/payments/` | List all payments | Admin |
-| POST | `/payments/` | Create a payment | Admin |
-| GET | `/payments/{payment_id}` | Get payment details | Admin |
-| PATCH | `/payments/{payment_id}` | Update a payment | Admin |
-| DELETE | `/payments/{payment_id}` | Delete a payment | Admin |
+| GET | `/payments/` | List payments | Yes |
+| POST | `/payments/` | Create a payment | Yes |
+| GET | `/payments/{payment_id}` | Get payment details | Yes |
+| PATCH | `/payments/{payment_id}` | Update a payment | Yes |
+| DELETE | `/payments/{payment_id}` | Delete a payment | Yes |
 
 ### Payees
 
 | Method | Endpoint | Description | Auth required |
 |---|---|---|---|
-| GET | `/payees/` | List payees (supports `?q=` search) | Admin |
-| POST | `/payees/` | Create a payee | Admin |
-| GET | `/payees/{payee_id}` | Get payee details | Admin |
-| GET | `/payees/{payee_id}/balance` | Get payee balance | Admin |
-| PATCH | `/payees/{payee_id}` | Update a payee | Admin |
-| DELETE | `/payees/{payee_id}` | Delete a payee | Admin |
+| GET | `/payees/` | List payees (supports `?q=` search) | Yes |
+| POST | `/payees/` | Create a payee | Yes |
+| GET | `/payees/{payee_id}` | Get payee details | Yes |
+| GET | `/payees/{payee_id}/balance` | Get payee balance | Yes |
+| PATCH | `/payees/{payee_id}` | Update a payee | Yes |
+| DELETE | `/payees/{payee_id}` | Delete a payee | Yes |
 
 ## Tech Stack
 

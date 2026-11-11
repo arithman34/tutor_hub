@@ -1,13 +1,15 @@
+import uuid
+
 from django.test import Client, TestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from billing.models import Payee
 from students.models import Student
 
 
-def make_user(email, role=UserRole.TUTOR, **extra):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role, **extra)
+def make_user(email, **extra):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", **extra)
 
 
 def login(client, user):
@@ -21,10 +23,9 @@ class StudentFormsCsrfTests(TestCase):
 
     def setUp(self):
         self.client = Client(enforce_csrf_checks=True)
-        self.admin = make_user("admin@example.com", UserRole.ADMIN)
         self.tutor = make_user("tutor@example.com")
         self.student = Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith")
-        login(self.client, self.admin)
+        login(self.client, self.tutor)
 
     def _csrf_token(self, get_path):
         self.client.get(get_path)
@@ -32,9 +33,7 @@ class StudentFormsCsrfTests(TestCase):
 
     def test_create_form_includes_working_csrf_token(self):
         token = self._csrf_token("/students/new")
-        response = self.client.post(
-            "/students", {"first_name": "New", "last_name": "Student", "tutor_id": str(self.tutor.id), "csrfmiddlewaretoken": token}
-        )
+        response = self.client.post("/students", {"first_name": "New", "last_name": "Student", "csrfmiddlewaretoken": token})
         self.assertEqual(response.status_code, 302)
 
     def test_update_form_includes_working_csrf_token(self):
@@ -54,7 +53,7 @@ class StudentFormsCsrfTests(TestCase):
 
 
 class StudentsListPageTests(TestCase):
-    def test_tutor_sees_only_own_students(self):
+    def test_shows_only_own_students(self):
         tutor = make_user("tutor@example.com")
         other = make_user("other@example.com")
         Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
@@ -65,68 +64,60 @@ class StudentsListPageTests(TestCase):
         self.assertContains(response, "Sam")
         self.assertNotContains(response, "Pat")
 
-    def test_admin_sees_add_student_link(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        login(self.client, admin)
+    def test_shows_add_student_link(self):
+        login(self.client, make_user("tutor@example.com"))
         response = self.client.get("/students")
         self.assertContains(response, "Add Student")
-
-    def test_tutor_does_not_see_add_student_link(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        response = self.client.get("/students")
-        self.assertNotContains(response, "Add Student")
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/students")
         self.assertRedirects(response, "/login", fetch_redirect_response=False)
 
     def test_search_filters_by_name(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
         tutor = make_user("tutor@example.com")
         Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
         Student.objects.create(user=tutor, first_name="Pat", last_name="Jones")
 
-        login(self.client, admin)
+        login(self.client, tutor)
         response = self.client.get("/students", {"q": "sam"})
         self.assertContains(response, "Sam")
         self.assertNotContains(response, "Pat")
 
 
 class StudentCreateTests(TestCase):
-    def test_tutor_cannot_create_student(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        response = self.client.post("/students", {"first_name": "new", "last_name": "student", "tutor_id": str(tutor.id)})
-        self.assertEqual(Student.objects.count(), 0)
-        self.assertRedirects(response, "/students", fetch_redirect_response=False)
+    def setUp(self):
+        self.tutor = make_user("tutor@example.com")
+        self.other = make_user("other@example.com")
+        login(self.client, self.tutor)
 
-    def test_admin_can_create_student(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        tutor = make_user("tutor@example.com")
-        login(self.client, admin)
-
-        response = self.client.post("/students", {"first_name": "new", "last_name": "student", "tutor_id": str(tutor.id)})
+    def test_creates_student_owned_by_current_user(self):
+        response = self.client.post("/students", {"first_name": "new", "last_name": "student"})
         self.assertRedirects(response, "/students", fetch_redirect_response=False)
         student = Student.objects.get()
         self.assertEqual(student.first_name, "New")
-        self.assertEqual(student.user_id, tutor.id)
+        self.assertEqual(student.user, self.tutor)
 
-    def test_new_page_redirects_non_admin(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
+    def test_owner_cannot_be_overridden_by_form(self):
+        self.client.post("/students", {"first_name": "new", "last_name": "student", "tutor_id": str(self.other.id)})
+        self.assertEqual(Student.objects.get().user, self.tutor)
+
+    def test_attaches_own_payee(self):
+        payee = Payee.objects.create(user=self.tutor, first_name="Jo", last_name="Payer")
+        self.client.post("/students", {"first_name": "new", "last_name": "student", "payee_id": str(payee.id)})
+        self.assertEqual(Student.objects.get().payee, payee)
+
+    def test_ignores_another_accounts_payee(self):
+        foreign = Payee.objects.create(user=self.other, first_name="Lee", last_name="Other")
+        self.client.post("/students", {"first_name": "new", "last_name": "student", "payee_id": str(foreign.id)})
+        self.assertIsNone(Student.objects.get().payee)
+
+    def test_new_page_lists_only_own_payees(self):
+        Payee.objects.create(user=self.tutor, first_name="Jo", last_name="Payer")
+        Payee.objects.create(user=self.other, first_name="Lee", last_name="Other")
         response = self.client.get("/students/new")
-        self.assertRedirects(response, "/students", fetch_redirect_response=False)
-
-    def test_new_page_lists_tutors_and_payees_for_admin(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        tutor = make_user("tutor@example.com")
-        Payee.objects.create(user=admin, first_name="Jo", last_name="Payer")
-        login(self.client, admin)
-
-        response = self.client.get("/students/new")
-        self.assertContains(response, tutor.first_name)
         self.assertContains(response, "Jo Payer")
+        self.assertNotContains(response, "Lee Other")
+        self.assertNotContains(response, "tutor_id")
 
 
 class StudentDetailTests(TestCase):
@@ -140,14 +131,21 @@ class StudentDetailTests(TestCase):
         response = self.client.get(f"/students/{self.student.id}")
         self.assertContains(response, "Sam Smith")
 
+    def test_detail_offers_only_own_payees(self):
+        Payee.objects.create(user=self.tutor, first_name="Jo", last_name="Payer")
+        Payee.objects.create(user=self.other_tutor, first_name="Lee", last_name="Other")
+        login(self.client, self.tutor)
+        response = self.client.get(f"/students/{self.student.id}")
+        self.assertContains(response, "Jo Payer")
+        self.assertNotContains(response, "Lee Other")
+
     def test_other_tutor_redirected_away(self):
         login(self.client, self.other_tutor)
         response = self.client.get(f"/students/{self.student.id}")
         self.assertRedirects(response, "/students", fetch_redirect_response=False)
+        self.assertNotContains(response, "Sam Smith", status_code=302)
 
     def test_nonexistent_student_redirects(self):
-        import uuid
-
         login(self.client, self.tutor)
         response = self.client.get(f"/students/{uuid.uuid4()}")
         self.assertRedirects(response, "/students", fetch_redirect_response=False)
@@ -155,12 +153,12 @@ class StudentDetailTests(TestCase):
 
 class StudentUpdateTests(TestCase):
     def setUp(self):
-        self.admin = make_user("admin@example.com", UserRole.ADMIN)
         self.tutor = make_user("tutor@example.com")
+        self.other = make_user("other@example.com")
         self.student = Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith")
 
-    def test_admin_can_update(self):
-        login(self.client, self.admin)
+    def test_owner_can_update(self):
+        login(self.client, self.tutor)
         response = self.client.post(f"/students/{self.student.id}/update", {"first_name": "sam", "level": "GCSE"})
         self.assertRedirects(response, f"/students/{self.student.id}", fetch_redirect_response=False)
         self.student.refresh_from_db()
@@ -168,7 +166,7 @@ class StudentUpdateTests(TestCase):
         self.assertEqual(self.student.level, "GCSE")
 
     def test_update_parses_google_doc_id_from_ilp_url(self):
-        login(self.client, self.admin)
+        login(self.client, self.tutor)
         self.client.post(
             f"/students/{self.student.id}/update",
             {"first_name": "Sam", "ilp_url": "https://docs.google.com/document/d/abc123XYZ/edit"},
@@ -176,50 +174,51 @@ class StudentUpdateTests(TestCase):
         self.student.refresh_from_db()
         self.assertEqual(self.student.google_doc_id, "abc123XYZ")
 
-    def test_tutor_cannot_update(self):
+    def test_cannot_attach_another_accounts_payee(self):
+        foreign = Payee.objects.create(user=self.other, first_name="Lee", last_name="Other")
         login(self.client, self.tutor)
+        self.client.post(f"/students/{self.student.id}/update", {"first_name": "Sam", "payee_id": str(foreign.id)})
+        self.student.refresh_from_db()
+        self.assertIsNone(self.student.payee)
+
+    def test_other_account_cannot_update(self):
+        login(self.client, self.other)
         response = self.client.post(f"/students/{self.student.id}/update", {"first_name": "changed"})
-        self.assertRedirects(response, f"/students/{self.student.id}", fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 404)
         self.student.refresh_from_db()
         self.assertEqual(self.student.first_name, "Sam")
 
 
 class StudentToggleActiveTests(TestCase):
-    def test_admin_can_toggle(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        tutor = make_user("tutor@example.com")
-        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", is_active=True)
+    def setUp(self):
+        self.tutor = make_user("tutor@example.com")
+        self.student = Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith", is_active=True)
 
-        login(self.client, admin)
-        self.client.post(f"/students/{student.id}/toggle-active")
-        student.refresh_from_db()
-        self.assertFalse(student.is_active)
+    def test_owner_can_toggle(self):
+        login(self.client, self.tutor)
+        self.client.post(f"/students/{self.student.id}/toggle-active")
+        self.student.refresh_from_db()
+        self.assertFalse(self.student.is_active)
 
-    def test_tutor_toggle_is_a_no_op(self):
-        tutor = make_user("tutor@example.com")
-        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", is_active=True)
-
-        login(self.client, tutor)
-        self.client.post(f"/students/{student.id}/toggle-active")
-        student.refresh_from_db()
-        self.assertTrue(student.is_active)
+    def test_other_account_toggle_is_a_no_op(self):
+        login(self.client, make_user("other@example.com"))
+        self.client.post(f"/students/{self.student.id}/toggle-active")
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.is_active)
 
 
 class StudentDeleteTests(TestCase):
-    def test_admin_can_delete(self):
-        admin = make_user("admin@example.com", UserRole.ADMIN)
-        tutor = make_user("tutor@example.com")
-        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
+    def setUp(self):
+        self.tutor = make_user("tutor@example.com")
+        self.student = Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith")
 
-        login(self.client, admin)
-        response = self.client.post(f"/students/{student.id}/delete")
+    def test_owner_can_delete(self):
+        login(self.client, self.tutor)
+        response = self.client.post(f"/students/{self.student.id}/delete")
         self.assertRedirects(response, "/students", fetch_redirect_response=False)
-        self.assertFalse(Student.objects.filter(id=student.id).exists())
+        self.assertFalse(Student.objects.filter(id=self.student.id).exists())
 
-    def test_tutor_cannot_delete(self):
-        tutor = make_user("tutor@example.com")
-        student = Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
-
-        login(self.client, tutor)
-        self.client.post(f"/students/{student.id}/delete")
-        self.assertTrue(Student.objects.filter(id=student.id).exists())
+    def test_other_account_cannot_delete(self):
+        login(self.client, make_user("other@example.com"))
+        self.client.post(f"/students/{self.student.id}/delete")
+        self.assertTrue(Student.objects.filter(id=self.student.id).exists())

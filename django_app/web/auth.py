@@ -85,13 +85,3 @@ def login_required(view):
 
     return wrapped
 
-
-def admin_required(view):
-    @wraps(view)
-    @login_required
-    def wrapped(request, *args, **kwargs):
-        if not request.user.is_admin:
-            return redirect("/dashboard")
-        return view(request, *args, **kwargs)
-
-    return wrapped

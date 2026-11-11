@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import User, UserRole
+from accounts.models import User
 from billing.models import Payee, Payment
 from students.models import Student
 from tutoring_sessions.models import Session
@@ -13,8 +13,8 @@ from tutoring_sessions.models import Session
 from . import services
 
 
-def make_user(email, role=UserRole.TUTOR):
-    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B", role=role)
+def make_user(email):
+    return User.objects.create_user(email=email, password="x", first_name="A", last_name="B")
 
 
 class BucketMathTests(APITestCase):
@@ -105,13 +105,20 @@ class ResolveRangeTests(APITestCase):
 
 class EarliestActivityTests(APITestCase):
     def test_none_when_no_data(self):
-        self.assertIsNone(services.get_earliest_activity())
+        tutor = make_user("tutor@example.com")
+        self.assertIsNone(services.get_earliest_activity(tutor.id))
 
     def test_returns_earliest_across_entities(self):
         tutor = make_user("tutor@example.com")
         Student.objects.create(user=tutor, first_name="Sam", last_name="Smith")
-        earliest = services.get_earliest_activity()
+        earliest = services.get_earliest_activity(tutor.id)
         self.assertIsNotNone(earliest)
+
+    def test_ignores_other_accounts(self):
+        tutor = make_user("tutor@example.com")
+        other = make_user("other@example.com")
+        Student.objects.create(user=other, first_name="Pat", last_name="Jones")
+        self.assertIsNone(services.get_earliest_activity(tutor.id))
 
 
 class GetTrendsTests(APITestCase):
@@ -123,7 +130,7 @@ class GetTrendsTests(APITestCase):
     def test_new_student_counted_in_window_and_roster_carries_baseline_forward(self):
         now = datetime.now(timezone.utc)
         start = now - timedelta(days=60)
-        filters = services.Filters(start=start, end=now, granularity="month")
+        filters = services.Filters(start=start, end=now, user_id=self.tutor.id, granularity="month")
         trends = services.get_trends(filters, now=now)
 
         students_chart = next(c for c in trends["charts"] if c["key"] == "students")
@@ -147,7 +154,7 @@ class GetTrendsTests(APITestCase):
         )
         Payment.objects.create(user=self.tutor, payee=self.payee, amount=Decimal("100.00"), payment_date=now - timedelta(days=5))
 
-        filters = services.Filters(start=start, end=now, granularity="month")
+        filters = services.Filters(start=start, end=now, user_id=self.tutor.id, granularity="month")
         trends = services.get_trends(filters, now=now)
 
         sessions_chart = next(c for c in trends["charts"] if c["key"] == "sessions")
@@ -160,59 +167,63 @@ class GetTrendsTests(APITestCase):
         payments_amount = next(s for s in payments_chart["series"] if s["key"] == "payments_amount")
         self.assertEqual(payments_amount["total"], 100.0)
 
-    def test_filters_scope_to_tutor(self):
-        other_tutor = make_user("other@example.com")
-        Student.objects.create(user=other_tutor, first_name="Pat", last_name="Jones")
-
+    def test_never_counts_another_accounts_data(self):
+        other = make_user("other@example.com")
+        other_payee = Payee.objects.create(user=other, first_name="Lee", last_name="Other")
+        other_student = Student.objects.create(user=other, first_name="Pat", last_name="Jones", payee=other_payee)
         now = datetime.now(timezone.utc)
-        start = now - timedelta(days=90)
-        filters = services.Filters(start=start, end=now, granularity="month", tutor_id=self.tutor.id)
-        trends = services.get_trends(filters, now=now)
+        Session.objects.create(
+            user=other,
+            student=other_student,
+            session_date=now - timedelta(days=1),
+            session_start_time=now - timedelta(days=1),
+            session_end_time=now - timedelta(days=1) + timedelta(hours=1),
+        )
+        Payment.objects.create(user=other, payee=other_payee, amount=Decimal("50.00"), payment_date=now - timedelta(days=1))
 
-        students_chart = next(c for c in trends["charts"] if c["key"] == "students")
-        roster_series = next(s for s in students_chart["series"] if s["key"] == "students_roster")
-        # Only self.student (belongs to self.tutor) should count, not other_tutor's student.
-        self.assertEqual(roster_series["total"], 1.0)
+        # Even when filtering by the other account's student/payee ids.
+        for extra in ({}, {"student_id": other_student.id}, {"payee_id": other_payee.id}):
+            filters = services.Filters(start=now - timedelta(days=90), end=now, user_id=self.tutor.id, granularity="month", **extra)
+            trends = services.get_trends(filters, now=now)
+            totals = {s["key"]: s["total"] for c in trends["charts"] for s in c["series"]}
+            self.assertEqual(totals["sessions_count"], 0, extra)
+            self.assertEqual(totals["payments_amount"], 0, extra)
+            expected_roster = 0.0 if extra else 1.0  # only self.student, and only unfiltered
+            self.assertEqual(totals["students_roster"], expected_roster, extra)
 
 
 class FilterOptionsTests(APITestCase):
-    def test_returns_tutors_students_and_payees(self):
+    def test_returns_own_students_and_payees_only(self):
         tutor = make_user("tutor@example.com")
         payee = Payee.objects.create(user=tutor, first_name="Jo", last_name="Payer")
         Student.objects.create(user=tutor, first_name="Sam", last_name="Smith", payee=payee)
+        other = make_user("other@example.com")
+        Payee.objects.create(user=other, first_name="Lee", last_name="Other")
+        Student.objects.create(user=other, first_name="Pat", last_name="Jones")
 
-        options = services.get_filter_options()
-        self.assertEqual(len(options["tutors"]), 1)
-        self.assertEqual(len(options["students"]), 1)
-        self.assertEqual(len(options["payees"]), 1)
-
-    def test_admin_only_role_excluded_from_tutor_options(self):
-        make_user("admin@example.com", UserRole.ADMIN)
-        options = services.get_filter_options()
-        self.assertEqual(options["tutors"], [])
+        options = services.get_filter_options(tutor.id)
+        self.assertEqual([o["name"] for o in options["students"]], ["Sam Smith"])
+        self.assertEqual([o["name"] for o in options["payees"]], ["Jo Payer"])
+        self.assertNotIn("tutors", options)
 
 
 class ViewPermissionTests(APITestCase):
     def setUp(self):
-        self.admin = make_user("admin@example.com", UserRole.ADMIN)
         self.tutor = make_user("tutor@example.com")
 
-    def test_tutor_cannot_view_trends(self):
+    def test_any_account_can_view_trends(self):
         self.client.force_authenticate(self.tutor)
-        response = self.client.get(reverse("analytics-trends"))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_admin_can_view_trends(self):
-        self.client.force_authenticate(self.admin)
         response = self.client.get(reverse("analytics-trends"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("charts", response.data)
 
-    def test_admin_can_view_filters(self):
-        self.client.force_authenticate(self.admin)
+    def test_filters_only_list_own_students(self):
+        Student.objects.create(user=self.tutor, first_name="Sam", last_name="Smith")
+        Student.objects.create(user=make_user("other@example.com"), first_name="Pat", last_name="Jones")
+        self.client.force_authenticate(self.tutor)
         response = self.client.get(reverse("analytics-filters"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("tutors", response.data)
+        self.assertEqual([o["name"] for o in response.data["students"]], ["Sam Smith"])
 
     def test_unauthenticated_cannot_view_trends(self):
         response = self.client.get(reverse("analytics-trends"))
