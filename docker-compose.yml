@@ -1,7 +1,7 @@
 services:
   db:
     container_name: db_container
-    image: pgvector/pgvector:pg17
+    image: postgres:17
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

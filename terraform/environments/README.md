@@ -2,7 +2,7 @@
 
 Three independent Terraform root modules, each with its own local state:
 
-- **`foundation/`** — VPC, RDS (with pgvector data), ECR, IAM roles, and all
+- **`foundation/`** — VPC, RDS, ECR, IAM roles, and all
   SSM secrets. This is the layer that's expensive/impossible to recreate
   without data loss or downtime. It is never destroyed as part of a
   production ↔ cost-optimized switch.

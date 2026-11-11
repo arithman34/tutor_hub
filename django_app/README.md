@@ -24,9 +24,6 @@ tests, or deploys it anymore.
   module that knows the provider (OpenAI); `quota.py` enforces each
   account's daily question allowance (`User.assistant_daily_limit`, blank =
   unlimited) with the `AssistantUsage` model. Tested with a fake model client.
-- `rag` — the retired Document Q&A feature. Now just an empty app whose
-  migration `0002` drops the `documents` and `chunks` tables; it is deleted
-  once that migration has run in production.
 - `calendar_integration` — `GoogleCalendarToken` model, OAuth connect/callback/
   disconnect, upcoming/one-off/recurring event endpoints against the
   "Tutoring" calendar. The connect/callback handshake is JWT-only (no Django
@@ -182,8 +179,7 @@ root FastAPI app's `POSTGRES_*` settings, plus `DJANGO_SECRET_KEY`,
 
 No standalone Postgres handy? `docker run -d -e POSTGRES_USER=postgres -e
 POSTGRES_PASSWORD=postgres -e POSTGRES_DB=tutorhub_dev -p 127.0.0.1:5432:5432
-pgvector/pgvector:pg17` gives you one with the `vector` extension image
-already baked in; point `.env`'s `POSTGRES_*` vars at it.
+postgres:17` gives you one; point `.env`'s `POSTGRES_*` vars at it.
 
 The `/setup` first-run page (create the first admin when the `users` table
 is empty) is ported too — visit it once, or use
