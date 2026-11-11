@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "rag",
     "calendar_integration",
     "analytics",
+    "assistant",
     "web",
 ]
 
