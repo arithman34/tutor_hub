@@ -26,3 +26,24 @@ jobs:
       - name: Run tests
         working-directory: django_app
         run: python manage.py test
+
+  # Catches a broken Tailwind build on the PR rather than in the deploy's
+  # docker build.
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: django_app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: django_app
+        run: npm ci
+
+      - name: Build CSS and vendor JS
+        working-directory: django_app
+        run: npm run build
