@@ -8,6 +8,7 @@ call tools forever.
 
 import json
 import logging
+import time
 from datetime import datetime
 
 from django.utils import timezone
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 MAX_TOOL_ROUNDS = 5
 MAX_HISTORY_TURNS = 10
+# The whole answer must finish inside the web worker's timeout (gunicorn --timeout 55).
+TIME_BUDGET_SECONDS = 45
+MIN_CALL_SECONDS = 5
 
 GAVE_UP_ANSWER = "Sorry, I couldn't work that out. Try asking a narrower question, for example about one student or one month."
 EMPTY_ANSWER = "Sorry, I don't have an answer for that."
@@ -31,6 +35,9 @@ Today is {today}. Interpret relative dates such as "last week" or "this month" i
 pass dates to tools as YYYY-MM-DD. Weeks run Monday to Sunday.
 
 Rules:
+- This is an ongoing conversation. Read follow-up questions in the light of earlier messages: for example, after \
+naming who owes money, "anyone else?" means anyone not already named, so answer "No one else" if there is nobody \
+more. Don't repeat what you have already said.
 - Answer only from tool results. If the tools do not return what you need, say you don't know. Never guess numbers, names or dates.
 - To refer to a student by name, call find_students first to get their id. If more than one student matches, ask which one the tutor means.
 - A negative payee balance means the payee owes that amount; positive means they are in credit. Money is in GBP (£).
@@ -63,9 +70,15 @@ def answer(user, question: str, history: list[dict] | None = None, client: LLMCl
     client = client or get_client()
     system = build_system_prompt(now)
     messages = [*trim_history(history or []), {"role": "user", "content": question}]
+    deadline = time.monotonic() + TIME_BUDGET_SECONDS
 
     for round_number in range(1, MAX_TOOL_ROUNDS + 1):
-        reply = client.chat(system, messages, TOOL_SPECS)
+        remaining = deadline - time.monotonic()
+        if remaining < MIN_CALL_SECONDS:
+            logger.warning("assistant ran out of time after %d tool rounds", round_number - 1)
+            return GAVE_UP_ANSWER
+
+        reply = client.chat(system, messages, TOOL_SPECS, timeout=remaining)
         if not reply.tool_calls:
             return (reply.text or "").strip() or EMPTY_ANSWER
 

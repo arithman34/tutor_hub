@@ -14,6 +14,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     address = models.CharField(max_length=255, null=True, blank=True)
+    assistant_daily_limit = models.PositiveIntegerField(
+        "TutorHub AI daily limit",
+        null=True,
+        blank=True,
+        default=1,
+        help_text="Questions this account can ask TutorHub AI per day (UK time). Leave blank for unlimited.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

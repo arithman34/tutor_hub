@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import (
     analytics_views,
+    assistant_views,
     calendar_views,
     connections_views,
     data_views,
@@ -41,6 +42,9 @@ urlpatterns = [
     path("documents/upload", documents_views.upload_document, name="web-documents-upload"),
     path("documents/query", documents_views.query_documents, name="web-documents-query"),
     path("documents/<uuid:document_id>/delete", documents_views.delete_document, name="web-documents-delete"),
+    path("assistant", assistant_views.assistant_page, name="web-assistant"),
+    path("assistant/ask", assistant_views.assistant_ask, name="web-assistant-ask"),
+    path("assistant/reset", assistant_views.assistant_reset, name="web-assistant-reset"),
     path("connections", connections_views.connections_page, name="web-connections"),
     path("calendar", calendar_views.calendar_page, name="web-calendar"),
     path("calendar/create", calendar_views.calendar_create_index, name="web-calendar-create"),

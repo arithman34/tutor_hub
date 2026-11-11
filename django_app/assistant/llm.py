@@ -16,8 +16,8 @@ from typing import Protocol
 import openai
 from django.conf import settings
 
-REQUEST_TIMEOUT_SECONDS = 30
-MAX_RETRIES = 2
+# Each attempt gets half the caller's remaining time, so one retry still fits inside it.
+MAX_RETRIES = 1
 
 
 class LLMError(Exception):
@@ -38,21 +38,19 @@ class LLMReply:
 
 
 class LLMClient(Protocol):
-    def chat(self, system: str, messages: list[dict], tools: list[dict]) -> LLMReply: ...
+    def chat(self, system: str, messages: list[dict], tools: list[dict], timeout: float) -> LLMReply: ...
 
 
 class OpenAIClient:
     def __init__(self, api_key: str | None = None, model: str | None = None):
         self.model = model or settings.ASSISTANT_MODEL
-        self._client = openai.OpenAI(
-            api_key=api_key or settings.OPENAI_API_KEY,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-            max_retries=MAX_RETRIES,
-        )
+        self._client = openai.OpenAI(api_key=api_key or settings.OPENAI_API_KEY, max_retries=MAX_RETRIES)
 
-    def chat(self, system: str, messages: list[dict], tools: list[dict]) -> LLMReply:
+    def chat(self, system: str, messages: list[dict], tools: list[dict], timeout: float) -> LLMReply:
+        """One model turn. `timeout` is the total seconds the caller can wait, retries included."""
         try:
             response = self._client.chat.completions.create(
+                timeout=timeout / (MAX_RETRIES + 1),
                 model=self.model,
                 messages=[{"role": "system", "content": system}, *(_to_openai(message) for message in messages)],
                 tools=[{"type": "function", "function": spec} for spec in tools],

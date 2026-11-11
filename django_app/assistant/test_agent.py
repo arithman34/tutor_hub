@@ -9,7 +9,16 @@ from django.test import TestCase, override_settings
 from accounts.models import User
 from students.models import Student
 
-from .agent import EMPTY_ANSWER, GAVE_UP_ANSWER, MAX_HISTORY_TURNS, MAX_TOOL_ROUNDS, answer, build_system_prompt, trim_history
+from .agent import (
+    EMPTY_ANSWER,
+    GAVE_UP_ANSWER,
+    MAX_HISTORY_TURNS,
+    MAX_TOOL_ROUNDS,
+    TIME_BUDGET_SECONDS,
+    answer,
+    build_system_prompt,
+    trim_history,
+)
 from .llm import LLMError, LLMReply, OpenAIClient, ToolCall
 from .tools import TOOL_SPECS
 
@@ -21,8 +30,8 @@ class FakeClient:
         self.replies = list(replies)
         self.calls = []
 
-    def chat(self, system, messages, tools):
-        self.calls.append({"system": system, "messages": list(messages), "tools": tools})
+    def chat(self, system, messages, tools, timeout):
+        self.calls.append({"system": system, "messages": list(messages), "tools": tools, "timeout": timeout})
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
             raise reply
@@ -103,6 +112,19 @@ class AgentTests(TestCase):
             self.assertEqual(answer(self.owner, "Loop forever", client=client), GAVE_UP_ANSWER)
         self.assertEqual(len(client.calls), MAX_TOOL_ROUNDS)
 
+    def test_each_call_gets_the_remaining_time_budget(self):
+        client = FakeClient(tool_reply(("list_payee_balances", "{}")), LLMReply(text="Done."))
+        with mock.patch("assistant.agent.time.monotonic", side_effect=[100.0, 100.0, 130.0]):
+            answer(self.owner, "Balances?", client=client)
+        self.assertEqual([call["timeout"] for call in client.calls], [TIME_BUDGET_SECONDS, TIME_BUDGET_SECONDS - 30])
+
+    def test_gives_up_when_out_of_time(self):
+        client = FakeClient(tool_reply(("list_payee_balances", "{}")))
+        with mock.patch("assistant.agent.time.monotonic", side_effect=[100.0, 100.0, 100.0 + TIME_BUDGET_SECONDS - 1]):
+            with self.assertLogs("assistant.agent", level="WARNING"):
+                self.assertEqual(answer(self.owner, "Balances?", client=client), GAVE_UP_ANSWER)
+        self.assertEqual(len(client.calls), 1)
+
     def test_empty_reply_gets_fallback_text(self):
         for text in (None, "   "):
             with self.subTest(text=text):
@@ -148,6 +170,7 @@ class SystemPromptTests(TestCase):
         self.assertIn("Wednesday 11 November 2026", prompt)
         self.assertIn("Answer only from tool results", prompt)
         self.assertIn("negative payee balance means the payee owes", prompt)
+        self.assertIn("Read follow-up questions in the light of earlier messages", prompt)
 
 
 def openai_response(content=None, tool_calls=()):
@@ -176,10 +199,11 @@ class OpenAIClientTests(TestCase):
             {"role": "tool", "tool_call_id": "call_1", "content": '{"students": []}'},
         ]
 
-        OpenAIClient().chat("system prompt", messages, TOOL_SPECS[:1])
+        OpenAIClient().chat("system prompt", messages, TOOL_SPECS[:1], timeout=40)
 
         kwargs = self.create.call_args.kwargs
         self.assertEqual(kwargs["model"], "test-model")
+        self.assertEqual(kwargs["timeout"], 20)
         self.assertEqual(kwargs["tools"], [{"type": "function", "function": TOOL_SPECS[0]}])
         self.assertEqual(
             kwargs["messages"],
@@ -197,21 +221,21 @@ class OpenAIClientTests(TestCase):
 
     def test_parses_text_reply(self):
         self.create.return_value = openai_response(content="Two sessions.")
-        self.assertEqual(OpenAIClient().chat("s", [], []), LLMReply(text="Two sessions.", tool_calls=[]))
+        self.assertEqual(OpenAIClient().chat("s", [], [], timeout=10), LLMReply(text="Two sessions.", tool_calls=[]))
 
     def test_parses_function_tool_calls_and_skips_other_types(self):
         self.create.return_value = openai_response(
             tool_calls=[openai_tool_call("call_1", "find_students", '{"name": "Lok"}'), openai_tool_call("call_2", "x", "", call_type="custom")]
         )
-        reply = OpenAIClient().chat("s", [], [])
+        reply = OpenAIClient().chat("s", [], [], timeout=10)
         self.assertEqual(reply.tool_calls, [ToolCall(id="call_1", name="find_students", arguments='{"name": "Lok"}')])
 
     def test_sdk_errors_become_llm_errors(self):
         self.create.side_effect = openai.APIConnectionError(request=mock.Mock())
         with self.assertRaisesMessage(LLMError, "APIConnectionError"):
-            OpenAIClient().chat("s", [], [])
+            OpenAIClient().chat("s", [], [], timeout=10)
 
     def test_no_choices_is_an_llm_error(self):
         self.create.return_value = SimpleNamespace(choices=[])
         with self.assertRaises(LLMError):
-            OpenAIClient().chat("s", [], [])
+            OpenAIClient().chat("s", [], [], timeout=10)
