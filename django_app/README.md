@@ -168,10 +168,30 @@ app once this is stable; Django stays as a pure DRF API at that point and
 ```bash
 cd django_app
 pip install -r requirements.txt
+npm install
+npm run build
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
+
+### Frontend assets
+
+Pages are styled with Tailwind CSS v4, compiled ahead of time by the
+Tailwind CLI (no CDN). `frontend/tailwind.css` is the input: it holds the
+dark-mode variant, the shared `th-*` component classes and a few v3
+compatibility defaults. Tailwind scans `templates/` and emits only the
+classes they use, into `static/css/app.css`.
+
+`npm run build` also copies Flowbite and Chart.js (pinned in
+`package.json`) into `static/vendor/`, so all browser JS is self-hosted.
+Both outputs are gitignored. The Docker image builds them in a Node stage,
+and `collectstatic` gives them content-hashed names that WhiteNoise serves
+with long cache lifetimes.
+
+While editing templates, run `npm run dev` alongside `runserver` to rebuild
+the CSS on every change. A class added to a template has no styles until
+Tailwind rebuilds.
 
 Reads config from a `.env` file in this directory (same variables as the
 root FastAPI app's `POSTGRES_*` settings, plus `DJANGO_SECRET_KEY`,

@@ -5,3 +5,6 @@ __pycache__
 db.sqlite3
 .git
 htmlcov
+node_modules
+static/css/app.css
+static/vendor

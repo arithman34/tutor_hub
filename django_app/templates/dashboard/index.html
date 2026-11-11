@@ -28,7 +28,7 @@
         <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Revenue All-Time</p>
         <p class="text-3xl font-bold text-gray-900 dark:text-white">£{{ "%.2f"|format(revenue_alltime) }}</p>
     </div>
-    <a href="/payees" class="block bg-white rounded-xl border {% if outstanding_payees %}border-red-200{% else %}border-green-100{% endif %} p-6 hover:shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <a href="/payees" class="block bg-white rounded-xl border {% if outstanding_payees %}border-red-200{% else %}border-green-100{% endif %} p-6 hover:shadow-xs dark:bg-gray-800 dark:border-gray-700">
         <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Outstanding</p>
         <p class="text-3xl font-bold {% if outstanding_payees %}text-red-600{% else %}text-green-600{% endif %}">£{{ "%.2f"|format(outstanding_total) }}</p>
         <p class="text-xs text-gray-400 mt-2">

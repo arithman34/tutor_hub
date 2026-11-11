@@ -1,0 +1,17 @@
+{
+  "name": "tutorhub-frontend",
+  "private": true,
+  "description": "Builds TutorHub's CSS and vendors its browser JS into static/.",
+  "scripts": {
+    "build": "npm run vendor && npm run build:css",
+    "build:css": "tailwindcss -i frontend/tailwind.css -o static/css/app.css --minify",
+    "dev": "npm run vendor && tailwindcss -i frontend/tailwind.css -o static/css/app.css --watch",
+    "vendor": "node frontend/copy-vendor.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.5",
+    "chart.js": "4.6.1",
+    "flowbite": "3.1.2",
+    "tailwindcss": "4.3.5"
+  }
+}
