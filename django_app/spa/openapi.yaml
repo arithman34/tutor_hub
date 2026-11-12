@@ -621,6 +621,12 @@ paths:
       description: |-
         For DRF viewsets: scope every query to the requesting user and stamp
         new rows with them.
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Filter by payee name.
       tags:
       - payees
       security:
@@ -1009,6 +1015,17 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Filter by student name.
+      - in: query
+        name: student
+        schema:
+          type: string
+          format: uuid
+        description: Only this student's sessions.
       tags:
       - sessions
       security:
@@ -1255,6 +1272,12 @@ paths:
       description: |-
         For DRF viewsets: scope every query to the requesting user and stamp
         new rows with them.
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Filter by student name.
       tags:
       - students
       security:
@@ -1424,6 +1447,7 @@ paths:
       description: |-
         For DRF viewsets: scope every query to the requesting user and stamp
         new rows with them.
+      summary: Switch a student between active and inactive
       parameters:
       - in: path
         name: id
@@ -1434,18 +1458,6 @@ paths:
         required: true
       tags:
       - students
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StudentRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/StudentRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/StudentRequest'
-        required: true
       security:
       - jwtAuth: []
         cookieAuth: []

@@ -16,7 +16,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
       { label: 'Dashboard', to: '/' },
       { label: 'Analytics', href: '/analytics' },
       { label: 'TutorHub AI', to: '/assistant' },
-      { label: 'Students', href: '/students' },
+      { label: 'Students', to: '/students' },
       { label: 'Sessions', href: '/sessions' },
     ],
   },
@@ -45,7 +45,7 @@ function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate: () => vo
   return (
     <NavLink
       to={item.to}
-      end
+      end={item.to === '/'}
       onClick={onNavigate}
       className={({ isActive }) => `${itemClass} ${isActive ? activeClass : ''}`}
     >

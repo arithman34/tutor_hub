@@ -1,8 +1,10 @@
 import logging
+import uuid
 from dataclasses import asdict
 
 from django.db.models import Q
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -21,6 +23,14 @@ class SessionPagination(LimitOffsetPagination):
     default_limit = 20
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter("q", str, description="Filter by student name."),
+            OpenApiParameter("student", OpenApiTypes.UUID, description="Only this student's sessions."),
+        ]
+    )
+)
 class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     model = Session
     serializer_class = SessionSerializer
@@ -32,6 +42,12 @@ class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
         q = self.request.query_params.get("q")
         if q:
             qs = qs.filter(Q(student__first_name__icontains=q) | Q(student__last_name__icontains=q))
+        student = self.request.query_params.get("student")
+        if student:
+            try:
+                qs = qs.filter(student_id=uuid.UUID(student))
+            except ValueError:
+                return qs.none()
         return qs
 
     @extend_schema(
