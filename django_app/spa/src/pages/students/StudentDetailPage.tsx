@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
 import type { Student } from '../../api/types'
@@ -101,10 +101,9 @@ function StudentDetail({ student }: { student: Student }) {
         <section className="card lg:col-span-2">
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <h2 className="font-semibold">Recent sessions</h2>
-            {/* Logging sessions is still a classic page; a full-page link until it moves. */}
-            <a href={`/sessions/new?student_id=${student.id}`} className={`${buttonPrimary} py-1.5`}>
+            <Link to={`/sessions/new?student_id=${student.id}`} className={`${buttonPrimary} py-1.5`}>
               Log session
-            </a>
+            </Link>
           </div>
           {sessions.isPending && <div className="p-6"><Loading>Loading sessions…</Loading></div>}
           {sessions.isError && <div className="p-6"><ErrorMessage>Couldn't load sessions.</ErrorMessage></div>}
@@ -125,9 +124,9 @@ function StudentDetail({ student }: { student: Student }) {
                     <td className="px-6 py-4">{formatDate(session.session_date)}</td>
                     <td className="px-6 py-4">{session.is_no_show ? 'No-show' : `${session.minutes} min`}</td>
                     <td className="px-6 py-4 text-right">
-                      <a href={`/sessions/${session.id}`} className="text-xs text-blue-600 hover:underline dark:text-blue-400">
+                      <Link to={`/sessions/${session.id}`} className="text-xs text-blue-600 hover:underline dark:text-blue-400">
                         View
-                      </a>
+                      </Link>
                     </td>
                   </tr>
                 ))}

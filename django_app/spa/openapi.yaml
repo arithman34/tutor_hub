@@ -425,13 +425,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OneOffEventRequestRequest'
+              $ref: '#/components/schemas/OneOffEventRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/OneOffEventRequestRequest'
+              $ref: '#/components/schemas/OneOffEventRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/OneOffEventRequestRequest'
+              $ref: '#/components/schemas/OneOffEventRequest'
         required: true
       security:
       - jwtAuth: []
@@ -456,13 +456,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+              $ref: '#/components/schemas/RecurringEventsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+              $ref: '#/components/schemas/RecurringEventsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+              $ref: '#/components/schemas/RecurringEventsRequest'
         required: true
       security:
       - jwtAuth: []
@@ -1199,13 +1199,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ZoomParseRequestRequest'
+              $ref: '#/components/schemas/ZoomSummaryRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ZoomParseRequestRequest'
+              $ref: '#/components/schemas/ZoomSummaryRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ZoomParseRequestRequest'
+              $ref: '#/components/schemas/ZoomSummaryRequest'
         required: true
       security:
       - jwtAuth: []
@@ -1810,7 +1810,7 @@ components:
       required:
       - content
       - role
-    OneOffEventRequestRequest:
+    OneOffEventRequest:
       type: object
       properties:
         summary:
@@ -2189,7 +2189,7 @@ components:
       - amount
       - payee
       - payment_date
-    RecurringEventsRequestRequest:
+    RecurringEventsRequest:
       type: object
       properties:
         summary:
@@ -2719,7 +2719,7 @@ components:
       - topic_tags
       - tutor_actions
       - work_covered
-    ZoomParseRequestRequest:
+    ZoomSummaryRequest:
       type: object
       properties:
         summary:

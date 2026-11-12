@@ -43,7 +43,7 @@ class CalendarSessionsSerializer(serializers.Serializer):
     error = serializers.CharField(allow_null=True, help_text="Set when Google Calendar couldn't be reached.")
 
 
-class OneOffEventRequestSerializer(serializers.Serializer):
+class OneOffEventSerializer(serializers.Serializer):
     summary = serializers.CharField(max_length=255)
     date = serializers.DateField()
     start_time = serializers.RegexField(_TIME, help_text="HH:MM")
@@ -67,7 +67,7 @@ class DayConfigSerializer(serializers.Serializer):
         return attrs
 
 
-class RecurringEventsRequestSerializer(serializers.Serializer):
+class RecurringEventsSerializer(serializers.Serializer):
     summary = serializers.CharField(max_length=255)
     day_configs = DayConfigSerializer(many=True, allow_empty=False)
     start_date = serializers.DateField()
