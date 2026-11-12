@@ -11,22 +11,24 @@ A full-stack tutoring management platform. The backend is a Django REST Framewor
 
 ## Screenshots
 
-| Analytics | Session notes from a Zoom summary |
+Shown with made-up demo data (`python manage.py seed_demo`).
+
+| Dashboard | Analytics |
 |---|---|
-| ![Weekly sessions, no-shows and hours taught](docs/screenshots/admin-analytics-sessions.png) | ![Session detail with AI-generated notes](docs/screenshots/session-detail.png) |
-| **Admin overview** | |
-| ![Admin financial and operations overview](docs/screenshots/admin-dashboard.png) | |
+| ![Revenue, outstanding balances, active students and hours taught this month](docs/screenshots/dashboard.png) | ![New, taught, lapsed and current students by month, with filters for period, grouping, student and payee](docs/screenshots/analytics_students.png) |
+| **Sessions and payments over time** | **Payees and balances** |
+| ![Monthly sessions, no-shows and hours taught, and payments received](docs/screenshots/analytics_sessions_payments.png) | ![Payees with contact details, bank references and outstanding balances](docs/screenshots/payees.png) |
 
 <details>
-<summary><strong>Admin pages</strong></summary>
+<summary><strong>More pages</strong></summary>
 
-| Sessions | Tutor accounts |
+| Payments | TutorHub AI |
 |---|---|
-| ![All tutors' sessions](docs/screenshots/admin-sessions.png) | ![Tutor account management](docs/screenshots/admin-users.png) |
-| **Payees and balances** | **Payments** |
-| ![Payees with outstanding balances](docs/screenshots/admin-payees.png) | ![Payments received](docs/screenshots/admin-payments.png) |
-| **Student trends** | **Payment trends** |
-| ![Weekly new, active and lapsed students](docs/screenshots/admin-analytics-students.png) | ![Weekly payments received](docs/screenshots/admin-analytics-payments.png) |
+| ![Payments received, newest first](docs/screenshots/payments.png) | ![TutorHub AI with suggested questions and the daily allowance](docs/screenshots/tutorhub_ai.png) |
+| **Google Calendar connection** | **Profile** |
+| ![Connecting Google Calendar](docs/screenshots/connections.png) | ![Editing personal details and changing password](docs/screenshots/profile.png) |
+| **My Data** | **Light mode** |
+| ![Exporting and importing all your data as JSON](docs/screenshots/data.png) | ![The My Data page in light mode](docs/screenshots/light_mode.png) |
 
 </details>
 
