@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.http import HttpResponse
-from django.urls import include, path
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from accounts.data_views import DataExportView, DataImportView
 from accounts.views import SetupView
+
+from .spa import spa_index
 
 urlpatterns = [
     path("health", lambda request: HttpResponse("ok")),
@@ -26,5 +28,7 @@ urlpatterns = [
     # rest of the API; the browser's auth cookie is enough to view the docs.
     path("api/v1/schema", SpectacularAPIView.as_view(), name="api-schema"),
     path("api/v1/docs", SpectacularSwaggerView.as_view(url_name="api-schema"), name="api-docs"),
+    # The React app. Any path under /app/ is one of its pages.
+    re_path(r"^app(?:/(?P<path>.*))?$", spa_index, name="spa"),
     path("", include("web.urls")),
 ]

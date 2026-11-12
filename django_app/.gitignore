@@ -7,3 +7,5 @@ node_modules/
 # Built by `npm run build` (see package.json)
 static/css/app.css
 static/vendor/
+# Built by `npm run build` in spa/
+static/spa/

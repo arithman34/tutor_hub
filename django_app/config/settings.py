@@ -6,6 +6,7 @@ varies per environment is read from the environment, with sane local
 defaults.
 """
 
+import re
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -195,6 +196,17 @@ STORAGES = {
         ),
     },
 }
+
+
+def _immutable_static_file(path: str, url: str) -> bool:
+    """Files WhiteNoise may tell browsers to cache forever: those whose name
+    changes whenever their content does. That's Django's hashed copies
+    (app.2bb0a3640c85.css) and Vite's bundles for the React app
+    (spa/assets/index-B1x9fQzA.js). Never spa/index.html, which keeps its name."""
+    return bool(re.match(r"^.+\.[0-9a-f]{12}\..+$", url)) or "/spa/assets/" in url
+
+
+WHITENOISE_IMMUTABLE_FILE_TEST = _immutable_static_file
 
 # Behind the Cloudflare Tunnel (production) / an ALB, the real scheme arrives
 # as X-Forwarded-Proto, not on the connection itself.

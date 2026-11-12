@@ -27,11 +27,14 @@ jobs:
         working-directory: django_app
         run: python manage.py test
 
-      # The frontend's TypeScript types are generated from this schema, so an
-      # endpoint drf-spectacular can't describe would leave a gap there.
+      # The React app's TypeScript types are generated from spa/openapi.yaml.
+      # Fail if an endpoint can't be described, or if the committed schema is
+      # out of date (fix: run the spectacular command below and commit it).
       - name: Check OpenAPI schema
         working-directory: django_app
-        run: python manage.py spectacular --validate --fail-on-warn --file /dev/null
+        run: |
+          python manage.py spectacular --validate --fail-on-warn --file spa/openapi.yaml
+          git diff --exit-code spa/openapi.yaml
 
   # Catches a broken Tailwind build on the PR rather than in the deploy's
   # docker build.
@@ -52,4 +55,39 @@ jobs:
 
       - name: Build CSS and vendor JS
         working-directory: django_app
+        run: npm run build
+
+  # The React app: types match the schema, then lint, type-check, test, build.
+  spa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: django_app/spa
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: django_app/spa/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check API types match the schema
+        run: |
+          npm run gen:api
+          git diff --exit-code src/api/schema.d.ts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
         run: npm run build

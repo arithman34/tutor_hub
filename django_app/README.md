@@ -159,9 +159,10 @@ suite) and is worth repeating for every new page.
 Each app ships its tests alongside it (`tests.py`) rather than as a
 follow-up — run them as you go, not just before a PR.
 
-The plan is to eventually move the frontend to a separate React + Tailwind
-app once this is stable; Django stays as a pure DRF API at that point and
-`web`/its templates get retired.
+The frontend is moving, page by page, to a React app in `spa/` served at
+`/app/` (see "React app" below). Until a page is rebuilt there, the app's
+sidebar links to its classic version here. Once every page has moved, Django
+is a pure DRF API plus the public pages, and `web`/its templates are retired.
 
 ## Local setup
 
@@ -193,6 +194,45 @@ While editing templates, run `npm run dev` alongside `runserver` to rebuild
 the CSS on every change. A class added to a template has no styles until
 Tailwind rebuilds.
 
+### React app (`spa/`)
+
+Vite + React + TypeScript, with React Router, TanStack Query and Tailwind v4.
+Django serves it at `/app/`: `config/spa.py` returns the built `index.html`
+for every `/app/*` URL, and the bundles are static files under
+`/static/spa/` (cached forever, since Vite hashes their names).
+
+```bash
+cd spa
+npm install
+npm run dev        # http://localhost:5173/app/ with hot reload; runserver must be running
+```
+
+The dev server proxies everything except the app itself to Django
+(`DJANGO_ORIGIN`, default `http://localhost:8000`), so the API, the classic
+pages and the login cookies all behave as in production.
+
+- `npm test` / `npm run test:watch`: Vitest + Testing Library, with the API
+  faked by MSW (`src/test/server.ts`).
+- `npm run lint`, `npm run typecheck`.
+- `npm run build`: production build into `static/spa/` (gitignored). The
+  Docker image does this in its Node stage.
+
+**API types.** `src/api/schema.d.ts` is generated from Django's OpenAPI
+schema, so every `api.GET/POST(...)` call is type-checked against the real
+endpoints. After changing an API endpoint, regenerate and commit both files:
+
+```bash
+python manage.py spectacular --file spa/openapi.yaml   # from django_app/
+npm run gen:api                                        # from spa/
+```
+
+CI fails if either is out of date.
+
+**Auth.** The app logs in with `POST /api/v1/auth/cookie/login`, which sets
+the same httponly JWT cookies as the classic login page, so one sign-in
+covers both. `src/api/client.ts` adds the CSRF header to unsafe requests
+and quietly refreshes an expired access token once before giving up.
+
 Reads config from a `.env` file in this directory (same variables as the
 root FastAPI app's `POSTGRES_*` settings, plus `DJANGO_SECRET_KEY`,
 `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`).
@@ -207,11 +247,22 @@ is empty) is ported too — visit it once, or use
 
 ## Auth endpoints
 
+Full, interactive API docs are at `/api/v1/docs` (sign in first).
+
+For API clients (tokens in the response body, sent back as `Authorization: Bearer`):
+
 - `POST /api/v1/auth/login` — `{"email": ..., "password": ...}` → access +
   refresh token pair.
 - `POST /api/v1/auth/refresh` — `{"refresh": ...}` → new access token
   (rotates/blacklists the old refresh token).
 - `POST /api/v1/auth/logout` — `{"refresh": ...}` → blacklists the token.
+
+For the browser app (tokens in httponly cookies; unsafe requests need the
+`X-CSRFToken` header):
+
+- `GET /api/v1/auth/csrf` → sets and returns the CSRF token.
+- `POST /api/v1/auth/cookie/login`, `/cookie/refresh`, `/cookie/logout`.
+- `GET`/`PATCH /api/v1/auth/me`, `POST /api/v1/auth/password`.
 
 ## Running tests
 
