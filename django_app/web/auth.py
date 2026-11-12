@@ -14,19 +14,8 @@ from django.shortcuts import redirect
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from accounts.cookies import ACCESS_COOKIE, REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies  # noqa: F401
 from accounts.models import User
-
-REFRESH_COOKIE_MAX_AGE = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
-
-
-def set_auth_cookies(response, access_token: str, refresh_token: str):
-    response.set_cookie("access_token", access_token, httponly=True, samesite="Lax")
-    response.set_cookie("refresh_token", refresh_token, httponly=True, samesite="Lax", max_age=REFRESH_COOKIE_MAX_AGE)
-
-
-def clear_auth_cookies(response):
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
 
 
 def _user_from_access_token(raw_token: str) -> User | None:
@@ -42,13 +31,13 @@ def get_current_user(request):
     """Returns (user, refreshed_tokens). refreshed_tokens is (access, refresh)
     when the refresh-token path minted new tokens that the caller should set
     as cookies on the response, else None."""
-    access_token = request.COOKIES.get("access_token")
+    access_token = request.COOKIES.get(ACCESS_COOKIE)
     if access_token:
         user = _user_from_access_token(access_token)
         if user:
             return user, None
 
-    refresh_token = request.COOKIES.get("refresh_token")
+    refresh_token = request.COOKIES.get(REFRESH_COOKIE)
     if not refresh_token:
         return None, None
 

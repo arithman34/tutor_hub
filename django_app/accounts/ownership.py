@@ -27,6 +27,10 @@ class OwnedQuerysetMixin:
     model = None
 
     def get_queryset(self):
+        # drf-spectacular calls this with no real user while it builds the
+        # schema, only to learn the model (and so the id field's type).
+        if getattr(self, "swagger_fake_view", False):
+            return self.model.objects.none()
         return self.model.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
