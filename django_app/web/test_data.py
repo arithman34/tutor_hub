@@ -12,7 +12,7 @@ from billing.models import Payee, Payment
 from students.models import Student
 from tutoring_sessions.models import Session
 
-from .data_transfer import build_full_backup, build_user_export, import_user_data, restore_full_backup
+from accounts.data_transfer import build_full_backup, build_user_export, import_user_data, restore_full_backup
 
 
 def make_user(email, **extra):

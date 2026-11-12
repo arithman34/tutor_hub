@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -11,17 +11,10 @@ from calendar_integration.models import GoogleCalendarToken
 from students.models import Student
 from tutoring_sessions.models import Session
 
-from . import ai
+from tutoring_sessions import zoom as ai
 from .auth import login_required
 
 logger = logging.getLogger(__name__)
-
-_PERIOD_WINDOWS: dict[str, tuple[int, int]] = {
-    "past": (-90, 0),
-    "today": (-1, 1),
-    "future": (0, 90),
-    "all": (-180, 180),
-}
 
 # Calendar rows rendered per page. The filtered list still lives in memory; this
 # caps how much HTML the browser has to parse and paint.
@@ -75,57 +68,7 @@ def _sessions_calendar_view(request, user, q):
     status = status or "all"
     period = period or "all"
 
-    now = datetime.now(timezone.utc)
-    days_before, days_after = _PERIOD_WINDOWS.get(period, _PERIOD_WINDOWS["all"])
-    time_min = now + timedelta(days=days_before)
-    time_max = now + timedelta(days=days_after)
-
-    error = None
-    events = []
-    try:
-        events = calendar_service.fetch_events(user, time_min, time_max)
-    except Exception as exc:
-        logger.exception("Fetching Google Calendar events failed for user %s", user.id)
-        error = str(exc) or type(exc).__name__
-
-    logged_by_event = dict(Session.objects.filter(user=user, calendar_event_id__isnull=False).values_list("calendar_event_id", "id"))
-
-    students = Student.objects.filter(user=user, is_active=True)
-    student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
-    student_by_first = {s.first_name: s for s in students}
-
-    items = []
-    for event in events:
-        parsed = calendar_service.parse_event(event)
-        session_id = logged_by_event.get(parsed["event_id"])
-        student = student_by_name.get(parsed["student_name"]) or student_by_first.get(parsed["student_name"])
-        items.append(
-            {
-                **parsed,
-                "logged": session_id is not None,
-                "session_id": str(session_id) if session_id else None,
-                "student_id": str(student.id) if student else None,
-            }
-        )
-
-    today_str = now.strftime("%Y-%m-%d")
-    past = sorted((i for i in items if i["date"] <= today_str), key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}", reverse=True)
-    future = sorted((i for i in items if i["date"] > today_str), key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}")
-    items = past + future
-
-    if q:
-        q_lower = q.lower()
-        items = [i for i in items if q_lower in (i.get("summary") or "").lower()]
-    if status == "logged":
-        items = [i for i in items if i["logged"]]
-    elif status == "unlogged":
-        items = [i for i in items if not i["logged"]]
-    if period == "past":
-        items = [i for i in items if i["date"] < today_str]
-    elif period == "today":
-        items = [i for i in items if i["date"] == today_str]
-    elif period == "future":
-        items = [i for i in items if i["date"] > today_str]
+    items, error = calendar_service.calendar_session_items(user, period=period, status=status, q=q)
 
     # Paginate last, so counts and page bounds reflect the filtered set.
     total_items = len(items)

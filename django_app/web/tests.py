@@ -10,7 +10,7 @@ from billing.models import Payee, Payment
 from students.models import Student
 from tutoring_sessions.models import Session
 
-from . import services
+from analytics.dashboard import get_dashboard_stats
 
 
 def make_user(email, **extra):
@@ -131,7 +131,7 @@ class DashboardStatsTests(TestCase):
         Payment.objects.create(user=tutor, payee=payee, amount=Decimal("100.00"), payment_date=now)
         Payment.objects.create(user=other, payee=other_payee, amount=Decimal("500.00"), payment_date=now)
 
-        stats = services.get_dashboard_stats(tutor)
+        stats = get_dashboard_stats(tutor)
         self.assertEqual(stats["active_students"], 1)
         self.assertEqual(stats["sessions_this_month"], 1)
         self.assertEqual(stats["hours_this_month"], 2.0)
@@ -152,7 +152,7 @@ class DashboardStatsTests(TestCase):
             )
             Payment.objects.create(user=tutor, payee=payee, amount=Decimal(paid), payment_date=now)
 
-        stats = services.get_dashboard_stats(tutor)
+        stats = get_dashboard_stats(tutor)
         # Owes: 40 - 10 = 30, Also: 20 - 0 = 20, Credit is +90 and excluded.
         self.assertEqual(stats["outstanding_total"], 50.0)
         self.assertEqual(stats["outstanding_payees"], 2)

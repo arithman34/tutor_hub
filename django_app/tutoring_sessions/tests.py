@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.urls import reverse
 from django.utils import timezone
@@ -134,3 +135,34 @@ class SessionAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.session.refresh_from_db()
         self.assertEqual(self.session.student, self.student)
+
+
+class ZoomParseApiTests(APITestCase):
+    URL = "/api/v1/sessions/zoom-parse/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="zoom@example.com", password="x", first_name="A", last_name="B")
+        self.client.force_authenticate(self.user)
+
+    def test_returns_parsed_fields(self):
+        from tutoring_sessions.zoom import ParsedSession
+
+        parsed = ParsedSession("fractions", "- homework", "- mark", "decimals", "fractions, maths")
+        with patch("tutoring_sessions.views.zoom.parse_zoom_summary", return_value=parsed) as mock_parse:
+            response = self.client.post(self.URL, {"summary": "raw summary"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["work_covered"], "fractions")
+        self.assertEqual(response.json()["topic_tags"], "fractions, maths")
+        mock_parse.assert_called_once_with("raw summary")
+        self.assertFalse(Session.objects.exists())
+
+    def test_parse_failure_is_502(self):
+        with patch("tutoring_sessions.views.zoom.parse_zoom_summary", side_effect=RuntimeError("boom")):
+            response = self.client.post(self.URL, {"summary": "raw"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+    def test_blank_summary_is_rejected(self):
+        with patch("tutoring_sessions.views.zoom.parse_zoom_summary") as mock_parse:
+            response = self.client.post(self.URL, {"summary": ""}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_parse.assert_not_called()

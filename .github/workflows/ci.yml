@@ -27,6 +27,12 @@ jobs:
         working-directory: django_app
         run: python manage.py test
 
+      # The frontend's TypeScript types are generated from this schema, so an
+      # endpoint drf-spectacular can't describe would leave a gap there.
+      - name: Check OpenAPI schema
+        working-directory: django_app
+        run: python manage.py spectacular --validate --fail-on-warn --file /dev/null
+
   # Catches a broken Tailwind build on the PR rather than in the deploy's
   # docker build.
   build-frontend:

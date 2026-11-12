@@ -5,12 +5,12 @@ from datetime import datetime, timezone
 import boto3
 from django.core.management.base import BaseCommand, CommandError
 
-from web.data_transfer import build_full_backup
+from accounts.data_transfer import build_full_backup
 
 
 class Command(BaseCommand):
     """Writes a full backup (every account and row, see
-    web.data_transfer.build_full_backup) to the backups S3 bucket, under
+    accounts.data_transfer.build_full_backup) to the backups S3 bucket, under
     exports/. Intended to run on a
     schedule (see terraform/environments/cost-optimized/backup.tf) rather
     than interactively.

@@ -10,7 +10,7 @@ from calendar_integration.models import GoogleCalendarToken
 from students.models import Student
 from tutoring_sessions.models import Session
 
-from .ai import ParsedSession
+from tutoring_sessions.zoom import ParsedSession
 
 
 def make_user(email, **extra):

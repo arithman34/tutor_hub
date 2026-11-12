@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .auth import login_required
-from .data_transfer import build_user_export, import_user_data
+from accounts.data_transfer import build_user_export, import_user_data
 
 
 @login_required

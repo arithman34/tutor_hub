@@ -14,21 +14,31 @@ access cookie would otherwise make DRF reject the request with 401 before a
 user ever got the chance to log in again or refresh.
 """
 
+from django.db import transaction
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
-from drf_spectacular.utils import extend_schema, inline_serializer
+from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import exceptions, serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .authentication import enforce_csrf
 from .cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
-from .serializers import UserSerializer
+from .models import User
+from .serializers import (
+    PasswordChangeSerializer,
+    ProfileSerializer,
+    SetupSerializer,
+    SetupStatusSerializer,
+    UserSerializer,
+)
+
 
 class _PublicAuthView(APIView):
     authentication_classes = []
@@ -124,3 +134,60 @@ class MeView(APIView):
     @extend_schema(summary="The signed-in user", responses=UserSerializer)
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+    @extend_schema(summary="Update your details", request=ProfileSerializer, responses=UserSerializer)
+    def patch(self, request):
+        serializer = ProfileSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
+
+
+class PasswordChangeView(APIView):
+    @extend_schema(
+        summary="Change your password",
+        description=(
+            "Signs out every other session by blacklisting all of the account's refresh tokens, "
+            "then sets fresh auth cookies for this one."
+        ),
+        request=PasswordChangeSerializer,
+        responses={204: None},
+    )
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        with transaction.atomic():
+            user.set_password(serializer.validated_data["new_password"])
+            user.save(update_fields=["password", "updated_at"])
+            for outstanding in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=outstanding)
+
+        refresh = RefreshToken.for_user(user)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        set_auth_cookies(response, str(refresh.access_token), str(refresh))
+        return response
+
+
+class SetupView(_PublicAuthView):
+    """First run: create the very first account. Does nothing once any account exists."""
+
+    @extend_schema(summary="Whether first-run setup is needed", responses=SetupStatusSerializer)
+    def get(self, request):
+        return Response({"needed": not User.objects.exists()})
+
+    @extend_schema(
+        summary="Create the first account",
+        request=SetupSerializer,
+        responses={201: UserSerializer, 409: OpenApiResponse(description="An account already exists.")},
+    )
+    def post(self, request):
+        enforce_csrf(request)
+        if User.objects.exists():
+            return Response({"detail": "Setup has already been completed."}, status=status.HTTP_409_CONFLICT)
+
+        serializer = SetupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = User.objects.create_user(is_active=True, **serializer.validated_data)
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
