@@ -1,10 +1,16 @@
+import logging
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
 from django.conf import settings
 
+from students.models import Student
+from tutoring_sessions.models import Session
+
 from .models import GoogleCalendarToken
+
+logger = logging.getLogger(__name__)
 
 _AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -332,3 +338,75 @@ def create_recurring_events(
                 created.append(resp.json())
 
     return created
+
+
+# How far either side of now each sessions-list period fetches from Google.
+_PERIOD_WINDOWS: dict[str, tuple[int, int]] = {
+    "past": (-90, 0),
+    "today": (-1, 1),
+    "future": (0, 90),
+    "all": (-180, 180),
+}
+SESSION_PERIODS = tuple(_PERIOD_WINDOWS)
+SESSION_STATUSES = ("all", "logged", "unlogged")
+
+
+def calendar_session_items(user, period: str = "all", status: str = "all", q: str = "") -> tuple[list[dict], str | None]:
+    """The Tutoring calendar's events, each marked with whether it has been
+    logged as a Session and which student it seems to be for.
+
+    Past events come first (newest first), then future ones (soonest first).
+    Returns (items, error): if Google can't be reached the error is a message
+    and items is empty, so a page can still render.
+    """
+    now = datetime.now(timezone.utc)
+    days_before, days_after = _PERIOD_WINDOWS.get(period, _PERIOD_WINDOWS["all"])
+
+    error = None
+    events = []
+    try:
+        events = fetch_events(user, now + timedelta(days=days_before), now + timedelta(days=days_after))
+    except Exception as exc:
+        logger.exception("Fetching Google Calendar events failed for user %s", user.id)
+        error = str(exc) or type(exc).__name__
+
+    logged_by_event = dict(Session.objects.filter(user=user, calendar_event_id__isnull=False).values_list("calendar_event_id", "id"))
+
+    students = Student.objects.filter(user=user, is_active=True)
+    student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
+    student_by_first = {s.first_name: s for s in students}
+
+    items = []
+    for event in events:
+        parsed = parse_event(event)
+        session_id = logged_by_event.get(parsed["event_id"])
+        student = student_by_name.get(parsed["student_name"]) or student_by_first.get(parsed["student_name"])
+        items.append(
+            {
+                **parsed,
+                "logged": session_id is not None,
+                "session_id": str(session_id) if session_id else None,
+                "student_id": str(student.id) if student else None,
+            }
+        )
+
+    today_str = now.strftime("%Y-%m-%d")
+    past = sorted((i for i in items if i["date"] <= today_str), key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}", reverse=True)
+    future = sorted((i for i in items if i["date"] > today_str), key=lambda i: f"{i['date']}T{i['start_time'] or '00:00'}")
+    items = past + future
+
+    if q:
+        q_lower = q.lower()
+        items = [i for i in items if q_lower in (i.get("summary") or "").lower()]
+    if status == "logged":
+        items = [i for i in items if i["logged"]]
+    elif status == "unlogged":
+        items = [i for i in items if not i["logged"]]
+    if period == "past":
+        items = [i for i in items if i["date"] < today_str]
+    elif period == "today":
+        items = [i for i in items if i["date"] == today_str]
+    elif period == "future":
+        items = [i for i in items if i["date"] > today_str]
+
+    return items, error

@@ -3,6 +3,9 @@ from django.http import HttpResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from accounts.data_views import DataExportView, DataImportView
+from accounts.views import SetupView
+
 urlpatterns = [
     path("health", lambda request: HttpResponse("ok")),
     # Django's admin is the platform operator's view across all accounts
@@ -15,6 +18,10 @@ urlpatterns = [
     path("api/v1/", include("billing.urls")),
     path("api/v1/calendar/", include("calendar_integration.urls")),
     path("api/v1/analytics/", include("analytics.urls")),
+    path("api/v1/assistant/", include("assistant.urls")),
+    path("api/v1/data/export", DataExportView.as_view(), name="data-export"),
+    path("api/v1/data/import", DataImportView.as_view(), name="data-import"),
+    path("api/v1/setup", SetupView.as_view(), name="setup"),
     # OpenAPI schema and Swagger UI. Both need a signed-in user, like the
     # rest of the API; the browser's auth cookie is enough to view the docs.
     path("api/v1/schema", SpectacularAPIView.as_view(), name="api-schema"),

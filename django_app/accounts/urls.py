@@ -18,4 +18,5 @@ urlpatterns = [
     path("cookie/refresh", views.CookieRefreshView.as_view(), name="auth-cookie-refresh"),
     path("cookie/logout", views.CookieLogoutView.as_view(), name="auth-cookie-logout"),
     path("me", views.MeView.as_view(), name="auth-me"),
+    path("password", views.PasswordChangeView.as_view(), name="auth-password"),
 ]

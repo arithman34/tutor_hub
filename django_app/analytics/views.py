@@ -1,16 +1,19 @@
 from datetime import datetime, timezone
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import services
-from .serializers import TrendsQuerySerializer
+from .dashboard import get_dashboard_stats
+from .serializers import DashboardSerializer, FilterOptionsSerializer, TrendsQuerySerializer, TrendsSerializer
 
 
 class TrendsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(summary="Charts for the analytics page", parameters=[TrendsQuerySerializer], responses=TrendsSerializer)
     def get(self, request):
         query = TrendsQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
@@ -37,5 +40,14 @@ class TrendsView(APIView):
 class FilterOptionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(summary="Students and payees for the filter bar", responses=FilterOptionsSerializer)
     def get(self, request):
         return Response(services.get_filter_options(request.user.id))
+
+
+class DashboardView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(summary="Headline numbers for the dashboard", responses=DashboardSerializer)
+    def get(self, request):
+        return Response(DashboardSerializer(get_dashboard_stats(request.user)).data)

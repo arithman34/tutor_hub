@@ -2,14 +2,14 @@ import json
 
 from django.core.management.base import BaseCommand, CommandError
 
-from web.data_transfer import restore_full_backup
+from accounts.data_transfer import restore_full_backup
 
 
 class Command(BaseCommand):
     """Imports a data export produced by the original FastAPI app.
 
     That export's shape is identical to a full backup produced here
-    (web.data_transfer.build_full_backup), except user rows use
+    (accounts.data_transfer.build_full_backup), except user rows use
     `hashed_password` (a raw passlib bcrypt hash, e.g. "$2b$12$...") instead
     of `password`. Django's check_password() only
     recognises a bcrypt hash when it's prefixed with the hasher's algorithm

@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User
 
-from . import services
+from analytics.dashboard import get_dashboard_stats
 from .auth import clear_auth_cookies, get_current_user, login_required, set_auth_cookies
 
 
@@ -64,5 +64,5 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     user = request.user
-    stats = services.get_dashboard_stats(user)
+    stats = get_dashboard_stats(user)
     return render(request, "dashboard/index.html", {"user": user, "active_page": "dashboard", **stats})

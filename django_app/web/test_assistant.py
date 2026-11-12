@@ -8,7 +8,7 @@ from assistant.llm import LLMError
 from assistant.models import AssistantUsage
 from assistant.quota import get_allowance, uk_today
 
-ANSWER = "web.assistant_views.agent.answer"
+ANSWER = "assistant.conversation.agent.answer"
 
 
 def make_user(email, **extra):
@@ -117,7 +117,7 @@ class AssistantAskTests(TestCase):
 
     @patch(ANSWER, side_effect=LLMError("down"))
     def test_provider_error_refunds_and_keeps_the_question(self, answer):
-        with self.assertLogs("web.assistant_views", level="ERROR"):
+        with self.assertLogs("assistant.conversation", level="ERROR"):
             response = self.client.post("/assistant/ask", {"question": "Who owes me?"})
         self.assertRedirects(response, "/assistant?flash=error", fetch_redirect_response=False)
         self.assertEqual(get_allowance(self.tutor).used, 0)

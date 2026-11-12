@@ -42,3 +42,15 @@ class SessionSerializer(serializers.ModelSerializer):
         if start and end and end <= start:
             raise serializers.ValidationError("session_end_time must be after session_start_time")
         return attrs
+
+
+class ZoomParseRequestSerializer(serializers.Serializer):
+    summary = serializers.CharField(max_length=20000, help_text="The Zoom AI meeting summary, pasted as text.")
+
+
+class ZoomParseSerializer(serializers.Serializer):
+    work_covered = serializers.CharField(allow_blank=True)
+    student_actions = serializers.CharField(allow_blank=True)
+    tutor_actions = serializers.CharField(allow_blank=True)
+    next_lesson_focus = serializers.CharField(allow_blank=True)
+    topic_tags = serializers.CharField(allow_blank=True, help_text="Comma-separated.")
