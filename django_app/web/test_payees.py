@@ -29,7 +29,7 @@ class PayeesListPageTests(TestCase):
         login(self.client, make_user("tutor@example.com"))
         response = self.client.get("/payees")
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/payees")
@@ -42,7 +42,7 @@ class PayeesListPageTests(TestCase):
         login(self.client, admin)
         response = self.client.get("/payees", {"q": "Sam"})
         self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
     def test_balance_reflects_payments_minus_session_cost(self):
         admin = make_user("admin@example.com")

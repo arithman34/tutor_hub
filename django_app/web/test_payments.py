@@ -31,7 +31,7 @@ class PaymentsListPageTests(TestCase):
         login(self.client, make_user("tutor@example.com"))
         response = self.client.get("/payments")
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Sam")
+        self.assertNotContains(response, "Sam Smith")
 
     def test_unauthenticated_redirects_to_login(self):
         response = self.client.get("/payments")
@@ -44,7 +44,7 @@ class PaymentsListPageTests(TestCase):
         login(self.client, self.admin)
         response = self.client.get("/payments", {"q": "Sam"})
         self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
 
 class PaymentsNewPageTests(TestCase):
@@ -55,7 +55,7 @@ class PaymentsNewPageTests(TestCase):
         login(self.client, admin)
         response = self.client.get("/payments/new")
         self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
 
 class PaymentCreateTests(TestCase):

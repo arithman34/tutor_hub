@@ -769,6 +769,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
+         * Switch a student between active and inactive
          * @description For DRF viewsets: scope every query to the requesting user and stamp
          *     new rows with them.
          */
@@ -1935,7 +1936,10 @@ export interface operations {
     };
     payees_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter by payee name. */
+                q?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2253,6 +2257,10 @@ export interface operations {
                 limit?: number;
                 /** @description The initial index from which to return the results. */
                 offset?: number;
+                /** @description Filter by student name. */
+                q?: string;
+                /** @description Only this student's sessions. */
+                student?: string;
             };
             header?: never;
             path?: never;
@@ -2479,7 +2487,10 @@ export interface operations {
     };
     students_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter by student name. */
+                q?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2630,13 +2641,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StudentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["StudentRequest"];
-                "multipart/form-data": components["schemas"]["StudentRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

@@ -166,3 +166,35 @@ class ZoomParseApiTests(APITestCase):
             response = self.client.post(self.URL, {"summary": ""}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         mock_parse.assert_not_called()
+
+
+class SessionStudentFilterTests(APITestCase):
+    URL = "/api/v1/sessions/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="filter@example.com", password="x", first_name="A", last_name="B")
+        self.client.force_authenticate(self.user)
+        now = timezone.now()
+        self.sam = Student.objects.create(user=self.user, first_name="Sam", last_name="Smith")
+        self.alex = Student.objects.create(user=self.user, first_name="Alex", last_name="Jones")
+        for student in (self.sam, self.sam, self.alex):
+            Session.objects.create(
+                user=self.user, student=student, session_date=now,
+                session_start_time=now, session_end_time=now + timedelta(hours=1),
+            )
+
+    def test_filters_by_student(self):
+        response = self.client.get(self.URL, {"student": str(self.sam.id)})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["count"], 2)
+        self.assertTrue(all(row["student"] == str(self.sam.id) for row in response.json()["results"]))
+
+    def test_another_accounts_student_returns_nothing(self):
+        other = User.objects.create_user(email="other-filter@example.com", password="x", first_name="C", last_name="D")
+        theirs = Student.objects.create(user=other, first_name="T", last_name="S")
+        self.assertEqual(self.client.get(self.URL, {"student": str(theirs.id)}).json()["count"], 0)
+
+    def test_invalid_student_id_returns_nothing(self):
+        response = self.client.get(self.URL, {"student": "not-a-uuid"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["count"], 0)

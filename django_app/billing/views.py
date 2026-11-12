@@ -1,4 +1,5 @@
 from django.db.models import Q
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -11,6 +12,7 @@ from .serializers import PayeeSerializer, PaymentSerializer
 from .services import payee_balance
 
 
+@extend_schema_view(list=extend_schema(parameters=[OpenApiParameter("q", str, description="Filter by payee name.")]))
 class PayeeViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     model = Payee
     serializer_class = PayeeSerializer
