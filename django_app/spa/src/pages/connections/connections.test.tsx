@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { leaveFor } from '../../browser'
 import { renderApp } from '../../test/render'
-import { server } from '../../test/server'
+import { server, testUser } from '../../test/server'
 
 vi.mock('../../browser')
 
@@ -66,5 +66,15 @@ describe('connections page', () => {
     expect(await screen.findByText('Not connected')).toBeInTheDocument()
     expect(disconnects).toBe(1)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+})
+
+describe('connections page in the demo', () => {
+  it('offers no way to connect Google', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json({ ...testUser, is_demo: true })))
+    serveStatus(false)
+    renderApp('/connections')
+    expect(await screen.findByText('Not available in the demo.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument()
   })
 })

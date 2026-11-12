@@ -130,6 +130,12 @@ export function AppLayout() {
       </aside>
 
       <main className="flex-1 px-4 pt-16 pb-8 sm:px-8 sm:pt-8">
+        {me.data?.is_demo && (
+          <p role="status" className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            You're looking round the demo. Every student, lesson and payment is made up, and it's read-only, so nothing you
+            change will be saved.
+          </p>
+        )}
         {/* Most pages load on first visit (see App.tsx); keep the sidebar while they do. */}
         <Suspense fallback={<Loading />}>
           <Outlet />

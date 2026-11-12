@@ -9,6 +9,7 @@ from . import views
 urlpatterns = [
     path("", views.home_view, name="web-home"),
     path("privacy", views.privacy_view, name="web-privacy"),
+    path("demo", views.demo_view, name="web-demo"),
     # The redirect URI registered with Google; it redirects on to /app/connections.
     path("calendar/callback", GoogleRedirectView.as_view(), name="web-calendar-callback"),
     re_path(

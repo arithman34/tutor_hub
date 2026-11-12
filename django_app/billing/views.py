@@ -3,7 +3,7 @@ import uuid
 from django.db.models import Count, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
-from rest_framework import permissions, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -19,7 +19,6 @@ from .services import payee_balance, payee_balances
 class PayeeViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     model = Payee
     serializer_class = PayeeSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset().annotate(student_count=Count("students"))
@@ -58,7 +57,6 @@ class PaymentPagination(LimitOffsetPagination):
 class PaymentViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     model = Payment
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
     pagination_class = PaymentPagination
 
     def get_queryset(self):

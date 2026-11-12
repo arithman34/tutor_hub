@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CalendarSessionItem, Session, Student } from '../../api/types'
 import { leaveFor } from '../../browser'
 import { renderApp } from '../../test/render'
-import { server } from '../../test/server'
+import { server, testUser } from '../../test/server'
 
 vi.mock('../../browser')
 
@@ -456,5 +456,18 @@ describe('session page', () => {
   it('explains a session that doesn’t exist', async () => {
     renderApp('/sessions/99999999-9999-4999-8999-999999999999')
     expect(await screen.findByRole('alert')).toHaveTextContent('doesn’t exist')
+  })
+})
+
+describe('sessions page in the demo', () => {
+  it('points to the students’ pages instead of asking to connect Google', async () => {
+    server.use(
+      http.get('*/api/v1/auth/me', () => HttpResponse.json({ ...testUser, is_demo: true })),
+      http.get('*/api/v1/calendar/sessions', () => HttpResponse.json({ detail: 'Not connected.' }, { status: 409 })),
+    )
+    renderApp('/sessions')
+    expect(await screen.findByText(/which the demo isn't linked to/)).toBeInTheDocument()
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Students' })).toHaveAttribute('href', '/students')
+    expect(screen.queryByRole('link', { name: 'Go to Connections' })).not.toBeInTheDocument()
   })
 })

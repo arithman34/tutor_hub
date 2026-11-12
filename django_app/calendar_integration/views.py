@@ -6,10 +6,12 @@ from django.core import signing
 from django.shortcuts import redirect
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
+from accounts.permissions import DEMO_READ_ONLY
 
 from . import services
 from .models import GoogleCalendarToken
@@ -47,10 +49,12 @@ class ConnectView(APIView):
     in CallbackView. See services.sign_connect_state.
     """
 
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Start connecting Google Calendar", responses=ConnectUrlSerializer)
     def get(self, request):
+        if request.user.is_demo:
+            # A GET, so DemoIsReadOnly lets it through, but connecting would change the account.
+            raise PermissionDenied(DEMO_READ_ONLY)
         return Response({"url": services.build_connect_url(services.sign_connect_state(request.user))})
 
 
@@ -79,7 +83,7 @@ class CallbackView(APIView):
 
         state = request.query_params.get("state", "")
         try:
-            user = User.objects.get(id=services.read_connect_state(state))
+            user = User.objects.get(id=services.read_connect_state(state), is_demo=False)
         except (signing.BadSignature, User.DoesNotExist):
             return redirect(f"{settings.FRONTEND_URL}/connections?error=invalid_state")
 
@@ -99,7 +103,6 @@ class GoogleRedirectView(CallbackView):
 
 
 class StatusView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Whether Google Calendar is connected", responses=ConnectionStatusSerializer)
     def get(self, request):
@@ -108,7 +111,6 @@ class StatusView(APIView):
 
 
 class DisconnectView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Disconnect Google Calendar", request=None, responses={204: None})
     def post(self, request):
@@ -119,7 +121,6 @@ class DisconnectView(APIView):
 
 
 class UpcomingEventsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         summary="Upcoming Tutoring calendar events",
@@ -136,7 +137,6 @@ class UpcomingEventsView(APIView):
 class CalendarSessionsView(APIView):
     """The sessions page: calendar events and whether each has been logged."""
 
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         summary="Tutoring calendar events with their logged status",
@@ -157,7 +157,6 @@ class CalendarSessionsView(APIView):
 
 
 class OneOffEventView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         summary="Book a one-off lesson",
@@ -185,7 +184,6 @@ class OneOffEventView(APIView):
 
 
 class RecurringEventsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         summary="Book weekly lessons",

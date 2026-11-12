@@ -5,7 +5,7 @@ from dataclasses import asdict
 from django.db.models import Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import permissions, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -34,7 +34,6 @@ class SessionPagination(LimitOffsetPagination):
 class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     model = Session
     serializer_class = SessionSerializer
-    permission_classes = [permissions.IsAuthenticated]
     pagination_class = SessionPagination
 
     def get_queryset(self):

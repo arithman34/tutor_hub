@@ -170,12 +170,17 @@ class PasswordChangeView(APIView):
         return response
 
 
+def _real_accounts_exist() -> bool:
+    # The demo account may be created first, by a visitor clicking Try the demo.
+    return User.objects.filter(is_demo=False).exists()
+
+
 class SetupView(_PublicAuthView):
     """First run: create the very first account. Does nothing once any account exists."""
 
     @extend_schema(summary="Whether first-run setup is needed", responses=SetupStatusSerializer)
     def get(self, request):
-        return Response({"needed": not User.objects.exists()})
+        return Response({"needed": not _real_accounts_exist()})
 
     @extend_schema(
         summary="Create the first account",
@@ -184,7 +189,7 @@ class SetupView(_PublicAuthView):
     )
     def post(self, request):
         enforce_csrf(request)
-        if User.objects.exists():
+        if _real_accounts_exist():
             return Response({"detail": "Setup has already been completed."}, status=status.HTTP_409_CONFLICT)
 
         serializer = SetupSerializer(data=request.data)

@@ -14,6 +14,7 @@ export const testUser: User = {
   last_name: 'Lovelace',
   is_active: true,
   address: null,
+  is_demo: false,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }

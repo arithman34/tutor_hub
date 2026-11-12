@@ -27,6 +27,11 @@ export function useMe() {
   })
 }
 
+/** Whether this is the shared, read-only demo account (the homepage's Try the demo button). */
+export function useIsDemo() {
+  return useMe().data?.is_demo ?? false
+}
+
 export function useLogin() {
   const queryClient = useQueryClient()
   return useMutation({

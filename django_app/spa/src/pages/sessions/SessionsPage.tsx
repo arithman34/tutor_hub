@@ -6,6 +6,7 @@ import type { CalendarSessionItem } from '../../api/types'
 import { Tabs } from '../../components/Tabs'
 import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } from '../../components/ui'
 import { formatDate } from '../../format'
+import { useIsDemo } from '../../auth'
 import { useConnectGoogle } from '../connections/queries'
 import { useCalendarSessions, type SessionPeriod, type SessionStatus } from './queries'
 
@@ -62,6 +63,7 @@ export function SessionsPage() {
   const notice = (useLocation().state as { notice?: string } | null)?.notice
   const sessions = useCalendarSessions(status, period, q)
   const reconnect = useConnectGoogle()
+  const isDemo = useIsDemo()
 
   function update(changes: Record<string, string>) {
     const next = new URLSearchParams(searchParams)
@@ -134,7 +136,16 @@ export function SessionsPage() {
 
       {sessions.isPending && <Loading>Loading your calendar…</Loading>}
 
-      {notConnected && (
+      {notConnected && isDemo && (
+        <p className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          This list comes from the tutor's Google Calendar, which the demo isn't linked to. Open a student from the{' '}
+          <Link to="/students" className="font-medium underline">
+            Students
+          </Link>{' '}
+          page to see their logged lessons.
+        </p>
+      )}
+      {notConnected && !isDemo && (
         <ErrorMessage>
           Connect Google Calendar to see your sessions here.{' '}
           <Link to="/connections" className="font-medium underline">

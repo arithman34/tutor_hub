@@ -5,11 +5,12 @@ React app at /app/."""
 
 from django.conf import settings
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_safe
+from django.views.decorators.http import require_GET, require_POST, require_safe
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from accounts.cookies import ACCESS_COOKIE, REFRESH_COOKIE
+from accounts import demo
+from accounts.cookies import ACCESS_COOKIE, REFRESH_COOKIE, set_auth_cookies
 from accounts.models import User
 
 
@@ -41,7 +42,23 @@ def home_view(request):
     """Public landing page. Signed-in users go straight to the app."""
     if _signed_in(request):
         return redirect("/app/")
-    return render(request, "public/home.html")
+    return render(request, "public/home.html", {"demo_enabled": settings.DEMO_ENABLED})
+
+
+@require_POST
+def demo_view(request):
+    """The homepage's Try the demo button: sign in to the read-only demo account.
+
+    A plain form post, CSRF-checked by Django's middleware like any other.
+    """
+    try:
+        user = demo.sign_in()
+    except demo.DemoUnavailable:
+        return render(request, "public/home.html", {"demo_enabled": False, "demo_unavailable": True}, status=503)
+    refresh = RefreshToken.for_user(user)
+    response = redirect("/app/")
+    set_auth_cookies(response, str(refresh.access_token), str(refresh))
+    return response
 
 
 @require_GET
