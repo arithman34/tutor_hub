@@ -8,22 +8,29 @@ class HomePageTests(TestCase):
     def test_shows_landing_page_when_signed_out(self):
         response = self.client.get("/")
         self.assertContains(response, "Run a tutoring business from one place.")
-        self.assertContains(response, 'href="/login"')
+        self.assertContains(response, 'href="/app/login"')
         self.assertContains(response, 'href="/privacy"')
 
-    def test_redirects_signed_in_user_to_dashboard(self):
+    def test_sends_a_signed_in_user_to_the_app(self):
         user = User.objects.create_user(email="tutor@example.com", password="x", first_name="A", last_name="B")
         self.client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
         response = self.client.get("/")
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
+        self.assertRedirects(response, "/app/", fetch_redirect_response=False)
 
-    def test_refreshes_expired_access_token_on_redirect(self):
+    def test_a_refresh_token_alone_counts_as_signed_in_without_rotating_it(self):
+        # The app refreshes the access token itself on its first API call.
         user = User.objects.create_user(email="tutor@example.com", password="x", first_name="A", last_name="B")
         self.client.cookies["refresh_token"] = str(RefreshToken.for_user(user))
         response = self.client.get("/")
-        self.assertRedirects(response, "/dashboard", fetch_redirect_response=False)
-        self.assertIn("access_token", response.cookies)
-        self.assertIn("refresh_token", response.cookies)
+        self.assertRedirects(response, "/app/", fetch_redirect_response=False)
+        self.assertNotIn("refresh_token", response.cookies)
+
+    def test_a_blacklisted_refresh_token_shows_landing_page(self):
+        user = User.objects.create_user(email="tutor@example.com", password="x", first_name="A", last_name="B")
+        refresh = RefreshToken.for_user(user)
+        refresh.blacklist()
+        self.client.cookies["refresh_token"] = str(refresh)
+        self.assertContains(self.client.get("/"), "Run a tutoring business from one place.")
 
     def test_invalid_token_shows_landing_page(self):
         self.client.cookies["access_token"] = "not-a-token"
@@ -63,8 +70,8 @@ class PrivacyPageTests(TestCase):
         response = self.client.get("/privacy")
         self.assertContains(response, 'href="mailto:privacy@example.com"')
 
-    def test_login_page_links_to_privacy(self):
-        self.assertContains(self.client.get("/login"), 'href="/privacy"')
+    def test_public_layout_links_to_privacy(self):
+        self.assertContains(self.client.get("/privacy"), 'href="/privacy"')
 
 
 class GoogleScopeTests(TestCase):

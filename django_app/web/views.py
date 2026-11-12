@@ -1,68 +1,86 @@
+"""The pages Django still renders itself: the public homepage and privacy
+policy (Google's OAuth consent screen links to both, so they must work without
+signing in), plus redirects from the old server-rendered app's URLs to the
+React app at /app/."""
+
 from django.conf import settings
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_GET, require_safe
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from accounts.cookies import ACCESS_COOKIE, REFRESH_COOKIE
 from accounts.models import User
 
-from analytics.dashboard import get_dashboard_stats
-from .auth import clear_auth_cookies, get_current_user, login_required, set_auth_cookies
+
+def _is_active_user(token) -> bool:
+    return User.objects.filter(id=token["user_id"], is_active=True).exists()
 
 
-@require_http_methods(["GET"])
+def _signed_in(request) -> bool:
+    """Whether the auth cookies belong to an active account.
+
+    Only checks them: refreshing an expired access token is left to the React
+    app, which does it on its first API call.
+    """
+    for cookie, token_class in ((ACCESS_COOKIE, AccessToken), (REFRESH_COOKIE, RefreshToken)):
+        raw = request.COOKIES.get(cookie)
+        if not raw:
+            continue
+        try:
+            # Verifies the signature and expiry, and that a refresh token isn't blacklisted.
+            if _is_active_user(token_class(raw)):
+                return True
+        except (TokenError, KeyError):
+            continue
+    return False
+
+
+@require_GET
 def home_view(request):
-    """Public landing page. Signed-in users go straight to their dashboard."""
-    user, refreshed = get_current_user(request)
-    if user is None:
-        return render(request, "public/home.html")
-
-    response = redirect("/dashboard")
-    if refreshed:
-        set_auth_cookies(response, *refreshed)
-    return response
+    """Public landing page. Signed-in users go straight to the app."""
+    if _signed_in(request):
+        return redirect("/app/")
+    return render(request, "public/home.html")
 
 
-@require_http_methods(["GET"])
+@require_GET
 def privacy_view(request):
     """Public privacy policy, linked from Google's OAuth consent screen."""
     return render(request, "public/privacy.html", {"contact_email": settings.CONTACT_EMAIL})
 
 
-@require_http_methods(["GET", "POST"])
-def login_view(request):
-    if request.method == "GET":
-        return render(request, "auth/login.html")
+# Old URL → its React page. Anything under these paths (a student's page, say)
+# keeps the rest of its path: /students/<id> → /app/students/<id>.
+_MOVED = {
+    "login": "login",
+    "dashboard": "",
+    "analytics": "analytics",
+    "assistant": "assistant",
+    "students": "students",
+    "sessions": "sessions",
+    "calendar/create": "sessions/schedule",
+    "calendar/connect": "connections",
+    "calendar": "sessions",
+    "payees": "payees",
+    "payments": "payments",
+    "connections": "connections",
+    "profile": "profile",
+    "data": "data",
+    "setup": "setup",
+}
 
-    email = request.POST.get("email", "")
-    password = request.POST.get("password", "")
-    user = User.objects.filter(email=email).first()
-
-    if not user or not user.check_password(password) or not user.is_active:
-        return render(request, "auth/login.html", {"error": "Invalid email or password"}, status=400)
-
-    refresh = RefreshToken.for_user(user)
-    response = redirect("/dashboard")
-    set_auth_cookies(response, str(refresh.access_token), str(refresh))
-    return response
-
-
-@require_http_methods(["POST"])
-def logout_view(request):
-    refresh_token = request.COOKIES.get("refresh_token")
-    if refresh_token:
-        try:
-            RefreshToken(refresh_token).blacklist()
-        except (TokenError, AttributeError):
-            pass
-
-    response = redirect("/login")
-    clear_auth_cookies(response)
-    return response
+# Longest first, so calendar/create wins over calendar.
+MOVED_PREFIXES = sorted(_MOVED, key=len, reverse=True)
 
 
-@login_required
-def dashboard_view(request):
-    user = request.user
-    stats = get_dashboard_stats(user)
-    return render(request, "dashboard/index.html", {"user": user, "active_page": "dashboard", **stats})
+@require_safe
+def moved_to_app(request, prefix: str, rest: str = ""):
+    """Bookmarks and links to the old pages land on the same page in the React app.
+
+    Temporary (302), so browsers don't cache it forever should the app move again.
+    """
+    target = "/app/" + "/".join(part for part in (_MOVED[prefix], rest) if part)
+    if request.META.get("QUERY_STRING"):
+        target += "?" + request.META["QUERY_STRING"]
+    return redirect(target)

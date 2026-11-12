@@ -74,9 +74,8 @@ TEMPLATES = [
         },
     },
     {
-        # Reuses the FastAPI app's Jinja2 templates (extends/block/macros/`abs`
-        # filter all work unchanged) instead of rewriting them in Django's own
-        # template language.
+        # The public homepage and privacy policy (templates/), in Jinja2 as
+        # carried over from the FastAPI app. Every other page is the React app.
         "BACKEND": "django.template.backends.jinja2.Jinja2",
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": False,

@@ -3,9 +3,9 @@
 [![Deploy](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml/badge.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 [![coverage](https://raw.githubusercontent.com/arithman34/tutor_hub/gh-pages/badges/coverage.svg)](https://github.com/arithman34/tutor_hub/actions/workflows/deploy.yml)
 
-A full-stack tutoring management platform. The backend is Django + Django REST Framework with a PostgreSQL database. The frontend is a server-rendered web UI built with Jinja2 templates. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and includes TutorHub AI, a chat assistant that answers questions about the tutor's own students, sessions and payments by calling read-only tools.
+A full-stack tutoring management platform. The backend is a Django REST Framework API on PostgreSQL, and the frontend is a React + TypeScript single-page app that Django serves. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and includes TutorHub AI, a chat assistant that answers questions about the tutor's own students, sessions and payments by calling read-only tools.
 
-**Live:** [tutorhub.arithman.dev/login](https://tutorhub.arithman.dev/login)
+**Live:** [tutorhub.arithman.dev](https://tutorhub.arithman.dev)
 
 > The app started as a FastAPI project (still in [`app/`](app/) for reference, with its own tests and docs below) and was rewritten on Django + DRF, which is what's actually running in production now — see [`django_app/`](django_app) and its [README](django_app/README.md) for the current implementation. `app/`'s CI job was retired since nothing deploys it anymore; the code stays for reference.
 
@@ -83,7 +83,9 @@ tutor_hub/
 │   ├── assistant/          # TutorHub AI: read-only tools, agent loop, LLM client, daily quota
 │   ├── calendar_integration/ # Google Calendar OAuth + events
 │   ├── analytics/          # Dashboard trend data
-│   ├── web/                # Server-rendered pages (reuses the Jinja2 templates below)
+│   ├── spa/                # The frontend: React + TypeScript app, served at /app/
+│   ├── web/                # Public homepage and privacy page, redirects from old page URLs
+│   ├── templates/          # Jinja2 templates for those public pages
 │   ├── config/             # Settings, urls, wsgi
 │   ├── Dockerfile
 │   └── entrypoint.sh
@@ -99,7 +101,7 @@ tutor_hub/
 │   ├── worker.py
 │   └── main.py
 ├── alembic/                # FastAPI app's database migrations
-├── templates/              # Jinja2 HTML templates (shared by both backends)
+├── templates/              # FastAPI app's Jinja2 templates
 ├── static/                 # CSS and JS assets
 ├── tests/                  # FastAPI app's tests
 ├── terraform/              # AWS infrastructure (foundation, cost-optimized [live], production [legacy/unused])
@@ -248,9 +250,10 @@ All REST endpoints are under the `/api/v1` prefix, served by Django REST Framewo
 | AI | OpenAI API (TutorHub AI tool calling, Zoom summary parsing) |
 | Calendar | Google OAuth 2.0, Google Calendar API |
 | Email | Resend |
-| Templating | Jinja2 (via Django's Jinja2 template backend), Tailwind CSS |
+| Frontend | React, TypeScript, Vite, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS, Chart.js |
+| API types | OpenAPI schema (drf-spectacular), generated TypeScript types (openapi-typescript) |
 | Static files | WhiteNoise |
-| Testing | Django's test runner (`manage.py test`) |
+| Testing | Django's test runner (`manage.py test`); Vitest, Testing Library and MSW for the frontend |
 | Containerisation | Docker, Docker Compose |
 | CI/CD | GitHub Actions |
 | Hosting | AWS (ECS Fargate, RDS), Cloudflare Tunnel, Terraform |

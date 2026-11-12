@@ -1,6 +1,6 @@
 /**
- * Light/dark mode. Stored under the same localStorage key as the classic
- * pages, so the choice carries across both while they live side by side.
+ * Light/dark mode. Stored under the same localStorage key the public pages
+ * Django renders read (templates/base.html), so they match the app.
  */
 import { useState } from 'react'
 
