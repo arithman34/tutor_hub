@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router'
 
+import { useIsDemo } from '../../auth'
 import { ErrorMessage, Loading, PageHeader, buttonDanger, buttonPrimary } from '../../components/ui'
 import { useCalendarStatus, useConnectGoogle, useDisconnectGoogle } from './queries'
 
@@ -15,6 +16,7 @@ export function ConnectionsPage() {
   const status = useCalendarStatus()
   const connect = useConnectGoogle()
   const disconnect = useDisconnectGoogle()
+  const isDemo = useIsDemo()
 
   const errorCode = searchParams.get('error')
   const callbackError = errorCode ? (CALLBACK_ERRORS[errorCode] ?? 'Connecting to Google failed. Please try again.') : null
@@ -67,6 +69,8 @@ export function ConnectionsPage() {
             <button type="button" onClick={handleDisconnect} disabled={disconnect.isPending} className={buttonDanger}>
               {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
             </button>
+          ) : isDemo ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">Not available in the demo.</p>
           ) : (
             // Stays "Opening Google…" after success too, while the browser leaves for Google.
             <button type="button" onClick={() => connect.mutate()} disabled={connect.isPending || connect.isSuccess} className={buttonPrimary}>

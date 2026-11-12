@@ -132,3 +132,18 @@ describe('layout', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach TutorHub"), { timeout: 4000 })
   })
 })
+
+describe('demo account', () => {
+  it('says the demo is made up and read-only', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json({ ...testUser, is_demo: true })))
+    renderApp('/')
+    expect(await screen.findByText(/looking round the demo/)).toHaveTextContent('nothing you change will be saved')
+  })
+
+  it('shows no banner to a real account', async () => {
+    renderApp('/')
+    // The sidebar shows the account's name once it has loaded.
+    expect(await screen.findByRole('link', { name: 'Ada Lovelace' })).toBeInTheDocument()
+    expect(screen.queryByText(/looking round the demo/)).not.toBeInTheDocument()
+  })
+})

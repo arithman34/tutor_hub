@@ -141,8 +141,11 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.CookieJWTAuthentication",
     ),
+    # Every view gets both unless it sets its own. The demo account can read
+    # everything but change nothing (see accounts/permissions.py).
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
+        "accounts.permissions.DemoIsReadOnly",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -169,6 +172,14 @@ SPECTACULAR_SETTINGS = {
 SECURE_COOKIES = not DEBUG
 CSRF_COOKIE_SECURE = SECURE_COOKIES
 SESSION_COOKIE_SECURE = SECURE_COOKIES
+
+# The read-only demo account behind the homepage's "Try the demo" button
+# (accounts/demo.py). It's created on the first click and refilled with
+# fresh made-up records once a week. Set DEMO_ENABLED=false to hide it.
+DEMO_ENABLED = os.environ.get("DEMO_ENABLED", "true").lower() == "true"
+DEMO_EMAIL = "demo@tutorhub.test"
+# Shared by every visitor, so it caps what the demo can cost in AI calls.
+DEMO_AI_DAILY_LIMIT = int(os.environ.get("DEMO_AI_DAILY_LIMIT", "20"))
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),

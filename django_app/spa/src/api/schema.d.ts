@@ -1317,6 +1317,11 @@ export interface components {
             last_name: string;
             is_active?: boolean;
             address?: string | null;
+            /**
+             * Demo account
+             * @description The shared, read-only account behind the homepage's Try the demo button. See accounts/demo.py.
+             */
+            readonly is_demo: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */

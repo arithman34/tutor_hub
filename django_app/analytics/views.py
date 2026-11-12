@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,7 +10,6 @@ from .serializers import DashboardSerializer, FilterOptionsSerializer, TrendsQue
 
 
 class TrendsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Charts for the analytics page", parameters=[TrendsQuerySerializer], responses=TrendsSerializer)
     def get(self, request):
@@ -38,7 +36,6 @@ class TrendsView(APIView):
 
 
 class FilterOptionsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Students and payees for the filter bar", responses=FilterOptionsSerializer)
     def get(self, request):
@@ -46,7 +43,6 @@ class FilterOptionsView(APIView):
 
 
 class DashboardView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Headline numbers for the dashboard", responses=DashboardSerializer)
     def get(self, request):

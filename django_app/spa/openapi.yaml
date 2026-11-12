@@ -2738,6 +2738,12 @@ components:
           type: string
           nullable: true
           maxLength: 255
+        is_demo:
+          type: boolean
+          readOnly: true
+          title: Demo account
+          description: The shared, read-only account behind the homepage's Try the
+            demo button. See accounts/demo.py.
         created_at:
           type: string
           format: date-time
@@ -2751,6 +2757,7 @@ components:
       - email
       - first_name
       - id
+      - is_demo
       - last_name
       - updated_at
     ZoomParse:

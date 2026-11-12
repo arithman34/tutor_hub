@@ -5,13 +5,13 @@
 
 A full-stack tutoring management platform. The backend is a Django REST Framework API on PostgreSQL, and the frontend is a React + TypeScript single-page app that Django serves. It integrates with Google Calendar, uses OpenAI to parse Zoom session summaries into structured notes, and includes TutorHub AI, a chat assistant that answers questions about the tutor's own students, sessions and payments by calling read-only tools.
 
-**Live:** [tutorhub.arithman.dev](https://tutorhub.arithman.dev)
+**Live:** [tutorhub.arithman.dev](https://tutorhub.arithman.dev). Click **Try the demo** to look round a read-only account filled with a year of made-up students, lessons and payments, no sign-up needed.
 
 > The app started as a FastAPI project (still in [`app/`](app/) for reference, with its own tests and docs below) and was rewritten on Django + DRF, which is what's actually running in production now — see [`django_app/`](django_app) and its [README](django_app/README.md) for the current implementation. `app/`'s CI job was retired since nothing deploys it anymore; the code stays for reference.
 
 ## Screenshots
 
-Shown with made-up demo data (`python manage.py seed_demo`).
+Shown with the same made-up data as the live demo (`python manage.py seed_demo` fills it locally).
 
 | Dashboard | Analytics |
 |---|---|

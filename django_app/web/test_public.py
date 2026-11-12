@@ -1,5 +1,5 @@
-from django.test import TestCase, override_settings
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.test import Client, TestCase, override_settings
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from accounts.models import User
 
@@ -79,3 +79,42 @@ class GoogleScopeTests(TestCase):
         from calendar_integration.services import _SCOPE
 
         self.assertEqual(_SCOPE.split(), ["https://www.googleapis.com/auth/calendar.app.created"])
+
+
+class DemoSignInTests(TestCase):
+    def test_homepage_offers_the_demo(self):
+        response = self.client.get("/")
+        self.assertContains(response, 'action="/demo"')
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
+
+    @override_settings(DEMO_ENABLED=False)
+    def test_homepage_hides_the_demo_when_switched_off(self):
+        self.assertNotContains(self.client.get("/"), 'action="/demo"')
+
+    def test_signs_in_to_the_demo_and_opens_the_app(self):
+        client = Client(enforce_csrf_checks=True)
+        client.get("/")
+        response = client.post("/demo", {"csrfmiddlewaretoken": client.cookies["csrftoken"].value})
+
+        self.assertRedirects(response, "/app/", fetch_redirect_response=False)
+        user = User.objects.get(email="demo@tutorhub.test")
+        self.assertTrue(user.is_demo)
+        access = AccessToken(response.cookies["access_token"].value)
+        self.assertEqual(access["user_id"], str(user.id))
+        self.assertTrue(response.cookies["access_token"]["httponly"])
+
+    def test_needs_the_csrf_token(self):
+        # Otherwise another site could sign a visitor into the demo without them knowing.
+        client = Client(enforce_csrf_checks=True)
+        response = client.post("/demo")
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.exists())
+
+    def test_only_accepts_post(self):
+        self.assertEqual(self.client.get("/demo").status_code, 405)
+
+    @override_settings(DEMO_ENABLED=False)
+    def test_says_so_when_the_demo_is_off(self):
+        response = self.client.post("/demo")
+        self.assertContains(response, "The demo isn't available right now.", status_code=503)
+        self.assertNotIn("access_token", response.cookies)

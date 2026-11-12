@@ -6,7 +6,7 @@ keep the session cookie get a fresh conversation on every request.
 """
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import permissions, status
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -27,7 +27,6 @@ def _allowance(user) -> dict:
 
 
 class ConversationView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="The current conversation and today's allowance", responses=ConversationSerializer)
     def get(self, request):
@@ -42,7 +41,8 @@ class ConversationView(APIView):
 
 
 class AskView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # The chat lives in the visitor's own session; the demo's daily cap limits the cost.
+    demo_can_write = True
 
     @extend_schema(
         summary="Ask TutorHub AI a question",
@@ -80,7 +80,7 @@ class AskView(APIView):
 
 
 class ResetView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    demo_can_write = True
 
     @extend_schema(summary="Start a new conversation", request=None, responses={204: None})
     def post(self, request):
