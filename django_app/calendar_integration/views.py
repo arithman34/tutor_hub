@@ -18,8 +18,8 @@ from .serializers import (
     CalendarSessionsSerializer,
     ConnectionStatusSerializer,
     ConnectUrlSerializer,
-    OneOffEventRequestSerializer,
-    RecurringEventsRequestSerializer,
+    OneOffEventSerializer,
+    RecurringEventsSerializer,
 )
 
 _STATE_SALT = "calendar-oauth-state"
@@ -143,11 +143,11 @@ class OneOffEventView(APIView):
 
     @extend_schema(
         summary="Book a one-off lesson",
-        request=OneOffEventRequestSerializer,
+        request=OneOffEventSerializer,
         responses={201: CalendarEventSerializer, 400: _CALENDAR_ERROR},
     )
     def post(self, request):
-        body = OneOffEventRequestSerializer(data=request.data)
+        body = OneOffEventSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
@@ -170,11 +170,11 @@ class RecurringEventsView(APIView):
     @extend_schema(
         summary="Book weekly lessons",
         description="Creates one recurring event per weekday in day_configs.",
-        request=RecurringEventsRequestSerializer,
+        request=RecurringEventsSerializer,
         responses={201: CalendarEventSerializer(many=True), 400: _CALENDAR_ERROR},
     )
     def post(self, request):
-        body = RecurringEventsRequestSerializer(data=request.data)
+        body = RecurringEventsSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:

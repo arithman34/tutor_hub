@@ -6,6 +6,9 @@ import { AssistantPage } from './pages/assistant/AssistantPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NewSessionPage } from './pages/sessions/NewSessionPage'
+import { SessionDetailPage } from './pages/sessions/SessionDetailPage'
+import { SessionsPage } from './pages/sessions/SessionsPage'
 import { NewStudentPage } from './pages/students/NewStudentPage'
 import { StudentDetailPage } from './pages/students/StudentDetailPage'
 import { StudentsPage } from './pages/students/StudentsPage'
@@ -22,6 +25,9 @@ export function App() {
           <Route path="students" element={<StudentsPage />} />
           <Route path="students/new" element={<NewStudentPage />} />
           <Route path="students/:studentId" element={<StudentDetailPage />} />
+          <Route path="sessions" element={<SessionsPage />} />
+          <Route path="sessions/new" element={<NewSessionPage />} />
+          <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

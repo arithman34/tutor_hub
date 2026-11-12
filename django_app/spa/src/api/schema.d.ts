@@ -934,7 +934,7 @@ export interface components {
             role: components["schemas"]["RoleEnum"];
             content: string;
         };
-        OneOffEventRequestRequest: {
+        OneOffEventRequest: {
             summary: string;
             /** Format: date */
             date: string;
@@ -1086,7 +1086,7 @@ export interface components {
             payment_date: string;
             payment_reference?: string | null;
         };
-        RecurringEventsRequestRequest: {
+        RecurringEventsRequest: {
             summary: string;
             day_configs: components["schemas"]["DayConfigRequest"][];
             /** Format: date */
@@ -1299,7 +1299,7 @@ export interface components {
             /** @description Comma-separated. */
             topic_tags: string;
         };
-        ZoomParseRequestRequest: {
+        ZoomSummaryRequest: {
             /** @description The Zoom AI meeting summary, pasted as text. */
             summary: string;
         };
@@ -1741,9 +1741,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["OneOffEventRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OneOffEventRequestRequest"];
-                "multipart/form-data": components["schemas"]["OneOffEventRequestRequest"];
+                "application/json": components["schemas"]["OneOffEventRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OneOffEventRequest"];
+                "multipart/form-data": components["schemas"]["OneOffEventRequest"];
             };
         };
         responses: {
@@ -1773,9 +1773,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RecurringEventsRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RecurringEventsRequestRequest"];
-                "multipart/form-data": components["schemas"]["RecurringEventsRequestRequest"];
+                "application/json": components["schemas"]["RecurringEventsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecurringEventsRequest"];
+                "multipart/form-data": components["schemas"]["RecurringEventsRequest"];
             };
         };
         responses: {
@@ -2411,9 +2411,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ZoomParseRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ZoomParseRequestRequest"];
-                "multipart/form-data": components["schemas"]["ZoomParseRequestRequest"];
+                "application/json": components["schemas"]["ZoomSummaryRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ZoomSummaryRequest"];
+                "multipart/form-data": components["schemas"]["ZoomSummaryRequest"];
             };
         };
         responses: {

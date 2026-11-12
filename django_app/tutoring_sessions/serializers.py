@@ -44,7 +44,7 @@ class SessionSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ZoomParseRequestSerializer(serializers.Serializer):
+class ZoomSummarySerializer(serializers.Serializer):
     summary = serializers.CharField(max_length=20000, help_text="The Zoom AI meeting summary, pasted as text.")
 
 
