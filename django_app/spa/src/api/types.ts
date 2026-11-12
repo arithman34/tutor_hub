@@ -5,3 +5,8 @@ type Schemas = components['schemas']
 
 export type User = Schemas['User']
 export type Dashboard = Schemas['Dashboard']
+
+export type Conversation = Schemas['Conversation']
+export type Answer = Schemas['Answer']
+export type Allowance = Schemas['Allowance']
+export type ChatMessage = Schemas['Message']
