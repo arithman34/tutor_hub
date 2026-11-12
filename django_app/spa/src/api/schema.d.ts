@@ -310,9 +310,9 @@ export interface paths {
          * @description Returns the Google OAuth URL for the frontend to redirect the browser to.
          *
          *     The CSRF `state` isn't a server-side session cookie (this API is JWT-only,
-         *     and the browser hop to Google and back can't carry an Authorization header)
-         *     — instead it's a signed, time-limited token embedding the user id, verified
-         *     in CallbackView.
+         *     and the browser hop to Google and back can't carry an Authorization header).
+         *     Instead it's a signed, time-limited token embedding the user id, verified
+         *     in CallbackView. See services.sign_connect_state.
          */
         get: operations["calendar_connect_retrieve"];
         put?: never;
@@ -934,15 +934,27 @@ export interface components {
             role: components["schemas"]["RoleEnum"];
             content: string;
         };
+        /**
+         * @description What every booking takes: who it's for, and where.
+         *
+         *     Needs the request in its context, to look the student up among the user's own.
+         */
         OneOffEventRequest: {
-            summary: string;
+            /**
+             * Format: uuid
+             * @description The student the lesson is for. The event is titled '<first name> - Tuition', the format the sessions list matches students by.
+             */
+            student_id?: string;
+            /** @description The event title, when no student_id is given. */
+            summary?: string;
+            /** @description Defaults to your tutoring address. Send null or blank for no location. */
+            location?: string | null;
             /** Format: date */
             date: string;
             /** @description HH:MM */
             start_time: string;
             /** @description HH:MM */
             end_time: string;
-            location?: string | null;
         };
         PaginatedPaymentList: {
             /** @example 123 */
@@ -1093,8 +1105,21 @@ export interface components {
             payment_date: string;
             payment_reference?: string | null;
         };
+        /**
+         * @description What every booking takes: who it's for, and where.
+         *
+         *     Needs the request in its context, to look the student up among the user's own.
+         */
         RecurringEventsRequest: {
-            summary: string;
+            /**
+             * Format: uuid
+             * @description The student the lesson is for. The event is titled '<first name> - Tuition', the format the sessions list matches students by.
+             */
+            student_id?: string;
+            /** @description The event title, when no student_id is given. */
+            summary?: string;
+            /** @description Defaults to your tutoring address. Send null or blank for no location. */
+            location?: string | null;
             day_configs: components["schemas"]["DayConfigRequest"][];
             /** Format: date */
             start_date: string;
@@ -1102,7 +1127,6 @@ export interface components {
             end_date?: string | null;
             /** @default 1 */
             interval_weeks: number;
-            location?: string | null;
         };
         /**
          * @description * `user` - user

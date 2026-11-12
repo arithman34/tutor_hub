@@ -5,7 +5,9 @@ import { Loading } from './components/ui'
 import { RequireAuth } from './RequireAuth'
 import { AppLayout } from './layout/AppLayout'
 import { AssistantPage } from './pages/assistant/AssistantPage'
+import { ConnectionsPage } from './pages/connections/ConnectionsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { MyDataPage } from './pages/data/MyDataPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { NewPayeePage } from './pages/payees/NewPayeePage'
@@ -13,9 +15,12 @@ import { PayeeDetailPage } from './pages/payees/PayeeDetailPage'
 import { PayeesPage } from './pages/payees/PayeesPage'
 import { NewPaymentPage } from './pages/payments/NewPaymentPage'
 import { PaymentsPage } from './pages/payments/PaymentsPage'
+import { ProfilePage } from './pages/profile/ProfilePage'
+import { ScheduleSessionPage } from './pages/sessions/ScheduleSessionPage'
 import { NewSessionPage } from './pages/sessions/NewSessionPage'
 import { SessionDetailPage } from './pages/sessions/SessionDetailPage'
 import { SessionsPage } from './pages/sessions/SessionsPage'
+import { SetupPage } from './pages/setup/SetupPage'
 import { NewStudentPage } from './pages/students/NewStudentPage'
 import { StudentDetailPage } from './pages/students/StudentDetailPage'
 import { StudentsPage } from './pages/students/StudentsPage'
@@ -29,6 +34,7 @@ export function App() {
   return (
     <Routes>
       <Route path="login" element={<LoginPage />} />
+      <Route path="setup" element={<SetupPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -46,12 +52,16 @@ export function App() {
           <Route path="students/:studentId" element={<StudentDetailPage />} />
           <Route path="sessions" element={<SessionsPage />} />
           <Route path="sessions/new" element={<NewSessionPage />} />
+          <Route path="sessions/schedule" element={<ScheduleSessionPage />} />
           <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
           <Route path="payees" element={<PayeesPage />} />
           <Route path="payees/new" element={<NewPayeePage />} />
           <Route path="payees/:payeeId" element={<PayeeDetailPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="payments/new" element={<NewPaymentPage />} />
+          <Route path="connections" element={<ConnectionsPage />} />
+          <Route path="data" element={<MyDataPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

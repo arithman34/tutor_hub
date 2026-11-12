@@ -94,11 +94,19 @@ describe('dashboard', () => {
 })
 
 describe('layout', () => {
-  it('links pages not yet rebuilt to the classic app', async () => {
+  it('opens every page from the sidebar without leaving the app', async () => {
+    server.use(http.get('*/api/v1/calendar/status', () => HttpResponse.json({ connected: false })))
+    const user = userEvent.setup()
     renderApp('/')
     const sidebar = await screen.findByRole('complementary', { name: 'Sidebar' })
-    expect(within(sidebar).getByRole('link', { name: 'Connections' })).toHaveAttribute('href', '/connections')
-    expect(within(sidebar).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/')
+
+    await user.click(within(sidebar).getByRole('link', { name: 'Connections' }))
+    expect(await screen.findByRole('heading', { name: 'Connections' })).toBeInTheDocument()
+
+    // Your name at the bottom of the sidebar opens your profile.
+    await user.click(within(sidebar).getByRole('link', { name: 'Ada Lovelace' }))
+    expect(await screen.findByRole('heading', { name: 'My profile' })).toBeInTheDocument()
+    expect(within(sidebar).getByRole('link', { name: 'Ada Lovelace' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('toggles and remembers dark mode', async () => {

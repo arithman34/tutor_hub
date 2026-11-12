@@ -1,9 +1,10 @@
-import secrets
+import logging
 
+import httpx
 from django.conf import settings
 from django.core import signing
 from django.shortcuts import redirect
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,33 +23,44 @@ from .serializers import (
     RecurringEventsSerializer,
 )
 
-_STATE_SALT = "calendar-oauth-state"
-_STATE_MAX_AGE = 300
+logger = logging.getLogger(__name__)
 
 _CALENDAR_ERROR = OpenApiResponse(description="Not connected to Google, or Google Calendar couldn't be reached.")
+
+
+def _google_failed(request):
+    """Google refused the booking or couldn't be reached. Log the details, which
+    may include Google's response, and tell the user something they can act on."""
+    logger.exception("Google Calendar booking failed for user %s", request.user.id)
+    return Response(
+        {"detail": "Google Calendar didn't accept the booking. Try again, or reconnect Google on the Connections page."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 class ConnectView(APIView):
     """Returns the Google OAuth URL for the frontend to redirect the browser to.
 
     The CSRF `state` isn't a server-side session cookie (this API is JWT-only,
-    and the browser hop to Google and back can't carry an Authorization header)
-    — instead it's a signed, time-limited token embedding the user id, verified
-    in CallbackView.
+    and the browser hop to Google and back can't carry an Authorization header).
+    Instead it's a signed, time-limited token embedding the user id, verified
+    in CallbackView. See services.sign_connect_state.
     """
 
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(summary="Start connecting Google Calendar", responses=ConnectUrlSerializer)
     def get(self, request):
-        state = signing.dumps({"user_id": str(request.user.id), "nonce": secrets.token_urlsafe(16)}, salt=_STATE_SALT)
-        return Response({"url": services.build_connect_url(state)})
+        return Response({"url": services.build_connect_url(services.sign_connect_state(request.user))})
 
 
 class CallbackView(APIView):
     """Google redirects the browser here directly, so no JWT is available —
     identity comes from the signed `state` instead. Redirects back to the
-    frontend with a query flag describing the outcome."""
+    frontend with a query flag describing the outcome.
+
+    Also served at /calendar/callback (GoogleRedirectView), the redirect URI
+    registered with Google."""
 
     # Identity comes from `state`, so skip cookie auth: a stale cookie must
     # not turn Google's redirect into a 401.
@@ -67,17 +79,23 @@ class CallbackView(APIView):
 
         state = request.query_params.get("state", "")
         try:
-            payload = signing.loads(state, salt=_STATE_SALT, max_age=_STATE_MAX_AGE)
-            user = User.objects.get(id=payload["user_id"])
+            user = User.objects.get(id=services.read_connect_state(state))
         except (signing.BadSignature, User.DoesNotExist):
             return redirect(f"{settings.FRONTEND_URL}/connections?error=invalid_state")
 
         try:
             services.exchange_code(request.query_params.get("code", ""), user)
         except Exception:
+            logger.exception("Google token exchange failed for user %s", user.id)
             return redirect(f"{settings.FRONTEND_URL}/connections?error=token_exchange_failed")
 
         return redirect(f"{settings.FRONTEND_URL}/connections?connected=1")
+
+
+@extend_schema_view(get=extend_schema(exclude=True))
+class GoogleRedirectView(CallbackView):
+    """CallbackView at /calendar/callback, the redirect URI registered with
+    Google. Left out of the API schema, which documents it once under /api/v1."""
 
 
 class StatusView(APIView):
@@ -147,7 +165,7 @@ class OneOffEventView(APIView):
         responses={201: CalendarEventSerializer, 400: _CALENDAR_ERROR},
     )
     def post(self, request):
-        body = OneOffEventSerializer(data=request.data)
+        body = OneOffEventSerializer(data=request.data, context={"request": request})
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
@@ -157,10 +175,12 @@ class OneOffEventView(APIView):
                 date_str=data["date"].isoformat(),
                 start_time=data["start_time"],
                 end_time=data["end_time"],
-                location=data.get("location") or None,
+                location=data["location"] or None,
             )
         except (ValueError, services.CalendarUnreachableError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except httpx.HTTPError:
+            return _google_failed(request)
         return Response(services.parse_event(event), status=status.HTTP_201_CREATED)
 
 
@@ -174,7 +194,7 @@ class RecurringEventsView(APIView):
         responses={201: CalendarEventSerializer(many=True), 400: _CALENDAR_ERROR},
     )
     def post(self, request):
-        body = RecurringEventsSerializer(data=request.data)
+        body = RecurringEventsSerializer(data=request.data, context={"request": request})
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
@@ -185,8 +205,10 @@ class RecurringEventsView(APIView):
                 start_date_str=data["start_date"].isoformat(),
                 end_date_str=data["end_date"].isoformat() if data.get("end_date") else None,
                 interval_weeks=data["interval_weeks"],
-                location=data.get("location") or None,
+                location=data["location"] or None,
             )
         except (ValueError, services.CalendarUnreachableError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except httpx.HTTPError:
+            return _google_failed(request)
         return Response([services.parse_event(e) for e in events], status=status.HTTP_201_CREATED)

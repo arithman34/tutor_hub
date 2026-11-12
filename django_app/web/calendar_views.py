@@ -1,5 +1,4 @@
 import logging
-import secrets
 from urllib.parse import quote
 
 from django.shortcuts import redirect, render
@@ -112,32 +111,9 @@ def calendar_create(request):
 
 @login_required
 def calendar_connect(request):
-    state = secrets.token_urlsafe(32)
-    url = services.build_connect_url(state)
-    response = redirect(url)
-    response.set_cookie("gcal_state", state, max_age=300, httponly=True, samesite="Lax")
-    return response
-
-
-@login_required
-def calendar_callback(request):
-    error = request.GET.get("error", "")
-    if error:
-        return redirect("/connections?error=access_denied")
-
-    state = request.GET.get("state", "")
-    stored_state = request.COOKIES.get("gcal_state")
-    if not stored_state or stored_state != state:
-        return redirect("/connections?error=invalid_state")
-
-    try:
-        services.exchange_code(request.GET.get("code", ""), request.user)
-    except Exception:
-        return redirect("/connections?error=token_exchange_failed")
-
-    response = redirect("/connections?connected=1")
-    response.delete_cookie("gcal_state")
-    return response
+    # The same signed state the API's connect endpoint uses, so Google's
+    # redirect lands on the one shared callback (calendar_integration.views.CallbackView).
+    return redirect(services.build_connect_url(services.sign_connect_state(request.user)))
 
 
 @login_required

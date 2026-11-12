@@ -387,9 +387,9 @@ paths:
         Returns the Google OAuth URL for the frontend to redirect the browser to.
 
         The CSRF `state` isn't a server-side session cookie (this API is JWT-only,
-        and the browser hop to Google and back can't carry an Authorization header)
-        — instead it's a signed, time-limited token embedding the user id, verified
-        in CallbackView.
+        and the browser hop to Google and back can't carry an Authorization header).
+        Instead it's a signed, time-limited token embedding the user id, verified
+        in CallbackView. See services.sign_connect_state.
       summary: Start connecting Google Calendar
       tags:
       - calendar
@@ -1829,11 +1829,27 @@ components:
       - role
     OneOffEventRequest:
       type: object
+      description: |-
+        What every booking takes: who it's for, and where.
+
+        Needs the request in its context, to look the student up among the user's own.
       properties:
+        student_id:
+          type: string
+          format: uuid
+          description: The student the lesson is for. The event is titled '<first
+            name> - Tuition', the format the sessions list matches students by.
         summary:
           type: string
           minLength: 1
+          description: The event title, when no student_id is given.
           maxLength: 255
+        location:
+          type: string
+          nullable: true
+          description: Defaults to your tutoring address. Send null or blank for no
+            location.
+          maxLength: 500
         date:
           type: string
           format: date
@@ -1847,15 +1863,10 @@ components:
           minLength: 1
           description: HH:MM
           pattern: ^([01]\d|2[0-3]):[0-5]\d$
-        location:
-          type: string
-          nullable: true
-          maxLength: 500
       required:
       - date
       - end_time
       - start_time
-      - summary
     PaginatedPaymentList:
       type: object
       required:
@@ -2223,11 +2234,27 @@ components:
       - payment_date
     RecurringEventsRequest:
       type: object
+      description: |-
+        What every booking takes: who it's for, and where.
+
+        Needs the request in its context, to look the student up among the user's own.
       properties:
+        student_id:
+          type: string
+          format: uuid
+          description: The student the lesson is for. The event is titled '<first
+            name> - Tuition', the format the sessions list matches students by.
         summary:
           type: string
           minLength: 1
+          description: The event title, when no student_id is given.
           maxLength: 255
+        location:
+          type: string
+          nullable: true
+          description: Defaults to your tutoring address. Send null or blank for no
+            location.
+          maxLength: 500
         day_configs:
           type: array
           items:
@@ -2244,14 +2271,9 @@ components:
           maximum: 52
           minimum: 1
           default: 1
-        location:
-          type: string
-          nullable: true
-          maxLength: 500
       required:
       - day_configs
       - start_date
-      - summary
     RoleEnum:
       enum:
       - user

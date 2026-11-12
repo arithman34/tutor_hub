@@ -4,11 +4,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useLogout, useMe } from '../auth'
 import { useTheme } from '../theme'
 
-type NavItem =
-  // A page already rebuilt in React: client-side navigation.
-  | { label: string; to: string }
-  // A page still served by Django: a normal full-page link.
-  | { label: string; href: string }
+type NavItem = { label: string; to: string }
 
 const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
   {
@@ -23,25 +19,18 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
   {
     title: 'Integrations',
     items: [
-      { label: 'Connections', href: '/connections' },
+      { label: 'Connections', to: '/connections' },
       { label: 'Payments', to: '/payments' },
       { label: 'Payees', to: '/payees' },
     ],
   },
-  { title: 'Account', items: [{ label: 'My Data', href: '/data' }] },
+  { title: 'Account', items: [{ label: 'My Data', to: '/data' }] },
 ]
 
 const itemClass = 'block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400'
 const activeClass = 'bg-blue-50 font-medium text-blue-700 dark:bg-gray-700 dark:text-blue-400'
 
 function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
-  if ('href' in item) {
-    return (
-      <a href={item.href} className={itemClass}>
-        {item.label}
-      </a>
-    )
-  }
   return (
     <NavLink
       to={item.to}
@@ -121,9 +110,13 @@ export function AppLayout() {
           <button type="button" onClick={toggle} className={`${itemClass} w-full text-left`}>
             {dark ? 'Light mode' : 'Dark mode'}
           </button>
-          <a href="/profile" className={itemClass}>
+          <NavLink
+            to="/profile"
+            onClick={() => setMenuOpen(false)}
+            className={({ isActive }) => `${itemClass} ${isActive ? activeClass : ''}`}
+          >
             {me.data ? `${me.data.first_name} ${me.data.last_name}` : 'Profile'}
-          </a>
+          </NavLink>
           <button
             type="button"
             onClick={handleLogout}

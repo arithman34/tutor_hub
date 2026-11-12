@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '../../api/client'
 import type { PatchedSessionRequest, Session, SessionRequest } from '../../api/types'
 import { invalidateBalances } from '../payees/queries'
+import { toOneOffBooking, toRecurringBooking, type ScheduleFormValues } from './scheduleForm'
 
 export type SessionStatus = 'all' | 'logged' | 'unlogged'
 export type SessionPeriod = 'all' | 'past' | 'today' | 'future'
@@ -77,5 +78,26 @@ export function useDeleteSession(id: string) {
 export function useZoomParse() {
   return useMutation({
     mutationFn: async (summary: string) => unwrap(await api.POST('/api/v1/sessions/zoom-parse/', { body: { summary } })),
+  })
+}
+
+/**
+ * Book lessons on Google Calendar: one event, or one weekly event per chosen
+ * day. Resolves to how many events were asked for and how many Google made
+ * (it can quietly refuse some of a weekly booking).
+ */
+export function useBookLessons() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (values: ScheduleFormValues) => {
+      if (values.kind === 'oneoff') {
+        unwrap(await api.POST('/api/v1/calendar/events', { body: toOneOffBooking(values) }))
+        return { requested: 1, created: 1 }
+      }
+      const body = toRecurringBooking(values)
+      const events = unwrap(await api.POST('/api/v1/calendar/events/recurring', { body }))
+      return { requested: body.day_configs.length, created: events.length }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
   })
 }

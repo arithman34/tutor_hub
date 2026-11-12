@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User
+from calendar_integration import services
 from calendar_integration.models import GoogleCalendarToken
 
 
@@ -71,52 +72,43 @@ class DisconnectTests(TestCase):
 
 class ConnectTests(TestCase):
     @patch("calendar_integration.services.build_connect_url")
-    def test_connect_redirects_to_google_and_sets_state_cookie(self, mock_build_url):
+    def test_connect_redirects_to_google_with_a_signed_state(self, mock_build_url):
         mock_build_url.return_value = "https://accounts.google.com/o/oauth2/v2/auth?state=xyz"
         tutor = make_user("tutor@example.com")
         login(self.client, tutor)
         response = self.client.get("/calendar/connect")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "https://accounts.google.com/o/oauth2/v2/auth?state=xyz")
-        self.assertIn("gcal_state", response.cookies)
+        # The state names the user, so the shared callback needs no cookie.
+        state = mock_build_url.call_args.args[0]
+        self.assertEqual(services.read_connect_state(state), str(tutor.id))
 
 
 class CallbackTests(TestCase):
+    """/calendar/callback is the redirect URI registered with Google. It's the
+    API's callback, and it sends the browser on to the React Connections page."""
+
     def test_access_denied_redirects_with_error(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
         response = self.client.get("/calendar/callback", {"error": "access_denied"})
-        self.assertRedirects(response, "/connections?error=access_denied", fetch_redirect_response=False)
+        self.assertRedirects(response, "/app/connections?error=access_denied", fetch_redirect_response=False)
 
-    def test_mismatched_state_redirects_with_invalid_state_error(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        self.client.cookies["gcal_state"] = "expected"
-        response = self.client.get("/calendar/callback", {"state": "wrong", "code": "abc"})
-        self.assertRedirects(response, "/connections?error=invalid_state", fetch_redirect_response=False)
-
-    def test_missing_state_cookie_redirects_with_invalid_state_error(self):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        response = self.client.get("/calendar/callback", {"state": "abc", "code": "abc"})
-        self.assertRedirects(response, "/connections?error=invalid_state", fetch_redirect_response=False)
+    def test_forged_state_redirects_with_invalid_state_error(self):
+        response = self.client.get("/calendar/callback", {"state": "forged", "code": "abc"})
+        self.assertRedirects(response, "/app/connections?error=invalid_state", fetch_redirect_response=False)
 
     @patch("calendar_integration.services.exchange_code", side_effect=RuntimeError("boom"))
-    def test_exchange_failure_redirects_with_error(self, mock_exchange):
-        tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        self.client.cookies["gcal_state"] = "matching"
-        response = self.client.get("/calendar/callback", {"state": "matching", "code": "abc"})
-        self.assertRedirects(response, "/connections?error=token_exchange_failed", fetch_redirect_response=False)
+    def test_exchange_failure_redirects_with_error(self, _mock_exchange):
+        state = services.sign_connect_state(make_user("tutor@example.com"))
+        with self.assertLogs("calendar_integration.views", "ERROR"):
+            response = self.client.get("/calendar/callback", {"state": state, "code": "abc"})
+        self.assertRedirects(response, "/app/connections?error=token_exchange_failed", fetch_redirect_response=False)
 
     @patch("calendar_integration.services.exchange_code")
-    def test_successful_exchange_redirects_with_connected_flag(self, mock_exchange):
+    def test_successful_exchange_connects_the_user_named_in_the_state(self, mock_exchange):
         tutor = make_user("tutor@example.com")
-        login(self.client, tutor)
-        self.client.cookies["gcal_state"] = "matching"
-        response = self.client.get("/calendar/callback", {"state": "matching", "code": "abc"})
-        self.assertRedirects(response, "/connections?connected=1", fetch_redirect_response=False)
-        mock_exchange.assert_called_once()
+        response = self.client.get("/calendar/callback", {"state": services.sign_connect_state(tutor), "code": "abc"})
+        self.assertRedirects(response, "/app/connections?connected=1", fetch_redirect_response=False)
+        mock_exchange.assert_called_once_with("abc", tutor)
 
 
 class DisconnectFormCsrfTests(TestCase):

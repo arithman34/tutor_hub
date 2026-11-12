@@ -4,8 +4,11 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarSessionItem, Session, Student } from '../../api/types'
+import { leaveFor } from '../../browser'
 import { renderApp } from '../../test/render'
 import { server } from '../../test/server'
+
+vi.mock('../../browser')
 
 const sam: Student = {
   id: '22222222-2222-4222-8222-222222222222',
@@ -159,10 +162,14 @@ describe('sessions list', () => {
     expect(screen.getByRole('link', { name: 'Go to Connections' })).toHaveAttribute('href', '/connections')
   })
 
-  it('shows Google errors with a reconnect link', async () => {
+  it('shows Google errors, and reconnecting goes straight to Google', async () => {
     serveCalendar([], 'Google Calendar access expired. Please reconnect.')
+    server.use(http.get('*/api/v1/calendar/connect', () => HttpResponse.json({ url: 'https://accounts.google.com/consent' })))
+    const user = userEvent.setup()
     renderApp('/sessions')
-    expect(await screen.findByRole('link', { name: 'Reconnect Google Calendar' })).toHaveAttribute('href', '/calendar/connect')
+
+    await user.click(await screen.findByRole('button', { name: 'Reconnect Google Calendar' }))
+    await waitFor(() => expect(leaveFor).toHaveBeenCalledWith('https://accounts.google.com/consent'))
   })
 })
 

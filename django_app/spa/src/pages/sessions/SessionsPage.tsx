@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
 import type { CalendarSessionItem } from '../../api/types'
 import { Tabs } from '../../components/Tabs'
 import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } from '../../components/ui'
 import { formatDate } from '../../format'
+import { useConnectGoogle } from '../connections/queries'
 import { useCalendarSessions, type SessionPeriod, type SessionStatus } from './queries'
 
 const PAGE_SIZE = 50
@@ -57,7 +58,10 @@ export function SessionsPage() {
   const q = searchParams.get('q') ?? ''
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
   const [draft, setDraft] = useState(q)
+  // Set by the schedule page after a booking. Any filter change drops it.
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
   const sessions = useCalendarSessions(status, period, q)
+  const reconnect = useConnectGoogle()
 
   function update(changes: Record<string, string>) {
     const next = new URLSearchParams(searchParams)
@@ -83,11 +87,16 @@ export function SessionsPage() {
   return (
     <div>
       <PageHeader title="Sessions">
-        {/* Booking lessons is still a classic page; a full-page link until it moves. */}
-        <a href="/calendar/create" className={buttonPrimary}>
+        <Link to="/sessions/schedule" className={buttonPrimary}>
           Schedule session
-        </a>
+        </Link>
       </PageHeader>
+
+      {notice && (
+        <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+          {notice}
+        </p>
+      )}
 
       <form role="search" onSubmit={handleSearch} className="mb-4 flex flex-wrap gap-2">
         <label htmlFor="session-search" className="sr-only">
@@ -128,9 +137,9 @@ export function SessionsPage() {
       {notConnected && (
         <ErrorMessage>
           Connect Google Calendar to see your sessions here.{' '}
-          <a href="/connections" className="font-medium underline">
+          <Link to="/connections" className="font-medium underline">
             Go to Connections
-          </a>
+          </Link>
         </ErrorMessage>
       )}
       {sessions.isError && !notConnected && <ErrorMessage>Couldn't load sessions: {sessions.error.message}</ErrorMessage>}
@@ -140,9 +149,12 @@ export function SessionsPage() {
           <ErrorMessage>
             {sessions.data.error}{' '}
             {sessions.data.error.includes('reconnect') && (
-              <a href="/calendar/connect" className="font-medium underline">
+              // Straight to Google: when Google has only refused the calendar, the
+              // connection still counts as connected, so Connections would offer
+              // just "Disconnect".
+              <button type="button" onClick={() => reconnect.mutate()} disabled={reconnect.isPending || reconnect.isSuccess} className="font-medium underline">
                 Reconnect Google Calendar
-              </a>
+              </button>
             )}
           </ErrorMessage>
         </div>
