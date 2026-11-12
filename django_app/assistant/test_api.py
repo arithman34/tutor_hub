@@ -94,9 +94,12 @@ class AssistantApiTests(APITestCase):
         self.assertEqual(client.post(ASK, {"question": "Hi"}, format="json").status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class SharedConversationTests(APITestCase):
+class CookieConversationTests(APITestCase):
+    """The browser app's case: signed in by cookie, so CSRF applies, and the
+    conversation is kept in the session between requests."""
+
     @patch("assistant.conversation.agent.answer", return_value="From the API")
-    def test_web_page_shows_a_conversation_started_over_the_api(self, _mock_answer):
+    def test_asking_needs_the_csrf_token_and_the_answer_is_kept(self, _mock_answer):
         user = make_user()
         client = APIClient(enforce_csrf_checks=True)
         client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
@@ -106,4 +109,5 @@ class SharedConversationTests(APITestCase):
         response = client.post(ASK, {"question": "Hi"}, format="json", HTTP_X_CSRFTOKEN=token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertContains(client.get("/assistant"), "From the API")
+        messages = client.get(CONVERSATION).json()["history"]
+        self.assertEqual([message["content"] for message in messages], ["Hi", "From the API"])

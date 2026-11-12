@@ -1,4 +1,4 @@
-"""A TutorHub AI conversation, shared by the web page and the API.
+"""A TutorHub AI conversation.
 
 The conversation lives in the Django session, keyed by user id so a shared
 browser never shows one account's chat to another. Each question is charged

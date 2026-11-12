@@ -53,7 +53,7 @@ jobs:
         working-directory: django_app
         run: npm ci
 
-      - name: Build CSS and vendor JS
+      - name: Build the public pages' CSS
         working-directory: django_app
         run: npm run build
 

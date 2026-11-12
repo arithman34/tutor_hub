@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
 import { useLogout, useMe } from '../auth'
+import { Loading } from '../components/ui'
 import { useTheme } from '../theme'
 
 type NavItem = { label: string; to: string }
@@ -129,7 +130,10 @@ export function AppLayout() {
       </aside>
 
       <main className="flex-1 px-4 pt-16 pb-8 sm:px-8 sm:pt-8">
-        <Outlet />
+        {/* Most pages load on first visit (see App.tsx); keep the sidebar while they do. */}
+        <Suspense fallback={<Loading />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

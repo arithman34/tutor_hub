@@ -1,9 +1,8 @@
 """TutorHub AI over the API.
 
-Uses the same session-stored conversation as the web page (see
-conversation.py), so a browser sees one chat whichever UI it uses. API
-clients that don't keep the session cookie get a fresh conversation on every
-request.
+The conversation is kept in the Django session (see conversation.py), so
+the browser app sees the same chat across page loads. API clients that don't
+keep the session cookie get a fresh conversation on every request.
 """
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema

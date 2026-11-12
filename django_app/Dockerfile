@@ -1,4 +1,4 @@
-# Stage 1: build the classic pages' CSS and browser JS, and the React app.
+# Stage 1: build the public pages' CSS and the React app.
 # Node never reaches the final image; only the files in static/ it produces do.
 FROM node:22-slim AS frontend
 
@@ -28,7 +28,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 COPY --from=frontend /build/static/css/app.css static/css/app.css
-COPY --from=frontend /build/static/vendor static/vendor
 COPY --from=frontend /build/static/spa static/spa
 
 RUN python manage.py collectstatic --noinput

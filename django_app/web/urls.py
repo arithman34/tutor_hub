@@ -1,64 +1,19 @@
-from django.urls import path
+import re
+
+from django.urls import path, re_path
 
 from calendar_integration.views import GoogleRedirectView
 
-from . import (
-    analytics_views,
-    assistant_views,
-    calendar_views,
-    connections_views,
-    data_views,
-    payees_views,
-    payments_views,
-    profile_views,
-    sessions_views,
-    setup_views,
-    students_views,
-    views,
-)
+from . import views
 
 urlpatterns = [
     path("", views.home_view, name="web-home"),
     path("privacy", views.privacy_view, name="web-privacy"),
-    path("login", views.login_view, name="web-login"),
-    path("logout", views.logout_view, name="web-logout"),
-    path("dashboard", views.dashboard_view, name="web-dashboard"),
-    path("students", students_views.students_index, name="web-students-list"),
-    path("students/new", students_views.students_new, name="web-students-new"),
-    path("students/<uuid:student_id>", students_views.student_detail, name="web-student-detail"),
-    path("students/<uuid:student_id>/update", students_views.student_update, name="web-student-update"),
-    path("students/<uuid:student_id>/toggle-active", students_views.student_toggle_active, name="web-student-toggle-active"),
-    path("students/<uuid:student_id>/delete", students_views.student_delete, name="web-student-delete"),
-    path("sessions", sessions_views.sessions_index, name="web-sessions-list"),
-    path("sessions/new", sessions_views.sessions_new, name="web-sessions-new"),
-    path("sessions/zoom-parse", sessions_views.sessions_zoom_parse, name="web-sessions-zoom-parse"),
-    path("sessions/<uuid:session_id>", sessions_views.session_detail, name="web-session-detail"),
-    path("sessions/<uuid:session_id>/update", sessions_views.session_update, name="web-session-update"),
-    path("sessions/<uuid:session_id>/delete", sessions_views.session_delete, name="web-session-delete"),
-    path("payees", payees_views.payees_index, name="web-payees-list"),
-    path("payees/new", payees_views.payees_new, name="web-payees-new"),
-    path("payees/<uuid:payee_id>", payees_views.payee_detail, name="web-payee-detail"),
-    path("payees/<uuid:payee_id>/update", payees_views.payee_update, name="web-payee-update"),
-    path("payments", payments_views.payments_index, name="web-payments-list"),
-    path("payments/new", payments_views.payments_new, name="web-payments-new"),
-    path("assistant", assistant_views.assistant_page, name="web-assistant"),
-    path("assistant/ask", assistant_views.assistant_ask, name="web-assistant-ask"),
-    path("assistant/reset", assistant_views.assistant_reset, name="web-assistant-reset"),
-    path("connections", connections_views.connections_page, name="web-connections"),
-    path("calendar", calendar_views.calendar_page, name="web-calendar"),
-    path("calendar/create", calendar_views.calendar_create_index, name="web-calendar-create"),
-    path("calendar/connect", calendar_views.calendar_connect, name="web-calendar-connect"),
-    # The redirect URI registered with Google. One callback serves both the
-    # classic Connect link and the React app; it redirects to FRONTEND_URL.
+    # The redirect URI registered with Google; it redirects on to /app/connections.
     path("calendar/callback", GoogleRedirectView.as_view(), name="web-calendar-callback"),
-    path("calendar/disconnect", calendar_views.calendar_disconnect, name="web-calendar-disconnect"),
-    path("profile", profile_views.profile_page, name="web-profile"),
-    path("profile/update", profile_views.profile_update, name="web-profile-update"),
-    path("profile/password", profile_views.profile_password, name="web-profile-password"),
-    path("data", data_views.data_page, name="web-data"),
-    path("data/export", data_views.data_export, name="web-data-export"),
-    path("data/import", data_views.data_import, name="web-data-import"),
-    path("analytics", analytics_views.analytics_page, name="web-analytics"),
-    path("analytics/data", analytics_views.analytics_data, name="web-analytics-data"),
-    path("setup", setup_views.setup_index, name="web-setup"),
+    re_path(
+        rf"^(?P<prefix>{'|'.join(map(re.escape, views.MOVED_PREFIXES))})(?:/(?P<rest>.*))?$",
+        views.moved_to_app,
+        name="web-moved",
+    ),
 ]
