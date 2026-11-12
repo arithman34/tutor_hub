@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, unwrap } from '../../api/client'
 import type { Student, StudentRequest } from '../../api/types'
+import { invalidateBalances } from '../payees/queries'
 
 export const studentKeys = {
   all: ['students'] as const,
@@ -38,19 +39,11 @@ export function useRecentSessions(studentId: string) {
   })
 }
 
-export function usePayees() {
-  return useQuery({
-    queryKey: ['payees', 'list'],
-    queryFn: async () => unwrap(await api.GET('/api/v1/payees/')),
-    staleTime: 60_000,
-  })
-}
-
 export function useCreateStudent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (body: StudentRequest) => unwrap(await api.POST('/api/v1/students/', { body })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: studentKeys.all }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: studentKeys.all }), invalidateBalances(queryClient)]),
   })
 }
 
@@ -62,7 +55,7 @@ export function useUpdateStudent(id: string) {
     onSuccess: (student) => {
       // We already have the updated student, so put it straight in the cache.
       queryClient.setQueryData<Student>(studentKeys.detail(id), student)
-      return queryClient.invalidateQueries({ queryKey: ['students', 'list'] })
+      return Promise.all([queryClient.invalidateQueries({ queryKey: ['students', 'list'] }), invalidateBalances(queryClient)])
     },
   })
 }
@@ -87,7 +80,7 @@ export function useDeleteStudent(id: string) {
     },
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: studentKeys.detail(id) })
-      return queryClient.invalidateQueries({ queryKey: ['students', 'list'] })
+      return Promise.all([queryClient.invalidateQueries({ queryKey: ['students', 'list'] }), invalidateBalances(queryClient)])
     },
   })
 }

@@ -1050,6 +1050,12 @@ export interface components {
             email?: (string) | null;
             phone_number?: string | null;
             bank_reference_pattern?: string | null;
+            /**
+             * Format: double
+             * @description Payments received minus the cost of billed sessions. Negative means the payee owes money.
+             */
+            readonly balance: number;
+            readonly student_count: number;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -1067,6 +1073,7 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             payee: string;
+            readonly payee_name: string;
             /** Format: decimal */
             amount: string;
             /** Format: date-time */
@@ -2109,6 +2116,10 @@ export interface operations {
                 limit?: number;
                 /** @description The initial index from which to return the results. */
                 offset?: number;
+                /** @description Only this payee's payments. */
+                payee?: string;
+                /** @description Filter by payee name. */
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -2488,6 +2499,8 @@ export interface operations {
     students_list: {
         parameters: {
             query?: {
+                /** @description Only students this payee pays for. */
+                payee?: string;
                 /** @description Filter by student name. */
                 q?: string;
             };

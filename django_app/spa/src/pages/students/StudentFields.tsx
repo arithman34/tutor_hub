@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form'
 import { Field } from '../../components/form'
 import { describedBy } from '../../components/formHelpers'
 import { googleDocUrl, type StudentFormValues } from './studentForm'
-import { usePayees } from './queries'
+import { usePayees } from '../payees/queries'
 
 /** The inputs shared by the add and edit forms. */
 export function StudentFields({ form, savedDocId }: { form: UseFormReturn<StudentFormValues>; savedDocId?: string | null }) {

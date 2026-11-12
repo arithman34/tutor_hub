@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, unwrap } from '../../api/client'
 import type { PatchedSessionRequest, Session, SessionRequest } from '../../api/types'
+import { invalidateBalances } from '../payees/queries'
 
 export type SessionStatus = 'all' | 'logged' | 'unlogged'
 export type SessionPeriod = 'all' | 'past' | 'today' | 'future'
@@ -30,13 +31,13 @@ export function useSession(id: string) {
 
 /**
  * Logging or changing a session affects the sessions list (logged status),
- * the student's recent sessions and the dashboard's counts, so refresh them all.
+ * the student's recent sessions, payee balances and the dashboard, so refresh them all.
  */
 function invalidateAfterChange(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
     queryClient.invalidateQueries({ queryKey: ['students', 'detail'] }),
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    invalidateBalances(queryClient),
   ])
 }
 

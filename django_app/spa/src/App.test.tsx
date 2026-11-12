@@ -97,7 +97,7 @@ describe('layout', () => {
   it('links pages not yet rebuilt to the classic app', async () => {
     renderApp('/')
     const sidebar = await screen.findByRole('complementary', { name: 'Sidebar' })
-    expect(within(sidebar).getByRole('link', { name: 'Payees' })).toHaveAttribute('href', '/payees')
+    expect(within(sidebar).getByRole('link', { name: 'Connections' })).toHaveAttribute('href', '/connections')
     expect(within(sidebar).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/')
   })
 

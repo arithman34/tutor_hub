@@ -24,8 +24,8 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
     title: 'Integrations',
     items: [
       { label: 'Connections', href: '/connections' },
-      { label: 'Payments', href: '/payments' },
-      { label: 'Payees', href: '/payees' },
+      { label: 'Payments', to: '/payments' },
+      { label: 'Payees', to: '/payees' },
     ],
   },
   { title: 'Account', items: [{ label: 'My Data', href: '/data' }] },

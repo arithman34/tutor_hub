@@ -6,6 +6,11 @@ import { AssistantPage } from './pages/assistant/AssistantPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NewPayeePage } from './pages/payees/NewPayeePage'
+import { PayeeDetailPage } from './pages/payees/PayeeDetailPage'
+import { PayeesPage } from './pages/payees/PayeesPage'
+import { NewPaymentPage } from './pages/payments/NewPaymentPage'
+import { PaymentsPage } from './pages/payments/PaymentsPage'
 import { NewSessionPage } from './pages/sessions/NewSessionPage'
 import { SessionDetailPage } from './pages/sessions/SessionDetailPage'
 import { SessionsPage } from './pages/sessions/SessionsPage'
@@ -28,6 +33,11 @@ export function App() {
           <Route path="sessions" element={<SessionsPage />} />
           <Route path="sessions/new" element={<NewSessionPage />} />
           <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
+          <Route path="payees" element={<PayeesPage />} />
+          <Route path="payees/new" element={<NewPayeePage />} />
+          <Route path="payees/:payeeId" element={<PayeeDetailPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
+          <Route path="payments/new" element={<NewPaymentPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
