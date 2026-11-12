@@ -18,6 +18,11 @@ export type PatchedSessionRequest = Schemas['PatchedSessionRequest']
 export type CalendarSessionItem = Schemas['CalendarSessionItem']
 export type ZoomNotes = Schemas['ZoomParse']
 
+export type Trends = Schemas['Trends']
+export type TrendChart = Schemas['TrendChart']
+export type TrendSeries = Schemas['TrendSeries']
+export type FilterOptions = Schemas['FilterOptions']
+
 export type Conversation = Schemas['Conversation']
 export type Answer = Schemas['Answer']
 export type Allowance = Schemas['Allowance']

@@ -14,7 +14,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
   {
     items: [
       { label: 'Dashboard', to: '/' },
-      { label: 'Analytics', href: '/analytics' },
+      { label: 'Analytics', to: '/analytics' },
       { label: 'TutorHub AI', to: '/assistant' },
       { label: 'Students', to: '/students' },
       { label: 'Sessions', to: '/sessions' },
