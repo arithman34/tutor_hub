@@ -8,3 +8,5 @@ htmlcov
 node_modules
 static/css/app.css
 static/vendor
+spa/node_modules
+static/spa

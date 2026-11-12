@@ -1,0 +1,2730 @@
+openapi: 3.0.3
+info:
+  title: TutorHub API
+  version: 1.0.0
+  description: Students, sessions, billing, calendar and analytics for an independent
+    tutor.
+paths:
+  /api/v1/analytics/dashboard:
+    get:
+      operationId: analytics_dashboard_retrieve
+      summary: Headline numbers for the dashboard
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: ''
+  /api/v1/analytics/filters:
+    get:
+      operationId: analytics_filters_retrieve
+      summary: Students and payees for the filter bar
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterOptions'
+          description: ''
+  /api/v1/analytics/trends:
+    get:
+      operationId: analytics_trends_retrieve
+      summary: Charts for the analytics page
+      parameters:
+      - in: query
+        name: end
+        schema:
+          type: string
+          format: date
+          nullable: true
+      - in: query
+        name: granularity
+        schema:
+          type: string
+          minLength: 1
+          default: month
+        description: day, week or month. Coarsened automatically for long ranges.
+      - in: query
+        name: payee_id
+        schema:
+          type: string
+          format: uuid
+          nullable: true
+      - in: query
+        name: range
+        schema:
+          type: string
+          minLength: 1
+          default: 12m
+        description: 3m, 6m, 12m, ytd or all. Unknown values fall back to 12m.
+      - in: query
+        name: start
+        schema:
+          type: string
+          format: date
+          nullable: true
+        description: With end, overrides range.
+      - in: query
+        name: student_id
+        schema:
+          type: string
+          format: uuid
+          nullable: true
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trends'
+          description: ''
+  /api/v1/assistant/:
+    get:
+      operationId: assistant_retrieve
+      summary: The current conversation and today's allowance
+      tags:
+      - assistant
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/v1/assistant/ask:
+    post:
+      operationId: assistant_ask_create
+      summary: Ask TutorHub AI a question
+      tags:
+      - assistant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+          description: ''
+        '429':
+          description: Today's question allowance is used up.
+        '502':
+          description: The AI provider failed. The question wasn't charged.
+  /api/v1/assistant/reset:
+    post:
+      operationId: assistant_reset_create
+      summary: Start a new conversation
+      tags:
+      - assistant
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/cookie/login:
+    post:
+      operationId: auth_cookie_login_create
+      summary: Log in with httponly cookies
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CookieLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CookieLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CookieLoginRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/cookie/logout:
+    post:
+      operationId: auth_cookie_logout_create
+      summary: Log out and clear the cookies
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/cookie/refresh:
+    post:
+      operationId: auth_cookie_refresh_create
+      description: Swaps the refresh_token cookie for a new access/refresh pair. Call
+        it after a 401, then retry the request.
+      summary: Refresh the cookie tokens
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/csrf:
+    get:
+      operationId: auth_csrf_retrieve
+      description: Sets the csrftoken cookie and returns the same token. Send it as
+        the X-CSRFToken header on cookie-authenticated POST, PUT, PATCH and DELETE
+        requests.
+      summary: Get a CSRF token
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+          description: ''
+  /api/v1/auth/login:
+    post:
+      operationId: auth_login_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout_create
+      description: |-
+        Takes a token and blacklists it. Must be used with the
+        `rest_framework_simplejwt.token_blacklist` app installed.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/me:
+    get:
+      operationId: auth_me_retrieve
+      summary: The signed-in user
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: auth_me_partial_update
+      summary: Update your details
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/password:
+    post:
+      operationId: auth_password_create
+      description: Signs out every other session by blacklisting all of the account's
+        refresh tokens, then sets fresh auth cookies for this one.
+      summary: Change your password
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/refresh:
+    post:
+      operationId: auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/calendar/callback:
+    get:
+      operationId: calendar_callback_retrieve
+      description: Not called directly. Google sends the browser here, and it redirects
+        on to the frontend.
+      summary: Google's OAuth redirect target
+      tags:
+      - calendar
+      security:
+      - {}
+      responses:
+        '302':
+          description: No response body
+  /api/v1/calendar/connect:
+    get:
+      operationId: calendar_connect_retrieve
+      description: |-
+        Returns the Google OAuth URL for the frontend to redirect the browser to.
+
+        The CSRF `state` isn't a server-side session cookie (this API is JWT-only,
+        and the browser hop to Google and back can't carry an Authorization header)
+        — instead it's a signed, time-limited token embedding the user id, verified
+        in CallbackView.
+      summary: Start connecting Google Calendar
+      tags:
+      - calendar
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectUrl'
+          description: ''
+  /api/v1/calendar/disconnect:
+    post:
+      operationId: calendar_disconnect_create
+      summary: Disconnect Google Calendar
+      tags:
+      - calendar
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/calendar/events:
+    post:
+      operationId: calendar_events_create
+      summary: Book a one-off lesson
+      tags:
+      - calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneOffEventRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OneOffEventRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OneOffEventRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEvent'
+          description: ''
+        '400':
+          description: Not connected to Google, or Google Calendar couldn't be reached.
+  /api/v1/calendar/events/recurring:
+    post:
+      operationId: calendar_events_recurring_create
+      description: Creates one recurring event per weekday in day_configs.
+      summary: Book weekly lessons
+      tags:
+      - calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecurringEventsRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarEvent'
+          description: ''
+        '400':
+          description: Not connected to Google, or Google Calendar couldn't be reached.
+  /api/v1/calendar/events/upcoming:
+    get:
+      operationId: calendar_events_upcoming_list
+      summary: Upcoming Tutoring calendar events
+      tags:
+      - calendar
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarEvent'
+          description: ''
+        '400':
+          description: Not connected to Google, or Google Calendar couldn't be reached.
+  /api/v1/calendar/sessions:
+    get:
+      operationId: calendar_sessions_retrieve
+      description: 'The sessions page: calendar events and whether each has been logged.'
+      summary: Tutoring calendar events with their logged status
+      parameters:
+      - in: query
+        name: period
+        schema:
+          enum:
+          - past
+          - today
+          - future
+          - all
+          type: string
+          default: all
+          minLength: 1
+        description: |-
+          * `past` - past
+          * `today` - today
+          * `future` - future
+          * `all` - all
+      - in: query
+        name: q
+        schema:
+          type: string
+          default: ''
+        description: Filter by event title.
+      - in: query
+        name: status
+        schema:
+          enum:
+          - all
+          - logged
+          - unlogged
+          type: string
+          default: all
+          minLength: 1
+        description: |-
+          * `all` - all
+          * `logged` - logged
+          * `unlogged` - unlogged
+      tags:
+      - calendar
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarSessions'
+          description: ''
+        '409':
+          description: Google Calendar was never connected.
+  /api/v1/calendar/status:
+    get:
+      operationId: calendar_status_retrieve
+      summary: Whether Google Calendar is connected
+      tags:
+      - calendar
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatus'
+          description: ''
+  /api/v1/data/export:
+    get:
+      operationId: data_export_retrieve
+      description: A JSON file (sent as an attachment) of your payees, students, sessions
+        and payments.
+      summary: Download all your data
+      tags:
+      - data
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/data/import:
+    post:
+      operationId: data_import_create
+      description: Deletes your current payees, students, sessions and payments and
+        loads the file's instead. Nothing changes if the file has any problem.
+      summary: Replace all your data from an export file
+      tags:
+      - data
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DataImportRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportCounts'
+          description: ''
+        '400':
+          description: Missing, too large or invalid file.
+  /api/v1/payees/:
+    get:
+      operationId: payees_list
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - payees
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payee'
+          description: ''
+    post:
+      operationId: payees_create
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - payees
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payee'
+          description: ''
+  /api/v1/payees/{id}/:
+    get:
+      operationId: payees_retrieve
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payee.
+        required: true
+      tags:
+      - payees
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payee'
+          description: ''
+    put:
+      operationId: payees_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payee.
+        required: true
+      tags:
+      - payees
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PayeeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payee'
+          description: ''
+    patch:
+      operationId: payees_partial_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payee.
+        required: true
+      tags:
+      - payees
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPayeeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPayeeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPayeeRequest'
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payee'
+          description: ''
+    delete:
+      operationId: payees_destroy
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payee.
+        required: true
+      tags:
+      - payees
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/payees/{id}/balance/:
+    get:
+      operationId: payees_balance_retrieve
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payee.
+        required: true
+      tags:
+      - payees
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payee'
+          description: ''
+  /api/v1/payments/:
+    get:
+      operationId: payments_list
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentList'
+          description: ''
+    post:
+      operationId: payments_create
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/v1/payments/{id}/:
+    get:
+      operationId: payments_retrieve
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payment.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    put:
+      operationId: payments_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payment.
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    patch:
+      operationId: payments_partial_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payment.
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRequest'
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    delete:
+      operationId: payments_destroy
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this payment.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/sessions/:
+    get:
+      operationId: sessions_list
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - sessions
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSessionList'
+          description: ''
+    post:
+      operationId: sessions_create
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/v1/sessions/{id}/:
+    get:
+      operationId: sessions_retrieve
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this session.
+        required: true
+      tags:
+      - sessions
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+    put:
+      operationId: sessions_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this session.
+        required: true
+      tags:
+      - sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+    patch:
+      operationId: sessions_partial_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this session.
+        required: true
+      tags:
+      - sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionRequest'
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+    delete:
+      operationId: sessions_destroy
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this session.
+        required: true
+      tags:
+      - sessions
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/sessions/zoom-parse/:
+    post:
+      operationId: sessions_zoom_parse_create
+      description: Sends the pasted summary to OpenAI and returns the session note
+        fields. Nothing is saved.
+      summary: Fill in session notes from a Zoom summary
+      tags:
+      - sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoomParseRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ZoomParseRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ZoomParseRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoomParse'
+          description: ''
+        '502':
+          description: The summary couldn't be parsed.
+  /api/v1/setup:
+    get:
+      operationId: setup_retrieve
+      description: 'First run: create the very first account. Does nothing once any
+        account exists.'
+      summary: Whether first-run setup is needed
+      tags:
+      - setup
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupStatus'
+          description: ''
+    post:
+      operationId: setup_create
+      description: 'First run: create the very first account. Does nothing once any
+        account exists.'
+      summary: Create the first account
+      tags:
+      - setup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetupRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '409':
+          description: An account already exists.
+  /api/v1/students/:
+    get:
+      operationId: students_list
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - students
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+          description: ''
+    post:
+      operationId: students_create
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+  /api/v1/students/{id}/:
+    get:
+      operationId: students_retrieve
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this student.
+        required: true
+      tags:
+      - students
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    put:
+      operationId: students_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this student.
+        required: true
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    patch:
+      operationId: students_partial_update
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this student.
+        required: true
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentRequest'
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    delete:
+      operationId: students_destroy
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this student.
+        required: true
+      tags:
+      - students
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/students/{id}/toggle-active/:
+    post:
+      operationId: students_toggle_active_create
+      description: |-
+        For DRF viewsets: scope every query to the requesting user and stamp
+        new rows with them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this student.
+        required: true
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+components:
+  schemas:
+    Allowance:
+      type: object
+      properties:
+        limit:
+          type: integer
+          nullable: true
+          description: Questions per day (UK time). Null means unlimited.
+        used:
+          type: integer
+        remaining:
+          type: integer
+          nullable: true
+        unlimited:
+          type: boolean
+        exhausted:
+          type: boolean
+      required:
+      - exhausted
+      - limit
+      - remaining
+      - unlimited
+      - used
+    Answer:
+      type: object
+      properties:
+        reply:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        allowance:
+          $ref: '#/components/schemas/Allowance'
+      required:
+      - allowance
+      - history
+      - reply
+    AskRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+      - question
+    AxisEnum:
+      enum:
+      - y
+      - y1
+      type: string
+      description: |-
+        * `y` - y
+        * `y1` - y1
+    CalendarEvent:
+      type: object
+      description: An event on the Tutoring calendar, flattened by services.parse_event.
+      properties:
+        event_id:
+          type: string
+        summary:
+          type: string
+        student_name:
+          type: string
+        date:
+          type: string
+          description: YYYY-MM-DD
+        start_time:
+          type: string
+          description: HH:MM, blank for all-day events
+        end_time:
+          type: string
+          description: HH:MM, blank for all-day events
+        all_day:
+          type: boolean
+        html_link:
+          type: string
+      required:
+      - all_day
+      - date
+      - end_time
+      - event_id
+      - html_link
+      - start_time
+      - student_name
+      - summary
+    CalendarSessionItem:
+      type: object
+      description: An event on the Tutoring calendar, flattened by services.parse_event.
+      properties:
+        event_id:
+          type: string
+        summary:
+          type: string
+        student_name:
+          type: string
+        date:
+          type: string
+          description: YYYY-MM-DD
+        start_time:
+          type: string
+          description: HH:MM, blank for all-day events
+        end_time:
+          type: string
+          description: HH:MM, blank for all-day events
+        all_day:
+          type: boolean
+        html_link:
+          type: string
+        logged:
+          type: boolean
+          description: Whether a Session has been logged for this event.
+        session_id:
+          type: string
+          format: uuid
+          nullable: true
+        student_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The active student the event title matches, if any.
+      required:
+      - all_day
+      - date
+      - end_time
+      - event_id
+      - html_link
+      - logged
+      - session_id
+      - start_time
+      - student_id
+      - student_name
+      - summary
+    CalendarSessions:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarSessionItem'
+        error:
+          type: string
+          nullable: true
+          description: Set when Google Calendar couldn't be reached.
+      required:
+      - error
+      - items
+    ConnectUrl:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Google's consent page. Send the browser here.
+      required:
+      - url
+    ConnectionStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+      required:
+      - connected
+    Conversation:
+      type: object
+      properties:
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        allowance:
+          $ref: '#/components/schemas/Allowance'
+        examples:
+          type: array
+          items:
+            type: string
+          description: Suggested first questions.
+        max_question_length:
+          type: integer
+      required:
+      - allowance
+      - examples
+      - history
+      - max_question_length
+    CookieLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    CsrfToken:
+      type: object
+      properties:
+        csrf_token:
+          type: string
+      required:
+      - csrf_token
+    Dashboard:
+      type: object
+      description: Headline numbers from analytics.dashboard.get_dashboard_stats.
+      properties:
+        revenue_alltime:
+          type: number
+          format: double
+        revenue_this_month:
+          type: number
+          format: double
+        revenue_this_year:
+          type: number
+          format: double
+        mom_trend:
+          type: number
+          format: double
+          nullable: true
+          description: Revenue percent change against last month.
+        outstanding_total:
+          type: number
+          format: double
+          description: Total owed by payees in arrears.
+        outstanding_payees:
+          type: integer
+        active_students:
+          type: integer
+        sessions_this_week:
+          type: integer
+          description: Sessions in the last 7 days.
+        sessions_this_month:
+          type: integer
+        sessions_pct_change:
+          type: number
+          format: double
+          nullable: true
+        hours_this_month:
+          type: number
+          format: double
+        hours_pct_change:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - active_students
+      - hours_pct_change
+      - hours_this_month
+      - mom_trend
+      - outstanding_payees
+      - outstanding_total
+      - revenue_alltime
+      - revenue_this_month
+      - revenue_this_year
+      - sessions_pct_change
+      - sessions_this_month
+      - sessions_this_week
+    DataImportRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+      required:
+      - file
+    DayConfigRequest:
+      type: object
+      properties:
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+          description: 0 = Monday, 6 = Sunday
+        start:
+          type: string
+          minLength: 1
+          description: HH:MM
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        end:
+          type: string
+          minLength: 1
+          description: HH:MM
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+      required:
+      - end
+      - start
+      - weekday
+    FilterOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    FilterOptions:
+      type: object
+      properties:
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterOption'
+        payees:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterOption'
+      required:
+      - payees
+      - students
+    ImportCounts:
+      type: object
+      properties:
+        payees:
+          type: integer
+        students:
+          type: integer
+        sessions:
+          type: integer
+        payments:
+          type: integer
+      required:
+      - payees
+      - payments
+      - sessions
+      - students
+    Message:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        content:
+          type: string
+      required:
+      - content
+      - role
+    OneOffEventRequestRequest:
+      type: object
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          minLength: 1
+          description: HH:MM
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        end_time:
+          type: string
+          minLength: 1
+          description: HH:MM
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        location:
+          type: string
+          nullable: true
+          maxLength: 500
+      required:
+      - date
+      - end_time
+      - start_time
+      - summary
+    PaginatedPaymentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    PaginatedSessionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+    PasswordChangeRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - current_password
+      - new_password
+    PatchedPayeeRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        bank_reference_pattern:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedPaymentRequest:
+      type: object
+      properties:
+        payee:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        payment_date:
+          type: string
+          format: date-time
+        payment_reference:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedProfileRequest:
+      type: object
+      description: |-
+        The fields a user may change about themselves.
+
+        Deliberately excludes is_active, is_staff and the AI limit, so a user
+        can't grant themselves anything.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        address:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedSessionRequest:
+      type: object
+      properties:
+        student:
+          type: string
+          format: uuid
+        session_date:
+          type: string
+          format: date-time
+        session_start_time:
+          type: string
+          format: date-time
+        session_end_time:
+          type: string
+          format: date-time
+        zoom_meeting_uuid:
+          type: string
+          nullable: true
+          maxLength: 255
+        zoom_summary_raw:
+          type: string
+          nullable: true
+        work_covered:
+          type: string
+          nullable: true
+        student_actions:
+          type: string
+          nullable: true
+        tutor_actions:
+          type: string
+          nullable: true
+        next_lesson_focus:
+          type: string
+          nullable: true
+        topic_tags:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_no_show:
+          type: boolean
+        calendar_event_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_recurring_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_html_link:
+          type: string
+          nullable: true
+          maxLength: 500
+        ilp_generated_at:
+          type: string
+          format: date-time
+          nullable: true
+    PatchedStudentRequest:
+      type: object
+      properties:
+        payee_id:
+          type: string
+          format: uuid
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        level:
+          type: string
+          nullable: true
+          maxLength: 100
+        hourly_rate:
+          type: number
+          format: double
+          nullable: true
+        zoom_meeting_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        google_doc_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        onedrive_shared_link:
+          type: string
+          nullable: true
+          maxLength: 500
+    Payee:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        bank_reference_pattern:
+          type: string
+          nullable: true
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - first_name
+      - id
+      - last_name
+      - updated_at
+    PayeeRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        bank_reference_pattern:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - first_name
+      - last_name
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        payee:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        payment_date:
+          type: string
+          format: date-time
+        payment_reference:
+          type: string
+          nullable: true
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - payee
+      - payment_date
+      - updated_at
+    PaymentRequest:
+      type: object
+      properties:
+        payee:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        payment_date:
+          type: string
+          format: date-time
+        payment_reference:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - amount
+      - payee
+      - payment_date
+    RecurringEventsRequestRequest:
+      type: object
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+        day_configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayConfigRequest'
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        interval_weeks:
+          type: integer
+          maximum: 52
+          minimum: 1
+          default: 1
+        location:
+          type: string
+          nullable: true
+          maxLength: 500
+      required:
+      - day_configs
+      - start_date
+      - summary
+    RoleEnum:
+      enum:
+      - user
+      - assistant
+      type: string
+      description: |-
+        * `user` - user
+        * `assistant` - assistant
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        student:
+          type: string
+          format: uuid
+        session_date:
+          type: string
+          format: date-time
+        session_start_time:
+          type: string
+          format: date-time
+        session_end_time:
+          type: string
+          format: date-time
+        minutes:
+          type: integer
+          readOnly: true
+        zoom_meeting_uuid:
+          type: string
+          nullable: true
+          maxLength: 255
+        zoom_summary_raw:
+          type: string
+          nullable: true
+        work_covered:
+          type: string
+          nullable: true
+        student_actions:
+          type: string
+          nullable: true
+        tutor_actions:
+          type: string
+          nullable: true
+        next_lesson_focus:
+          type: string
+          nullable: true
+        topic_tags:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_no_show:
+          type: boolean
+        calendar_event_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_recurring_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_html_link:
+          type: string
+          nullable: true
+          maxLength: 500
+        ilp_generated_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - minutes
+      - session_date
+      - session_end_time
+      - session_start_time
+      - student
+      - updated_at
+    SessionRequest:
+      type: object
+      properties:
+        student:
+          type: string
+          format: uuid
+        session_date:
+          type: string
+          format: date-time
+        session_start_time:
+          type: string
+          format: date-time
+        session_end_time:
+          type: string
+          format: date-time
+        zoom_meeting_uuid:
+          type: string
+          nullable: true
+          maxLength: 255
+        zoom_summary_raw:
+          type: string
+          nullable: true
+        work_covered:
+          type: string
+          nullable: true
+        student_actions:
+          type: string
+          nullable: true
+        tutor_actions:
+          type: string
+          nullable: true
+        next_lesson_focus:
+          type: string
+          nullable: true
+        topic_tags:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_no_show:
+          type: boolean
+        calendar_event_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_recurring_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        calendar_html_link:
+          type: string
+          nullable: true
+          maxLength: 500
+        ilp_generated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - session_date
+      - session_end_time
+      - session_start_time
+      - student
+    SetupRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+    SetupStatus:
+      type: object
+      properties:
+        needed:
+          type: boolean
+          description: True only while no account exists yet.
+      required:
+      - needed
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        payee_id:
+          type: string
+          format: uuid
+          nullable: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        level:
+          type: string
+          nullable: true
+          maxLength: 100
+        hourly_rate:
+          type: number
+          format: double
+          nullable: true
+        zoom_meeting_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        google_doc_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        onedrive_shared_link:
+          type: string
+          nullable: true
+          maxLength: 500
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - first_name
+      - id
+      - is_active
+      - last_name
+      - updated_at
+    StudentRequest:
+      type: object
+      properties:
+        payee_id:
+          type: string
+          format: uuid
+          nullable: true
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        level:
+          type: string
+          nullable: true
+          maxLength: 100
+        hourly_rate:
+          type: number
+          format: double
+          nullable: true
+        zoom_meeting_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        google_doc_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        onedrive_shared_link:
+          type: string
+          nullable: true
+          maxLength: 500
+      required:
+      - first_name
+      - last_name
+    TokenBlacklistRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TrendChart:
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendSeries'
+      required:
+      - key
+      - series
+      - title
+    TrendSeries:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeEnum'
+          description: |-
+            How the series is drawn.
+
+            * `bar` - bar
+            * `line` - line
+        axis:
+          allOf:
+          - $ref: '#/components/schemas/AxisEnum'
+          description: |-
+            Left (y) or right (y1) axis.
+
+            * `y` - y
+            * `y1` - y1
+        data:
+          type: array
+          items:
+            type: number
+            format: double
+          description: One value per label.
+        total:
+          type: number
+          format: double
+          description: Sum over the window, or the last value for running totals.
+        change:
+          type: number
+          format: double
+          nullable: true
+          description: Percent change against the previous window of equal length.
+      required:
+      - axis
+      - change
+      - data
+      - key
+      - label
+      - total
+      - type
+      - unit
+    Trends:
+      type: object
+      properties:
+        range:
+          type: string
+          description: The preset applied, or custom when start/end were given.
+        granularity:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        labels:
+          type: array
+          items:
+            type: string
+            format: date-time
+          description: Start of each bucket.
+        charts:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendChart'
+      required:
+      - charts
+      - end
+      - granularity
+      - labels
+      - range
+      - start
+    TypeEnum:
+      enum:
+      - bar
+      - line
+      type: string
+      description: |-
+        * `bar` - bar
+        * `line` - line
+    UnitEnum:
+      enum:
+      - count
+      - hours
+      - currency
+      type: string
+      description: |-
+        * `count` - count
+        * `hours` - hours
+        * `currency` - currency
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+        address:
+          type: string
+          nullable: true
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - first_name
+      - id
+      - last_name
+      - updated_at
+    ZoomParse:
+      type: object
+      properties:
+        work_covered:
+          type: string
+        student_actions:
+          type: string
+        tutor_actions:
+          type: string
+        next_lesson_focus:
+          type: string
+        topic_tags:
+          type: string
+          description: Comma-separated.
+      required:
+      - next_lesson_focus
+      - student_actions
+      - topic_tags
+      - tutor_actions
+      - work_covered
+    ZoomParseRequestRequest:
+      type: object
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          description: The Zoom AI meeting summary, pasted as text.
+          maxLength: 20000
+      required:
+      - summary
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: Set by POST /api/v1/auth/cookie/login. Unsafe methods also need
+        the X-CSRFToken header.
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

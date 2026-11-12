@@ -1,1 +1,4 @@
 *.sh text eol=lf
+# Generated files CI regenerates and diffs; keep them byte-identical everywhere.
+django_app/spa/openapi.yaml text eol=lf
+django_app/spa/src/api/schema.d.ts text eol=lf
