@@ -3,17 +3,21 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { ApiError } from '../api/client'
 import { useLogin, useMe } from '../auth'
+import { useSetupStatus } from './setup/queries'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const me = useMe()
   const login = useLogin()
+  const setup = useSetupStatus()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
   if (me.data) return <Navigate to={from} replace />
+  // A brand-new TutorHub has no account to sign in to yet.
+  if (setup.data?.needed) return <Navigate to="/setup" replace />
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

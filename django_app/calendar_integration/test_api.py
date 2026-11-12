@@ -1,7 +1,11 @@
 """The calendar API endpoints added for the browser app, and request validation."""
 
+import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+
+import httpx
+from django.core import signing
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -11,6 +15,7 @@ from accounts.models import User
 from students.models import Student
 from tutoring_sessions.models import Session
 
+from . import services
 from .models import GoogleCalendarToken
 
 SESSIONS = "/api/v1/calendar/sessions"
@@ -140,6 +145,61 @@ class OneOffEventTests(APITestCase):
         self.assertEqual(response.json()["detail"], "Google Calendar is not connected")
 
 
+class BookingForStudentTests(APITestCase):
+    """Booking by student_id: the server titles the event and fills in the location."""
+
+    def setUp(self):
+        self.user = make_user()
+        self.user.address = "1 High Street"
+        self.user.save()
+        self.client.force_authenticate(self.user)
+        self.student = Student.objects.create(user=self.user, first_name="Sam", last_name="Smith")
+        self.body = {"student_id": str(self.student.id), "date": "2026-12-01", "start_time": "16:00", "end_time": "17:00"}
+
+    @patch("calendar_integration.services.create_one_off_event")
+    def test_titles_the_event_after_the_student_and_uses_the_tutoring_address(self, mock_create):
+        mock_create.return_value = google_event("new", "Sam - Tuition", datetime(2026, 12, 1, 16, tzinfo=timezone.utc))
+        response = self.client.post(ONE_OFF, self.body, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(mock_create.call_args.kwargs["summary"], "Sam - Tuition")
+        self.assertEqual(mock_create.call_args.kwargs["location"], "1 High Street")
+
+    @patch("calendar_integration.services.create_one_off_event")
+    def test_an_explicit_blank_location_means_none(self, mock_create):
+        mock_create.return_value = google_event("new", "Sam - Tuition", datetime(2026, 12, 1, 16, tzinfo=timezone.utc))
+        self.client.post(ONE_OFF, {**self.body, "location": ""}, format="json")
+        self.assertIsNone(mock_create.call_args.kwargs["location"])
+
+    @patch("calendar_integration.services.create_recurring_events", return_value=[])
+    def test_recurring_bookings_are_titled_the_same_way(self, mock_create):
+        body = {"student_id": str(self.student.id), "start_date": "2026-12-01", "day_configs": [{"weekday": 1, "start": "16:00", "end": "17:00"}]}
+        self.assertEqual(self.client.post(RECURRING, body, format="json").status_code, status.HTTP_201_CREATED)
+        self.assertEqual(mock_create.call_args.kwargs["summary"], "Sam - Tuition")
+
+    @patch("calendar_integration.services.create_one_off_event")
+    def test_rejects_another_users_student(self, mock_create):
+        other = Student.objects.create(user=make_user("other@example.com"), first_name="Pat", last_name="Jones")
+        response = self.client.post(ONE_OFF, {**self.body, "student_id": str(other.id)}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("student_id", response.json())
+        mock_create.assert_not_called()
+
+    @patch("calendar_integration.services.create_one_off_event")
+    def test_needs_a_student_or_a_title(self, mock_create):
+        body = {key: value for key, value in self.body.items() if key != "student_id"}
+        response = self.client.post(ONE_OFF, body, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("student_id", response.json())
+        mock_create.assert_not_called()
+
+    def test_google_rejecting_the_event_is_a_bad_request_not_a_crash(self):
+        rejected = httpx.HTTPStatusError("403", request=httpx.Request("POST", "https://google"), response=httpx.Response(403))
+        with patch("calendar_integration.services.create_one_off_event", side_effect=rejected), self.assertLogs("calendar_integration.views", "ERROR"):
+            response = self.client.post(ONE_OFF, self.body, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("reconnect Google", response.json()["detail"])
+
+
 class RecurringEventsTests(APITestCase):
     def setUp(self):
         self.user = make_user()
@@ -186,3 +246,16 @@ class CallbackTests(APITestCase):
         self.client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
         response = self.client.get("/api/v1/calendar/callback", {"code": "x", "state": "forged"})
         self.assertIn("error=invalid_state", response.url)
+
+    def test_expired_state_is_rejected(self):
+        user = make_user()
+        state = services.sign_connect_state(user)
+        with patch("django.core.signing.time.time", return_value=time.time() + 301):
+            response = self.client.get("/api/v1/calendar/callback", {"code": "x", "state": state})
+        self.assertIn("error=invalid_state", response.url)
+
+    def test_state_round_trips_the_user_id(self):
+        user = make_user()
+        self.assertEqual(services.read_connect_state(services.sign_connect_state(user)), str(user.id))
+        with self.assertRaises(signing.BadSignature):
+            services.read_connect_state(services.sign_connect_state(user) + "x")

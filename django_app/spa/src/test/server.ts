@@ -38,6 +38,7 @@ export const unauthorized = () => HttpResponse.json({ detail: 'Not authenticated
 export const handlers = [
   http.get('*/api/v1/auth/csrf', () => HttpResponse.json({ csrf_token: 'test-csrf-token' })),
   http.get('*/api/v1/auth/me', () => HttpResponse.json(testUser)),
+  http.get('*/api/v1/setup', () => HttpResponse.json({ needed: false })),
   http.post('*/api/v1/auth/cookie/refresh', unauthorized),
   http.post('*/api/v1/auth/cookie/logout', () => new HttpResponse(null, { status: 204 })),
   http.get('*/api/v1/analytics/dashboard', () => HttpResponse.json(testDashboard)),

@@ -159,6 +159,10 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "COMPONENT_SPLIT_REQUEST": True,
+    # Stripped from paths to name operations (students_list) and tag them by
+    # area. Set explicitly: by default it's guessed from every route, so one
+    # API view outside /api/v1 would rename them all.
+    "SCHEMA_PATH_PREFIX": r"/api/v1",
 }
 
 # Cookies are HTTPS-only in production. Local runserver is plain HTTP, so
@@ -228,7 +232,9 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/calendar/callback")
 GOOGLE_CALENDAR_TIMEZONE = os.environ.get("GOOGLE_CALENDAR_TIMEZONE", "Europe/London")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+# Where Google's OAuth callback sends the browser afterwards. The React app is
+# served by Django under /app, so a same-site path works in every environment.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "/app")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "")

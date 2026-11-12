@@ -1,5 +1,7 @@
 from django.urls import path
 
+from calendar_integration.views import GoogleRedirectView
+
 from . import (
     analytics_views,
     assistant_views,
@@ -46,7 +48,9 @@ urlpatterns = [
     path("calendar", calendar_views.calendar_page, name="web-calendar"),
     path("calendar/create", calendar_views.calendar_create_index, name="web-calendar-create"),
     path("calendar/connect", calendar_views.calendar_connect, name="web-calendar-connect"),
-    path("calendar/callback", calendar_views.calendar_callback, name="web-calendar-callback"),
+    # The redirect URI registered with Google. One callback serves both the
+    # classic Connect link and the React app; it redirects to FRONTEND_URL.
+    path("calendar/callback", GoogleRedirectView.as_view(), name="web-calendar-callback"),
     path("calendar/disconnect", calendar_views.calendar_disconnect, name="web-calendar-disconnect"),
     path("profile", profile_views.profile_page, name="web-profile"),
     path("profile/update", profile_views.profile_update, name="web-profile-update"),

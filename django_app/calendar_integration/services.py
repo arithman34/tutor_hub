@@ -1,9 +1,11 @@
 import logging
+import secrets
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
 from django.conf import settings
+from django.core import signing
 
 from students.models import Student
 from tutoring_sessions.models import Session
@@ -40,6 +42,26 @@ _EVENT_REMINDERS = {
 
 def build_event_title(first_name: str) -> str:
     return f"{first_name}{_TUITION_SUFFIX}"
+
+
+_STATE_SALT = "calendar-oauth-state"
+_STATE_MAX_AGE = 300
+
+
+def sign_connect_state(user) -> str:
+    """The OAuth `state`: a signed, time-limited token naming the user.
+
+    Google sends the browser back to the callback with it. It needs no cookie
+    or server-side session, so the classic page's Connect link and the API's
+    connect endpoint share one callback (the redirect URI registered with Google).
+    """
+    return signing.dumps({"user_id": str(user.id), "nonce": secrets.token_urlsafe(16)}, salt=_STATE_SALT)
+
+
+def read_connect_state(state: str) -> str:
+    """The user id inside a state from sign_connect_state. Raises signing.BadSignature
+    (SignatureExpired is a subclass) if it was forged, altered or is too old."""
+    return signing.loads(state, salt=_STATE_SALT, max_age=_STATE_MAX_AGE)["user_id"]
 
 
 def build_connect_url(state: str) -> str:
