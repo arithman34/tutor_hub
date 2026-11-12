@@ -1,5 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 
+import { Loading } from './components/ui'
 import { RequireAuth } from './RequireAuth'
 import { AppLayout } from './layout/AppLayout'
 import { AssistantPage } from './pages/assistant/AssistantPage'
@@ -18,6 +20,10 @@ import { NewStudentPage } from './pages/students/NewStudentPage'
 import { StudentDetailPage } from './pages/students/StudentDetailPage'
 import { StudentsPage } from './pages/students/StudentsPage'
 
+// Analytics brings in Chart.js, which no other page needs. Loading it lazily
+// splits it into its own bundle, downloaded only when Analytics is opened.
+const AnalyticsPage = lazy(() => import('./pages/analytics/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
+
 /** Every page in the app. Paths are relative to /app (see main.tsx). */
 export function App() {
   return (
@@ -26,6 +32,14 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route
+            path="analytics"
+            element={
+              <Suspense fallback={<Loading>Loading analytics…</Loading>}>
+                <AnalyticsPage />
+              </Suspense>
+            }
+          />
           <Route path="assistant" element={<AssistantPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="students/new" element={<NewStudentPage />} />
