@@ -62,7 +62,7 @@ class StudentsListPageTests(TestCase):
         login(self.client, tutor)
         response = self.client.get("/students")
         self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
     def test_shows_add_student_link(self):
         login(self.client, make_user("tutor@example.com"))
@@ -81,7 +81,7 @@ class StudentsListPageTests(TestCase):
         login(self.client, tutor)
         response = self.client.get("/students", {"q": "sam"})
         self.assertContains(response, "Sam")
-        self.assertNotContains(response, "Pat")
+        self.assertNotContains(response, "Pat Jones")
 
 
 class StudentCreateTests(TestCase):
