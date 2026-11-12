@@ -4,6 +4,18 @@ export function formatMoney(amount: number): string {
   return gbp.format(amount)
 }
 
+/** A balance with its sign always shown: "+£20.00", "-£12.50". */
+export function formatBalance(amount: number): string {
+  return `${amount < 0 ? '-' : '+'}${formatMoney(Math.abs(amount))}`
+}
+
+/** Red when money is owed, green when in credit, grey when settled. */
+export function balanceTone(amount: number): string {
+  if (amount < 0) return 'text-red-600 dark:text-red-400'
+  if (amount > 0) return 'text-green-600 dark:text-green-400'
+  return 'text-gray-500 dark:text-gray-400'
+}
+
 /** "+12.5% vs last month", or null when there's nothing to compare with. */
 export function formatChange(percent: number | null | undefined, period = 'last month'): string | null {
   if (percent === null || percent === undefined) return null

@@ -835,6 +835,17 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: payee
+        schema:
+          type: string
+          format: uuid
+        description: Only this payee's payments.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Filter by payee name.
       tags:
       - payments
       security:
@@ -1273,6 +1284,12 @@ paths:
         For DRF viewsets: scope every query to the requesting user and stamp
         new rows with them.
       parameters:
+      - in: query
+        name: payee
+        schema:
+          type: string
+          format: uuid
+        description: Only students this payee pays for.
       - in: query
         name: q
         schema:
@@ -2088,6 +2105,15 @@ components:
           type: string
           nullable: true
           maxLength: 255
+        balance:
+          type: number
+          format: double
+          readOnly: true
+          description: Payments received minus the cost of billed sessions. Negative
+            means the payee owes money.
+        student_count:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -2097,10 +2123,12 @@ components:
           format: date-time
           readOnly: true
       required:
+      - balance
       - created_at
       - first_name
       - id
       - last_name
+      - student_count
       - updated_at
     PayeeRequest:
       type: object
@@ -2142,6 +2170,9 @@ components:
         payee:
           type: string
           format: uuid
+        payee_name:
+          type: string
+          readOnly: true
         amount:
           type: string
           format: decimal
@@ -2166,6 +2197,7 @@ components:
       - created_at
       - id
       - payee
+      - payee_name
       - payment_date
       - updated_at
     PaymentRequest:

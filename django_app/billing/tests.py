@@ -144,4 +144,5 @@ class PaymentAccessTests(APITestCase):
         self.client.force_authenticate(self.other)
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, [])
+        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(response.data["results"], [])
