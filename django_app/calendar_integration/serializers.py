@@ -32,6 +32,11 @@ class CalendarSessionItemSerializer(CalendarEventSerializer):
     logged = serializers.BooleanField(help_text="Whether a Session has been logged for this event.")
     session_id = serializers.UUIDField(allow_null=True)
     student_id = serializers.UUIDField(allow_null=True, help_text="The active student the event title matches, if any.")
+    zoom_outcome = serializers.CharField(
+        allow_null=True,
+        allow_blank=True,
+        help_text="What the Zoom integration did to the logged session (logged, no_show, notes_filled, linked); null if nothing.",
+    )
 
 
 class CalendarSessionsQuerySerializer(serializers.Serializer):

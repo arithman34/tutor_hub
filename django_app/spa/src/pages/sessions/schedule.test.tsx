@@ -36,6 +36,7 @@ function event(): CalendarSessionItem {
     logged: false,
     session_id: null,
     student_id: sam.id,
+    zoom_outcome: null,
   }
 }
 

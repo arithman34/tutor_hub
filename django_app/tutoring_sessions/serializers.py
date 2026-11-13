@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import serializers
 
 from accounts.ownership import OwnedPrimaryKeyRelatedField
@@ -6,9 +8,36 @@ from students.models import Student
 from .models import Session
 
 
+def done_zoom_events():
+    from zoom_integration.models import ZoomMeetingEvent
+
+    return ZoomMeetingEvent.objects.filter(status=ZoomMeetingEvent.Status.DONE).order_by("-updated_at")
+
+
 class SessionSerializer(serializers.ModelSerializer):
     student = OwnedPrimaryKeyRelatedField(queryset=Student.objects.all())
     minutes = serializers.IntegerField(read_only=True)
+    zoom_outcome = serializers.SerializerMethodField(
+        help_text=(
+            "What TutorHub's Zoom integration did to this session: logged, no_show, notes_filled or linked. "
+            "Blank if matched before outcomes were recorded; null if Zoom never touched it."
+        )
+    )
+    zoom_outcome_at = serializers.SerializerMethodField()
+
+    def _zoom_event(self, obj):
+        # SessionViewSet prefetches these as done_zoom_events; a freshly saved instance hasn't got them.
+        if not hasattr(obj, "done_zoom_events"):
+            obj.done_zoom_events = list(done_zoom_events().filter(session=obj)[:1])
+        return obj.done_zoom_events[0] if obj.done_zoom_events else None
+
+    def get_zoom_outcome(self, obj) -> str | None:
+        event = self._zoom_event(obj)
+        return event.outcome if event else None
+
+    def get_zoom_outcome_at(self, obj) -> datetime | None:
+        event = self._zoom_event(obj)
+        return event.updated_at if event else None
 
     class Meta:
         model = Session
@@ -21,6 +50,8 @@ class SessionSerializer(serializers.ModelSerializer):
             "minutes",
             "zoom_meeting_uuid",
             "zoom_summary_raw",
+            "zoom_outcome",
+            "zoom_outcome_at",
             "work_covered",
             "student_actions",
             "tutor_actions",

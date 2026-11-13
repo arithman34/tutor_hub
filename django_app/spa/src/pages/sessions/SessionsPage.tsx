@@ -8,8 +8,9 @@ import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } fro
 import { formatDate } from '../../format'
 import { useIsDemo } from '../../auth'
 import { useConnectGoogle } from '../connections/queries'
-import { useCalendarSessions, type SessionPeriod, type SessionStatus } from './queries'
-import { ZoomCatchUp } from './ZoomCatchUp'
+import { useCalendarSessions, useZoomSweep, type SessionPeriod, type SessionStatus } from './queries'
+import { ZoomCatchUpButton, ZoomSweepResult } from './ZoomCatchUp'
+import { zoomOutcomeLabel } from './zoomOutcome'
 
 const PAGE_SIZE = 50
 
@@ -64,6 +65,7 @@ export function SessionsPage() {
   const notice = (useLocation().state as { notice?: string } | null)?.notice
   const sessions = useCalendarSessions(status, period, q)
   const reconnect = useConnectGoogle()
+  const sweep = useZoomSweep()
   const isDemo = useIsDemo()
 
   function update(changes: Record<string, string>) {
@@ -90,11 +92,13 @@ export function SessionsPage() {
   return (
     <div>
       <PageHeader title="Sessions">
-        <ZoomCatchUp />
+        <ZoomCatchUpButton sweep={sweep} />
         <Link to="/sessions/schedule" className={buttonPrimary}>
           Schedule session
         </Link>
       </PageHeader>
+
+      <ZoomSweepResult sweep={sweep} />
 
       {notice && (
         <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
@@ -203,7 +207,17 @@ export function SessionsPage() {
                     </td>
                     <td className="px-6 py-4">
                       {item.logged ? (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Logged</span>
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Logged</span>
+                          {item.zoom_outcome !== null && (
+                            <span
+                              title={zoomOutcomeLabel(item.zoom_outcome)}
+                              className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                            >
+                              Zoom<span className="sr-only">: {zoomOutcomeLabel(item.zoom_outcome)}</span>
+                            </span>
+                          )}
+                        </span>
                       ) : (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">Not logged</span>
                       )}

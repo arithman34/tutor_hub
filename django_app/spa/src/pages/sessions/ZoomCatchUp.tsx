@@ -1,19 +1,27 @@
+import { Link } from 'react-router'
+
 import { useIsDemo } from '../../auth'
 import { buttonSecondary } from '../../components/ui'
+import { formatDate, wallTime } from '../../format'
 import { useZoomStatus } from '../connections/queries'
-import { useZoomSweep } from './queries'
+import type { useZoomSweep } from './queries'
+import { zoomOutcomeShort } from './zoomOutcome'
+
+type Sweep = ReturnType<typeof useZoomSweep>
+type SweepResult = NonNullable<Sweep['data']>
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? '' : 's'}`
 }
 
-/** What a sweep did, in words. */
-function describeSweep({ logged, updated, waiting, failed }: { logged: number; updated: number; waiting: number; failed: number }) {
+function describeSweep(result: SweepResult) {
   const parts = []
-  if (logged) parts.push(`logged ${plural(logged, 'lesson')}`)
-  if (updated) parts.push(`added notes to ${plural(updated, 'session')}`)
-  if (waiting) parts.push(`${plural(waiting, 'lesson')} still waiting for Zoom`)
-  if (failed) parts.push(`${plural(failed, 'lesson')} couldn't be logged`)
+  if (result.logged) parts.push(`logged ${plural(result.logged, 'lesson')}`)
+  if (result.no_shows) parts.push(`logged ${plural(result.no_shows, 'no-show')}`)
+  if (result.notes_filled) parts.push(`filled notes on ${plural(result.notes_filled, 'session')}`)
+  if (result.linked) parts.push(`matched ${plural(result.linked, 'session')} you'd already written notes for`)
+  if (result.waiting) parts.push(`${plural(result.waiting, 'lesson')} still waiting for Zoom`)
+  if (result.failed) parts.push(`${plural(result.failed, 'lesson')} couldn't be logged`)
   return parts.length ? `Zoom: ${parts.join(', ')}.` : 'Zoom: nothing new to log.'
 }
 
@@ -21,28 +29,44 @@ function describeSweep({ logged, updated, waiting, failed }: { logged: number; u
  * Lessons are logged automatically when Zoom says a summary is ready. This is
  * the manual catch-up, for anything missed (or a no-show Zoom never summarised).
  */
-export function ZoomCatchUp() {
+export function ZoomCatchUpButton({ sweep }: { sweep: Sweep }) {
   const isDemo = useIsDemo()
   const zoom = useZoomStatus({ enabled: !isDemo })
-  const sweep = useZoomSweep()
-
   if (isDemo || !zoom.data?.connected) return null
 
   return (
-    <>
-      {sweep.isSuccess && (
-        <span role="status" className="text-sm text-gray-600 dark:text-gray-300">
-          {describeSweep(sweep.data)}
-        </span>
+    <button type="button" onClick={() => sweep.mutate()} disabled={sweep.isPending} className={buttonSecondary}>
+      {sweep.isPending ? 'Checking Zoom…' : 'Check Zoom for missed lessons'}
+    </button>
+  )
+}
+
+/** What the last catch-up did, with a link to every session it logged or changed. */
+export function ZoomSweepResult({ sweep }: { sweep: Sweep }) {
+  if (sweep.isError) {
+    return (
+      <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+        {sweep.error.message}
+      </p>
+    )
+  }
+  if (!sweep.data) return null
+
+  return (
+    <div role="status" className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+      <p>{describeSweep(sweep.data)}</p>
+      {sweep.data.sessions.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {sweep.data.sessions.map((item) => (
+            <li key={item.session_id}>
+              <Link to={`/sessions/${item.session_id}`} className="text-blue-700 hover:underline dark:text-blue-300">
+                {item.student_name}, {formatDate(item.start)} {wallTime(item.start)}
+              </Link>
+              <span className="text-gray-600 dark:text-gray-400"> · {zoomOutcomeShort(item.outcome)}</span>
+            </li>
+          ))}
+        </ul>
       )}
-      {sweep.isError && (
-        <span role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {sweep.error.message}
-        </span>
-      )}
-      <button type="button" onClick={() => sweep.mutate()} disabled={sweep.isPending} className={buttonSecondary}>
-        {sweep.isPending ? 'Checking Zoom…' : 'Check Zoom for missed lessons'}
-      </button>
-    </>
+    </div>
   )
 }

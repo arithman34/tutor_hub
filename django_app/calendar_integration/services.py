@@ -373,6 +373,14 @@ SESSION_PERIODS = tuple(_PERIOD_WINDOWS)
 SESSION_STATUSES = ("all", "logged", "unlogged")
 
 
+def _zoom_outcomes(user) -> dict:
+    """session id -> what the Zoom integration last did to it, for the badge on the Sessions page."""
+    from zoom_integration.models import ZoomMeetingEvent
+
+    events = ZoomMeetingEvent.objects.filter(user=user, status=ZoomMeetingEvent.Status.DONE, session__isnull=False).order_by("updated_at")
+    return dict(events.values_list("session_id", "outcome"))  # later rows win, so the newest outcome
+
+
 def calendar_session_items(user, period: str = "all", status: str = "all", q: str = "") -> tuple[list[dict], str | None]:
     """The Tutoring calendar's events, each marked with whether it has been
     logged as a Session and which student it seems to be for.
@@ -393,6 +401,7 @@ def calendar_session_items(user, period: str = "all", status: str = "all", q: st
         error = str(exc) or type(exc).__name__
 
     logged_by_event = dict(Session.objects.filter(user=user, calendar_event_id__isnull=False).values_list("calendar_event_id", "id"))
+    zoom_outcomes = _zoom_outcomes(user)
 
     students = Student.objects.filter(user=user, is_active=True)
     student_by_name = {f"{s.first_name} {s.last_name}": s for s in students}
@@ -408,6 +417,7 @@ def calendar_session_items(user, period: str = "all", status: str = "all", q: st
                 **parsed,
                 "logged": session_id is not None,
                 "session_id": str(session_id) if session_id else None,
+                "zoom_outcome": zoom_outcomes.get(session_id),
                 "student_id": str(student.id) if student else None,
             }
         )

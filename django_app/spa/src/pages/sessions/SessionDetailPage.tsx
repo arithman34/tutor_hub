@@ -7,10 +7,12 @@ import { ApiError } from '../../api/client'
 import type { Session, Student, ZoomNotes } from '../../api/types'
 import { applyServerErrors } from '../../components/formHelpers'
 import { ErrorMessage, Loading, PageHeader, buttonDanger, buttonPrimary, buttonSecondary } from '../../components/ui'
+import { formatDate } from '../../format'
 import { useStudents } from '../students/queries'
 import { useDeleteSession, useSession, useUpdateSession } from './queries'
 import { DetailsFields, NotesFields } from './SessionFields'
 import { ZoomSummaryPanel } from './ZoomSummaryPanel'
+import { zoomOutcomeLabel } from './zoomOutcome'
 import {
   detailsFields,
   detailsFromSession,
@@ -170,6 +172,12 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
 
         <section className="card p-6 lg:col-span-2">
           <h2 className="mb-4 font-semibold">Session notes</h2>
+          {session.zoom_outcome !== null && (
+            <p className="-mt-2 mb-4 text-xs text-blue-700 dark:text-blue-300">
+              {zoomOutcomeLabel(session.zoom_outcome)}
+              {session.zoom_outcome_at && ` on ${formatDate(session.zoom_outcome_at)}`}.
+            </p>
+          )}
           {session.is_no_show ? (
             <p className="text-sm text-gray-400 italic">No notes recorded. The student did not attend.</p>
           ) : (

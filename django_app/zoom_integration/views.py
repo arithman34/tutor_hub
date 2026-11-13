@@ -118,7 +118,7 @@ class SweepView(APIView):
             "logs them, and retries any still waiting for Zoom."
         ),
         request=None,
-        responses={200: SweepResultSerializer, 409: None, 502: None},
+        responses={200: SweepResultSerializer, 409: None, 424: None},
     )
     def post(self, request):
         try:
@@ -126,5 +126,6 @@ class SweepView(APIView):
         except services.NotConnectedError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         except services.ZoomAPIError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+            # 424, not 502: Cloudflare swaps an origin's 502 for its own error page, losing the message.
+            return Response({"detail": str(exc)}, status=status.HTTP_424_FAILED_DEPENDENCY)
         return Response(counts)

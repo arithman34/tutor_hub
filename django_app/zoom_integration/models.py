@@ -27,18 +27,26 @@ class ZoomMeetingEvent(models.Model):
         DONE = "done", "Done"
         FAILED = "failed", "Failed"
 
+    class Outcome(models.TextChoices):
+        LOGGED = "logged", "Logged automatically from Zoom"
+        NO_SHOW = "no_show", "Logged as a no-show from Zoom (only you joined)"
+        NOTES_FILLED = "notes_filled", "Notes filled from Zoom"
+        LINKED = "linked", "Matched to its Zoom meeting; your notes were kept"
+
     class Source(models.TextChoices):
         WEBHOOK = "webhook", "Webhook"
         SWEEP = "sweep", "Catch-up sweep"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="zoom_meeting_events")
     student = models.ForeignKey("students.Student", on_delete=models.CASCADE, related_name="zoom_meeting_events")
-    session = models.ForeignKey("tutoring_sessions.Session", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    session = models.ForeignKey("tutoring_sessions.Session", on_delete=models.SET_NULL, null=True, blank=True, related_name="zoom_events")
     meeting_id = models.CharField(max_length=32)
     meeting_uuid = models.CharField(max_length=255, unique=True)
     start_time = models.DateTimeField(null=True, blank=True, help_text="Real UTC, as Zoom reports it.")
     source = models.CharField(max_length=16, choices=Source.choices)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    # What processing did to the session. Blank for events processed before this was recorded.
+    outcome = models.CharField(max_length=16, choices=Outcome.choices, blank=True, default="")
     attempts = models.PositiveSmallIntegerField(default=0)
     last_error = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

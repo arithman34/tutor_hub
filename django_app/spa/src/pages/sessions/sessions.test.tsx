@@ -39,6 +39,7 @@ function item(overrides: Partial<CalendarSessionItem> = {}): CalendarSessionItem
     logged: false,
     session_id: null,
     student_id: sam.id,
+    zoom_outcome: null,
     ...overrides,
   }
 }
@@ -56,6 +57,8 @@ function session(overrides: Partial<Session> = {}): Session {
     minutes: 25,
     zoom_meeting_uuid: null,
     zoom_summary_raw: null,
+    zoom_outcome: null,
+    zoom_outcome_at: null,
     work_covered: 'Fractions',
     student_actions: null,
     tutor_actions: null,
@@ -188,14 +191,32 @@ describe('catching up with Zoom', () => {
       http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
       http.post('*/api/v1/zoom/sweep', () => {
         sweeps += 1
-        return HttpResponse.json({ logged: 2, updated: 1, waiting: 0, failed: 0 })
+        return HttpResponse.json({
+          logged: 1,
+          no_shows: 1,
+          notes_filled: 1,
+          linked: 1,
+          waiting: 0,
+          failed: 0,
+          sessions: [
+            { session_id: 'new-1', student_name: 'Sam Smith', start: '2026-11-12T18:30:00Z', outcome: 'logged' },
+            { session_id: 'old-1', student_name: 'Sam Smith', start: '2026-11-11T18:30:00Z', outcome: 'linked' },
+          ],
+        })
       }),
     )
     const user = userEvent.setup()
     renderApp('/sessions')
 
     await user.click(await screen.findByRole('button', { name: 'Check Zoom for missed lessons' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('Zoom: logged 2 lessons, added notes to 1 session.')
+    const result = await screen.findByRole('status')
+    expect(result).toHaveTextContent(
+      "Zoom: logged 1 lesson, logged 1 no-show, filled notes on 1 session, matched 1 session you'd already written notes for.",
+    )
+    // Every session it touched is listed, with a link to check it.
+    expect(within(result).getByRole('link', { name: 'Sam Smith, 12/11/2026 18:30' })).toHaveAttribute('href', '/sessions/new-1')
+    expect(within(result).getByRole('link', { name: 'Sam Smith, 11/11/2026 18:30' })).toHaveAttribute('href', '/sessions/old-1')
+    expect(result).toHaveTextContent('Linked, your notes kept')
     expect(sweeps).toBe(1)
     await waitFor(() => expect(seen.length).toBe(2))
   })
@@ -204,7 +225,9 @@ describe('catching up with Zoom', () => {
     serveCalendar([])
     server.use(
       http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
-      http.post('*/api/v1/zoom/sweep', () => HttpResponse.json({ logged: 0, updated: 0, waiting: 0, failed: 0 })),
+      http.post('*/api/v1/zoom/sweep', () =>
+        HttpResponse.json({ logged: 0, no_shows: 0, notes_filled: 0, linked: 0, waiting: 0, failed: 0, sessions: [] }),
+      ),
     )
     const user = userEvent.setup()
     renderApp('/sessions')
@@ -222,6 +245,37 @@ describe('catching up with Zoom', () => {
     renderApp('/sessions')
     await user.click(await screen.findByRole('button', { name: 'Check Zoom for missed lessons' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Your Zoom connection has expired.')
+  })
+})
+
+describe('Zoom history', () => {
+  it('marks sessions Zoom logged or filled on the list', async () => {
+    serveCalendar([
+      item({ event_id: 'a', logged: true, session_id: 'a1', zoom_outcome: 'notes_filled' }),
+      item({ event_id: 'b', logged: true, session_id: 'b1', zoom_outcome: null }),
+    ])
+    renderApp('/sessions')
+    const [, zoomRow, plainRow] = (await screen.findAllByRole('row')) as HTMLElement[]
+    expect(within(zoomRow as HTMLElement).getByText('Zoom')).toBeInTheDocument()
+    expect(within(zoomRow as HTMLElement).getByText(': Notes filled from Zoom')).toBeInTheDocument()
+    expect(within(plainRow as HTMLElement).queryByText('Zoom')).not.toBeInTheDocument()
+  })
+
+  it('says on the session page what Zoom did', async () => {
+    server.use(
+      http.get('*/api/v1/sessions/:id/', () =>
+        HttpResponse.json(session({ zoom_outcome: 'logged', zoom_outcome_at: '2026-11-13T09:15:00Z' })),
+      ),
+    )
+    renderApp(`/sessions/${SESSION_ID}`)
+    expect(await screen.findByText('Logged automatically from Zoom on 13/11/2026.')).toBeInTheDocument()
+  })
+
+  it('says nothing for a session Zoom never touched', async () => {
+    renderApp(`/sessions/${SESSION_ID}`)
+    expect(await screen.findByRole('heading', { name: 'Session notes' })).toBeInTheDocument()
+    // (The "Fill from Zoom summary" button is always there; the history line isn't.)
+    expect(screen.queryByText(/from Zoom on|Matched to its Zoom meeting/)).not.toBeInTheDocument()
   })
 })
 

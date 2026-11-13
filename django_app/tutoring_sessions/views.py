@@ -2,7 +2,7 @@ import logging
 import uuid
 from dataclasses import asdict
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
@@ -15,7 +15,7 @@ from zoom_integration import services as zoom_services
 
 from . import zoom
 from .models import Session
-from .serializers import SessionSerializer, ZoomFetchedSummarySerializer, ZoomParseSerializer, ZoomSummarySerializer
+from .serializers import SessionSerializer, ZoomFetchedSummarySerializer, ZoomParseSerializer, ZoomSummarySerializer, done_zoom_events
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,9 @@ class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
     pagination_class = SessionPagination
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related("student")
+        qs = super().get_queryset().select_related("student").prefetch_related(
+            Prefetch("zoom_events", queryset=done_zoom_events(), to_attr="done_zoom_events")
+        )
         q = self.request.query_params.get("q")
         if q:
             qs = qs.filter(Q(student__first_name__icontains=q) | Q(student__last_name__icontains=q))
@@ -77,7 +79,7 @@ class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
             200: ZoomFetchedSummarySerializer,
             404: OpenApiResponse(description="No matching meeting, or no summary for it yet."),
             409: OpenApiResponse(description="Zoom isn't connected, or the connection expired."),
-            502: OpenApiResponse(description="Zoom couldn't be reached or returned an error."),
+            424: OpenApiResponse(description="Zoom couldn't be reached or returned an error. Not 502, which Cloudflare replaces with its own page."),
         },
     )
     @action(detail=True, methods=["get"], url_path="zoom-summary")
@@ -92,5 +94,5 @@ class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
             return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
         except zoom_services.ZoomAPIError as exc:
             logger.exception("Fetching a Zoom summary failed for session %s", session.id)
-            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response({"detail": str(exc)}, status=status.HTTP_424_FAILED_DEPENDENCY)
         return Response({"summary": summary, "meeting_uuid": meeting_uuid})

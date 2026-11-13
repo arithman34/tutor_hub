@@ -14,7 +14,7 @@ class ZoomTokenAdmin(admin.ModelAdmin):
 
 @admin.register(ZoomMeetingEvent)
 class ZoomMeetingEventAdmin(admin.ModelAdmin):
-    list_display = ("meeting_uuid", "student", "start_time", "source", "status", "attempts", "session", "created_at")
-    list_filter = ("status", "source")
+    list_display = ("meeting_uuid", "student", "start_time", "source", "status", "outcome", "attempts", "session", "updated_at")
+    list_filter = ("status", "outcome", "source")
     readonly_fields = ("created_at", "updated_at")
     search_fields = ("user__email", "meeting_id", "meeting_uuid")
