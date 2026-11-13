@@ -38,6 +38,9 @@ MATCH_TOLERANCE = timedelta(minutes=60)
 _STATE_SALT = "zoom-oauth-state"
 _STATE_MAX_AGE = 300
 
+# Zoom's error code for a summary the host has deleted (it sits in their trash).
+ZOOM_SUMMARY_IN_TRASH = 2305
+
 RECONNECT_MESSAGE = "Your Zoom connection has expired. Reconnect Zoom on the Connections page."
 
 
@@ -179,6 +182,26 @@ def _get(user, path: str) -> httpx.Response:
     return resp
 
 
+def _zoom_error(resp: httpx.Response, action: str) -> "ZoomAPIError":
+    """A ZoomAPIError saying what failed, with Zoom's own explanation when it gave one."""
+    logger.error("Zoom %s failed (%s): %s", action, resp.status_code, resp.text[:500])
+    message = f"Zoom returned an error ({resp.status_code}) {action}."
+    try:
+        reason = resp.json().get("message")
+    except (ValueError, AttributeError):
+        reason = None
+    if reason:
+        message = f"{message[:-1]}: {reason}"
+    return ZoomAPIError(message)
+
+
+def _zoom_code(resp: httpx.Response) -> int | None:
+    try:
+        return resp.json().get("code")
+    except (ValueError, AttributeError):
+        return None
+
+
 # --- Meetings ---------------------------------------------------------------
 
 
@@ -230,8 +253,7 @@ def list_past_instances(user, meeting_id: str) -> list[dict]:
     if resp.status_code == 404:
         raise NotFoundError("Zoom has no past meetings for this student's meeting ID.")
     if resp.is_error:
-        logger.error("Zoom past instances failed (%s): %s", resp.status_code, resp.text[:500])
-        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) listing past meetings.")
+        raise _zoom_error(resp, "listing past meetings")
     return resp.json().get("meetings", [])
 
 
@@ -241,8 +263,7 @@ def past_meeting(user, meeting_uuid: str) -> dict:
     if resp.status_code == 404:
         raise NotFoundError("Zoom has no record of this meeting yet. It may still be in progress.")
     if resp.is_error:
-        logger.error("Zoom past meeting failed (%s): %s", resp.status_code, resp.text[:500])
-        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) reading the meeting.")
+        raise _zoom_error(resp, "reading the meeting")
     return resp.json()
 
 
@@ -297,9 +318,10 @@ def fetch_summary(user, meeting_uuid: str) -> str:
             "Zoom has no AI summary for this lesson yet. It can take a few minutes after the meeting ends, "
             "and AI Companion meeting summaries must be turned on."
         )
+    if resp.status_code == 403 and _zoom_code(resp) == ZOOM_SUMMARY_IN_TRASH:
+        raise NotFoundError("This lesson's Zoom summary is in your Zoom trash. Restore it in Zoom, then try again.")
     if resp.is_error:
-        logger.error("Zoom meeting summary failed (%s): %s", resp.status_code, resp.text[:500])
-        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) fetching the summary.")
+        raise _zoom_error(resp, "fetching the summary")
 
     text = summary_text(resp.json())
     if not text:

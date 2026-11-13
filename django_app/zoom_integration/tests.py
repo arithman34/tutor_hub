@@ -319,13 +319,33 @@ class SessionZoomSummaryTests(APITestCase):
         connect(self.user)
         with self.zoom_get(response(500)):
             resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(resp.status_code, status.HTTP_424_FAILED_DEPENDENCY)
+
+    def test_summary_in_zoom_trash(self):
+        # What production saw: Zoom answers 403 with code 2305 for a deleted summary.
+        connect(self.user)
+        trashed = response(403, {"code": 2305, "message": "The meeting summary has been moved to Trash and cannot be accessed."})
+        with self.zoom_get(response(json_data={"meetings": [instance("u", SESSION_START)]}), trashed):
+            resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("in your Zoom trash", resp.json()["detail"])
+
+    def test_zoom_error_includes_zooms_reason(self):
+        connect(self.user)
+        refused = response(403, {"code": 4711, "message": "Invalid access token, does not contain scopes."})
+        with self.zoom_get(response(json_data={"meetings": [instance("u", SESSION_START)]}), refused):
+            resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_424_FAILED_DEPENDENCY)
+        self.assertEqual(
+            resp.json()["detail"],
+            "Zoom returned an error (403) fetching the summary: Invalid access token, does not contain scopes.",
+        )
 
     def test_zoom_unreachable(self):
         connect(self.user)
         with patch("httpx.Client.get", side_effect=httpx.ConnectError("down")):
             resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(resp.status_code, status.HTTP_424_FAILED_DEPENDENCY)
 
     def test_revoked_access_token(self):
         connect(self.user)

@@ -70,8 +70,9 @@ def _process_in_thread(event_id) -> None:
 
 
 def process_event(event_id) -> str | None:
-    """Log one pending event as a Session. Returns "logged", "updated", "waiting"
-    or "failed", or None if it wasn't pending (or another worker has it)."""
+    """Log one pending event as a Session. Returns its Outcome ("logged",
+    "no_show", "notes_filled" or "linked"), "waiting" or "failed", or None if it
+    wasn't pending (or another worker has it)."""
     with transaction.atomic():
         event = (
             ZoomMeetingEvent.objects.select_for_update(skip_locked=True)
@@ -151,7 +152,7 @@ def _log(event: ZoomMeetingEvent) -> str:
         if booked and not session.calendar_event_id:
             _link_calendar(session, booked)
         session.save()
-        outcome = "updated"
+        outcome = ZoomMeetingEvent.Outcome.NOTES_FILLED if notes else ZoomMeetingEvent.Outcome.LINKED
     else:
         start, end = (booked["start"], booked["end"]) if booked else (wall_start, wall_end)
         session = Session(
@@ -168,12 +169,13 @@ def _log(event: ZoomMeetingEvent) -> str:
         if booked:
             _link_calendar(session, booked)
         session.save()
-        outcome = "logged"
+        outcome = ZoomMeetingEvent.Outcome.NO_SHOW if no_show else ZoomMeetingEvent.Outcome.LOGGED
 
     event.session = session
+    event.outcome = outcome
     event.status = ZoomMeetingEvent.Status.DONE
     event.last_error = ""
-    return outcome
+    return str(outcome)
 
 
 def has_notes(session: Session) -> bool:
@@ -289,10 +291,25 @@ def sweep(user, days: int = SWEEP_DAYS) -> dict:
                 },
             )
 
-    counts = {"logged": 0, "updated": 0, "waiting": 0, "failed": 0}
+    counts = {"logged": 0, "no_shows": 0, "notes_filled": 0, "linked": 0, "waiting": 0, "failed": 0}
+    count_key = {"no_show": "no_shows"}
+    done = []
     pending = ZoomMeetingEvent.objects.filter(user=user, status=ZoomMeetingEvent.Status.PENDING).values_list("id", flat=True)
     for event_id in list(pending):
         outcome = process_event(event_id)
         if outcome:
-            counts[outcome] += 1
-    return counts
+            counts[count_key.get(outcome, outcome)] += 1
+        if outcome in ZoomMeetingEvent.Outcome.values:
+            done.append(event_id)
+
+    events = ZoomMeetingEvent.objects.filter(id__in=done, session__isnull=False).select_related("session", "student")
+    sessions = [
+        {
+            "session_id": event.session_id,
+            "student_name": f"{event.student.first_name} {event.student.last_name}",
+            "start": event.session.session_start_time,
+            "outcome": event.outcome,
+        }
+        for event in sorted(events, key=lambda e: e.session.session_start_time, reverse=True)
+    ]
+    return {**counts, "sessions": sessions}

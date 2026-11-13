@@ -957,6 +957,8 @@ export interface components {
              * @description The active student the event title matches, if any.
              */
             student_id: string | null;
+            /** @description What the Zoom integration did to the logged session (logged, no_show, notes_filled, linked); null if nothing. */
+            zoom_outcome: string | null;
         };
         CalendarSessions: {
             items: components["schemas"]["CalendarSessionItem"][];
@@ -1071,6 +1073,14 @@ export interface components {
             /** @description HH:MM */
             end_time: string;
         };
+        /**
+         * @description * `logged` - logged
+         *     * `no_show` - no_show
+         *     * `notes_filled` - notes_filled
+         *     * `linked` - linked
+         * @enum {string}
+         */
+        OutcomeEnum: "logged" | "no_show" | "notes_filled" | "linked";
         PaginatedPaymentList: {
             /** @example 123 */
             count: number;
@@ -1263,6 +1273,10 @@ export interface components {
             readonly minutes: number;
             zoom_meeting_uuid?: string | null;
             zoom_summary_raw?: string | null;
+            /** @description What TutorHub's Zoom integration did to this session: logged, no_show, notes_filled or linked. Blank if matched before outcomes were recorded; null if Zoom never touched it. */
+            readonly zoom_outcome: string | null;
+            /** Format: date-time */
+            readonly zoom_outcome_at: string | null;
             work_covered?: string | null;
             student_actions?: string | null;
             tutor_actions?: string | null;
@@ -1347,12 +1361,29 @@ export interface components {
         SweepResult: {
             /** @description Lessons logged as new sessions. */
             logged: number;
-            /** @description Sessions already logged that got notes or a summary. */
-            updated: number;
+            /** @description No-shows logged as new sessions. */
+            no_shows: number;
+            /** @description Sessions already logged whose empty notes were filled. */
+            notes_filled: number;
+            /** @description Sessions already logged that kept their notes; only the summary was stored. */
+            linked: number;
             /** @description Lessons Zoom hasn't finished with yet; tried again next time. */
             waiting: number;
             /** @description Lessons given up on after repeated errors. */
             failed: number;
+            /** @description The sessions this run logged or changed, newest first. */
+            sessions: components["schemas"]["SweptSession"][];
+        };
+        SweptSession: {
+            /** Format: uuid */
+            session_id: string;
+            student_name: string;
+            /**
+             * Format: date-time
+             * @description Wall-clock, like session_start_time.
+             */
+            start: string;
+            outcome: components["schemas"]["OutcomeEnum"];
         };
         TokenBlacklistRequest: {
             refresh: string;
@@ -2614,8 +2645,8 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Zoom couldn't be reached or returned an error. */
-            502: {
+            /** @description Zoom couldn't be reached or returned an error. Not 502, which Cloudflare replaces with its own page. */
+            424: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2975,7 +3006,7 @@ export interface operations {
                 content?: never;
             };
             /** @description No response body */
-            502: {
+            424: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -254,7 +254,10 @@ class ProcessEventTests(APITestCase):
 
     def test_no_show_is_logged_without_notes(self, mock_meeting, mock_summary, mock_parse):
         mock_meeting.return_value = meeting(WINTER, minutes=12, participants=1)
-        autolog.process_event(self.event().id)
+        event = self.event()
+        self.assertEqual(autolog.process_event(event.id), "no_show")
+        event.refresh_from_db()
+        self.assertEqual(event.outcome, "no_show")
 
         session = Session.objects.get()
         self.assertTrue(session.is_no_show)
@@ -267,9 +270,12 @@ class ProcessEventTests(APITestCase):
         existing = Session.objects.create(
             user=self.user, student=self.student, session_date=WINTER, session_start_time=WINTER, session_end_time=WINTER + timedelta(hours=1)
         )
-        self.assertEqual(autolog.process_event(self.event().id), "updated")
+        event = self.event()
+        self.assertEqual(autolog.process_event(event.id), "notes_filled")
         existing.refresh_from_db()
         self.assertEqual(existing.work_covered, "Fractions")
+        event.refresh_from_db()
+        self.assertEqual(event.outcome, "notes_filled")
         self.assertEqual(existing.zoom_meeting_uuid, "uuid-1")
         self.assertEqual(Session.objects.count(), 1)
 
@@ -283,7 +289,7 @@ class ProcessEventTests(APITestCase):
             session_end_time=WINTER + timedelta(hours=1),
             work_covered="My own notes",
         )
-        autolog.process_event(self.event().id)
+        self.assertEqual(autolog.process_event(self.event().id), "linked")
         existing.refresh_from_db()
         self.assertEqual(existing.work_covered, "My own notes")
         self.assertEqual(existing.zoom_summary_raw, "We did fractions.")
@@ -312,7 +318,7 @@ class ProcessEventTests(APITestCase):
             calendar_event_id="evt1",
         )
         with patch("calendar_integration.services.fetch_events", return_value=[calendar_event("evt1", "Sam - Tuition", WINTER, offset="+00:00")]):
-            self.assertEqual(autolog.process_event(self.event().id), "updated")
+            self.assertEqual(autolog.process_event(self.event().id), "notes_filled")
         self.assertEqual(Session.objects.get(), existing)
 
     def test_a_session_for_another_student_is_not_matched(self, mock_meeting, *_):
@@ -339,6 +345,12 @@ class ProcessEventTests(APITestCase):
         session = Session.objects.get()
         self.assertFalse(session.is_no_show)
         self.assertIsNone(session.work_covered)
+
+    def test_a_trashed_summary_is_logged_without_notes(self, mock_meeting, mock_summary, _parse):
+        mock_meeting.return_value = meeting(WINTER)
+        mock_summary.side_effect = services.NotFoundError("in your Zoom trash")
+        self.assertEqual(autolog.process_event(self.event().id), "logged")
+        self.assertIsNone(Session.objects.get().work_covered)
 
     def test_meeting_zoom_hasnt_finished_waits(self, mock_meeting, *_):
         mock_meeting.side_effect = services.NotFoundError("still going")
@@ -391,7 +403,21 @@ class SweepTests(APITestCase):
 
         resp = self.client.post("/api/v1/zoom/sweep")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.json(), {"logged": 1, "updated": 0, "waiting": 0, "failed": 0})
+        session = Session.objects.get()
+        self.assertEqual(
+            resp.json(),
+            {
+                "logged": 0,
+                "no_shows": 1,
+                "notes_filled": 0,
+                "linked": 0,
+                "waiting": 0,
+                "failed": 0,
+                "sessions": [
+                    {"session_id": str(session.id), "student_name": "Sam Smith", "start": iso(session.session_start_time), "outcome": "no_show"}
+                ],
+            },
+        )
         mock_instances.assert_called_once_with(self.user, "12345678901")
         event = ZoomMeetingEvent.objects.get()
         self.assertEqual((event.meeting_uuid, event.source), ("recent", "sweep"))
@@ -402,8 +428,28 @@ class SweepTests(APITestCase):
         mock_meeting.return_value = meeting(self.recent)
         self.client.post("/api/v1/zoom/sweep")
         resp = self.client.post("/api/v1/zoom/sweep")
-        self.assertEqual(resp.json(), {"logged": 0, "updated": 0, "waiting": 0, "failed": 0})
+        self.assertEqual(
+            resp.json(), {"logged": 0, "no_shows": 0, "notes_filled": 0, "linked": 0, "waiting": 0, "failed": 0, "sessions": []}
+        )
         self.assertEqual(Session.objects.count(), 1)
+
+    def test_lists_every_session_it_touched_newest_first(self, mock_instances, mock_meeting, *_):
+        older = self.recent - timedelta(days=1)
+        mock_instances.return_value = [{"uuid": "a", "start_time": iso(older)}, {"uuid": "b", "start_time": iso(self.recent)}]
+        mock_meeting.side_effect = lambda user, uuid: meeting(older if uuid == "a" else self.recent)
+        existing = Session.objects.create(
+            user=self.user,
+            student=self.student,
+            session_date=older,
+            session_start_time=services.to_wall_clock(older),
+            session_end_time=services.to_wall_clock(older) + timedelta(hours=1),
+            work_covered="Mine",
+        )
+
+        body = self.client.post("/api/v1/zoom/sweep").json()
+        self.assertEqual((body["logged"], body["linked"]), (1, 1))
+        self.assertEqual([item["outcome"] for item in body["sessions"]], ["logged", "linked"])
+        self.assertEqual(body["sessions"][1]["session_id"], str(existing.id))
 
     def test_skips_a_meeting_id_zoom_doesnt_know(self, mock_instances, *_):
         mock_instances.side_effect = services.NotFoundError("no such meeting")
@@ -415,7 +461,7 @@ class SweepTests(APITestCase):
 
     def test_zoom_error(self, mock_instances, *_):
         mock_instances.side_effect = services.ZoomAPIError("Zoom returned an error (500)")
-        self.assertEqual(self.client.post("/api/v1/zoom/sweep").status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(self.client.post("/api/v1/zoom/sweep").status_code, status.HTTP_424_FAILED_DEPENDENCY)
 
     def test_demo_cannot_sweep(self, *_):
         demo = User.objects.create_user(email="demo@example.com", password="x", first_name="D", last_name="D", is_demo=True)
@@ -429,3 +475,62 @@ class SweepTests(APITestCase):
         call_command("zoom_catch_up", stdout=out)
         self.assertIn("'logged': 1", out.getvalue())
         self.assertEqual(Session.objects.count(), 1)
+
+
+class SessionZoomOutcomeTests(APITestCase):
+    def setUp(self):
+        self.user = make_user()
+        self.client.force_authenticate(self.user)
+        self.student = Student.objects.create(user=self.user, first_name="Sam", last_name="Smith")
+
+    def session(self, **extra):
+        return Session.objects.create(
+            user=self.user, student=self.student, session_date=WINTER, session_start_time=WINTER, session_end_time=WINTER + timedelta(hours=1), **extra
+        )
+
+    def done_event(self, session, outcome, uuid="u1"):
+        return ZoomMeetingEvent.objects.create(
+            user=self.user, student=self.student, session=session, meeting_id="1", meeting_uuid=uuid, source="sweep", status="done", outcome=outcome
+        )
+
+    def test_session_api_says_what_zoom_did(self):
+        session = self.session()
+        self.done_event(session, "notes_filled")
+        body = self.client.get(f"/api/v1/sessions/{session.id}/").json()
+        self.assertEqual(body["zoom_outcome"], "notes_filled")
+        self.assertIsNotNone(body["zoom_outcome_at"])
+
+    def test_untouched_session_has_no_outcome(self):
+        body = self.client.get(f"/api/v1/sessions/{self.session().id}/").json()
+        self.assertIsNone(body["zoom_outcome"])
+        self.assertIsNone(body["zoom_outcome_at"])
+
+    def test_pending_events_dont_count(self):
+        session = self.session()
+        ZoomMeetingEvent.objects.create(user=self.user, student=self.student, session=session, meeting_id="1", meeting_uuid="p", source="sweep")
+        self.assertIsNone(self.client.get(f"/api/v1/sessions/{session.id}/").json()["zoom_outcome"])
+
+    def test_outcome_survives_saving_the_session(self):
+        session = self.session()
+        self.done_event(session, "logged")
+        body = self.client.patch(f"/api/v1/sessions/{session.id}/", {"work_covered": "Edited"}, format="json").json()
+        self.assertEqual(body["zoom_outcome"], "logged")
+
+    def test_session_list_doesnt_query_per_session(self):
+        for i in range(5):
+            self.done_event(self.session(), "logged", uuid=f"u{i}")
+        with self.assertNumQueries(3):  # count, sessions, prefetched Zoom events
+            body = self.client.get("/api/v1/sessions/").json()
+        self.assertEqual({item["zoom_outcome"] for item in body["results"]}, {"logged"})
+
+    def test_sessions_page_items_carry_the_outcome(self):
+        GoogleCalendarToken.objects.create(user=self.user, access_token="g", refresh_token="r", expires_at=datetime.now(UTC) + timedelta(hours=1))
+        session = self.session(calendar_event_id="evt1")
+        self.done_event(session, "no_show")
+        events = [
+            calendar_event("evt1", "Sam - Tuition", WINTER, offset="+00:00"),
+            calendar_event("evt2", "Sam - Tuition", WINTER + timedelta(days=1), offset="+00:00"),
+        ]
+        with patch("calendar_integration.services.fetch_events", return_value=events):
+            items = self.client.get("/api/v1/calendar/sessions").json()["items"]
+        self.assertEqual({item["event_id"]: item["zoom_outcome"] for item in items}, {"evt1": "no_show", "evt2": None})

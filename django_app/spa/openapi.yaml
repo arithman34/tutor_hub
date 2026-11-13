@@ -1229,8 +1229,9 @@ paths:
           description: No matching meeting, or no summary for it yet.
         '409':
           description: Zoom isn't connected, or the connection expired.
-        '502':
-          description: Zoom couldn't be reached or returned an error.
+        '424':
+          description: Zoom couldn't be reached or returned an error. Not 502, which
+            Cloudflare replaces with its own page.
   /api/v1/sessions/zoom-parse/:
     post:
       operationId: sessions_zoom_parse_create
@@ -1599,7 +1600,7 @@ paths:
           description: ''
         '409':
           description: No response body
-        '502':
+        '424':
           description: No response body
 components:
   schemas:
@@ -1724,6 +1725,11 @@ components:
           format: uuid
           nullable: true
           description: The active student the event title matches, if any.
+        zoom_outcome:
+          type: string
+          nullable: true
+          description: What the Zoom integration did to the logged session (logged,
+            no_show, notes_filled, linked); null if nothing.
       required:
       - all_day
       - date
@@ -1736,6 +1742,7 @@ components:
       - student_id
       - student_name
       - summary
+      - zoom_outcome
     CalendarSessions:
       type: object
       properties:
@@ -1983,6 +1990,18 @@ components:
       - date
       - end_time
       - start_time
+    OutcomeEnum:
+      enum:
+      - logged
+      - no_show
+      - notes_filled
+      - linked
+      type: string
+      description: |-
+        * `logged` - logged
+        * `no_show` - no_show
+        * `notes_filled` - notes_filled
+        * `linked` - linked
     PaginatedPaymentList:
       type: object
       required:
@@ -2427,6 +2446,18 @@ components:
         zoom_summary_raw:
           type: string
           nullable: true
+        zoom_outcome:
+          type: string
+          nullable: true
+          readOnly: true
+          description: 'What TutorHub''s Zoom integration did to this session: logged,
+            no_show, notes_filled or linked. Blank if matched before outcomes were
+            recorded; null if Zoom never touched it.'
+        zoom_outcome_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
         work_covered:
           type: string
           nullable: true
@@ -2478,6 +2509,8 @@ components:
       - session_start_time
       - student
       - updated_at
+      - zoom_outcome
+      - zoom_outcome_at
     SessionRequest:
       type: object
       properties:
@@ -2670,20 +2703,54 @@ components:
         logged:
           type: integer
           description: Lessons logged as new sessions.
-        updated:
+        no_shows:
           type: integer
-          description: Sessions already logged that got notes or a summary.
+          description: No-shows logged as new sessions.
+        notes_filled:
+          type: integer
+          description: Sessions already logged whose empty notes were filled.
+        linked:
+          type: integer
+          description: Sessions already logged that kept their notes; only the summary
+            was stored.
         waiting:
           type: integer
           description: Lessons Zoom hasn't finished with yet; tried again next time.
         failed:
           type: integer
           description: Lessons given up on after repeated errors.
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SweptSession'
+          description: The sessions this run logged or changed, newest first.
       required:
       - failed
+      - linked
       - logged
-      - updated
+      - no_shows
+      - notes_filled
+      - sessions
       - waiting
+    SweptSession:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        student_name:
+          type: string
+        start:
+          type: string
+          format: date-time
+          description: Wall-clock, like session_start_time.
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+      required:
+      - outcome
+      - session_id
+      - start
+      - student_name
     TokenBlacklistRequest:
       type: object
       properties:
