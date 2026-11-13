@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import type { Session, Student, ZoomNotes } from '../../api/types'
 import { applyServerErrors } from '../../components/formHelpers'
-import { ErrorMessage, Loading, PageHeader, buttonDanger, buttonPrimary, buttonSecondary } from '../../components/ui'
+import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } from '../../components/ui'
 import { formatDate } from '../../format'
 import { useStudents } from '../students/queries'
 import { useDeleteSession, useSession, useUpdateSession } from './queries'
@@ -115,11 +115,6 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
     })
   })
 
-  function handleDelete() {
-    if (!window.confirm('Delete this session? This cannot be undone.')) return
-    remove.mutate(undefined, { onSuccess: () => navigate('/sessions', { replace: true }) })
-  }
-
   return (
     <div>
       <PageHeader
@@ -164,14 +159,6 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
               </a>
             )}
           </section>
-
-          <section className="rounded-xl border border-red-200 bg-white p-4 dark:border-red-900 dark:bg-gray-800">
-            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">Deleting a session is permanent and cannot be undone.</p>
-            {remove.isError && <ErrorMessage>Couldn't delete the session. Please try again.</ErrorMessage>}
-            <button type="button" onClick={handleDelete} disabled={remove.isPending} className={`${buttonDanger} w-full`}>
-              Delete session
-            </button>
-          </section>
         </div>
 
         <section className="card p-6 lg:col-span-2">
@@ -182,8 +169,14 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
               {session.zoom_outcome_at && ` on ${formatDate(session.zoom_outcome_at)}`}.
             </p>
           )}
+          {remove.isError && <ErrorMessage>Couldn't clear the session. Please try again.</ErrorMessage>}
           {session.is_no_show ? (
-            <p className="text-sm text-gray-400 italic">No notes recorded. The student did not attend.</p>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400 italic">No notes recorded. The student did not attend.</p>
+              <button type="button" onClick={clearSession} disabled={remove.isPending} className={buttonSecondary}>
+                Clear session
+              </button>
+            </div>
           ) : (
             <form onSubmit={saveNotes} noValidate className="space-y-4">
               {notesError && <ErrorMessage>{notesError}</ErrorMessage>}

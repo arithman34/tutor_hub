@@ -440,18 +440,38 @@ describe('session page', () => {
     expect(screen.queryByRole('button', { name: 'Save notes' })).not.toBeInTheDocument()
   })
 
-  it('deletes after confirming and returns to the list', async () => {
+  it('has no separate Delete session button', async () => {
+    renderApp(`/sessions/${SESSION_ID}`)
+    expect(await screen.findByRole('button', { name: 'Clear notes' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete session' })).not.toBeInTheDocument()
+  })
+
+  it('clears a no-show after confirming', async () => {
     let deleted = false
-    server.use(http.delete('*/api/v1/sessions/:id/', () => ((deleted = true), new HttpResponse(null, { status: 204 }))))
-    serveCalendar([])
+    server.use(
+      http.get('*/api/v1/sessions/:id/', () => HttpResponse.json(session({ is_no_show: true }))),
+      http.delete('*/api/v1/sessions/:id/', () => ((deleted = true), new HttpResponse(null, { status: 204 }))),
+    )
+    serveCalendar([item({ logged: false })])
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
     renderApp(`/sessions/${SESSION_ID}`)
 
-    await user.click(await screen.findByRole('button', { name: 'Delete session' }))
+    await user.click(await screen.findByRole('button', { name: 'Clear session' }))
 
-    expect(await screen.findByRole('heading', { name: 'Sessions' })).toBeInTheDocument()
+    expect(await screen.findByText('Session cleared. Its calendar event is back to Not logged.')).toBeInTheDocument()
     expect(deleted).toBe(true)
+  })
+
+  it('says so when the clear fails', async () => {
+    server.use(http.delete('*/api/v1/sessions/:id/', () => new HttpResponse(null, { status: 500 })))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    renderApp(`/sessions/${SESSION_ID}`)
+
+    await user.click(await screen.findByRole('button', { name: 'Clear notes' }))
+
+    expect(await screen.findByText("Couldn't clear the session. Please try again.")).toBeInTheDocument()
   })
 
   it('clears the session after confirming, un-logging it', async () => {
