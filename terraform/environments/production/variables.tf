@@ -15,6 +15,11 @@ variable "google_client_id" {
   type        = string
 }
 
+variable "zoom_client_id" {
+  description = "Zoom OAuth client ID."
+  type        = string
+}
+
 variable "from_email" {
   description = "From address for outbound email."
   type        = string

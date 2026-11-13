@@ -39,3 +39,31 @@ export function useDisconnectGoogle() {
       ]),
   })
 }
+
+export const zoomStatusKey = ['zoom', 'status'] as const
+
+export function useZoomStatus({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: zoomStatusKey,
+    enabled,
+    queryFn: async () => unwrap(await api.GET('/api/v1/zoom/status')),
+  })
+}
+
+/** Start connecting Zoom. Zoom sends the browser back with ?provider=zoom&connected=1 or &error=…. */
+export function useConnectZoom() {
+  return useMutation({
+    mutationFn: async () => unwrap(await api.GET('/api/v1/zoom/connect')),
+    onSuccess: ({ url }) => leaveFor(url),
+  })
+}
+
+export function useDisconnectZoom() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      unwrap(await api.POST('/api/v1/zoom/disconnect'))
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: zoomStatusKey }),
+  })
+}

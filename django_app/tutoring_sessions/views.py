@@ -11,10 +11,11 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from accounts.ownership import OwnedQuerysetMixin
+from zoom_integration import services as zoom_services
 
 from . import zoom
 from .models import Session
-from .serializers import SessionSerializer, ZoomSummarySerializer, ZoomParseSerializer
+from .serializers import SessionSerializer, ZoomFetchedSummarySerializer, ZoomParseSerializer, ZoomSummarySerializer
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +66,31 @@ class SessionViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):
             logger.exception("Parsing a Zoom summary failed")
             return Response({"detail": "Could not parse the summary."}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(ZoomParseSerializer(asdict(parsed)).data)
+
+    @extend_schema(
+        summary="Fetch this session's Zoom AI summary",
+        description=(
+            "Finds the occurrence of the student's Zoom meeting that started closest to this session "
+            "(within an hour) and returns its AI Companion summary. Nothing is saved."
+        ),
+        responses={
+            200: ZoomFetchedSummarySerializer,
+            404: OpenApiResponse(description="No matching meeting, or no summary for it yet."),
+            409: OpenApiResponse(description="Zoom isn't connected, or the connection expired."),
+            502: OpenApiResponse(description="Zoom couldn't be reached or returned an error."),
+        },
+    )
+    @action(detail=True, methods=["get"], url_path="zoom-summary")
+    def zoom_summary(self, request, pk=None):
+        session = self.get_object()
+        try:
+            meeting_uuid = zoom_services.find_meeting_uuid(request.user, session.student.zoom_meeting_id, session.session_start_time)
+            summary = zoom_services.fetch_summary(request.user, meeting_uuid)
+        except zoom_services.NotConnectedError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except zoom_services.NotFoundError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except zoom_services.ZoomAPIError as exc:
+            logger.exception("Fetching a Zoom summary failed for session %s", session.id)
+            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"summary": summary, "meeting_uuid": meeting_uuid})

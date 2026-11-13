@@ -54,3 +54,8 @@ class ZoomParseSerializer(serializers.Serializer):
     tutor_actions = serializers.CharField(allow_blank=True)
     next_lesson_focus = serializers.CharField(allow_blank=True)
     topic_tags = serializers.CharField(allow_blank=True, help_text="Comma-separated.")
+
+
+class ZoomFetchedSummarySerializer(serializers.Serializer):
+    summary = serializers.CharField(help_text="The meeting's AI Companion summary, as plain text.")
+    meeting_uuid = serializers.CharField(help_text="The Zoom meeting occurrence the summary came from.")

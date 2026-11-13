@@ -4,6 +4,7 @@ secret_key           = "your-jwt-signing-key"
 openai_api_key       = "sk-..."
 resend_api_key       = "re_..."
 google_client_secret = "GOCSPX-..."
+zoom_client_secret   = "..."
 
 # Only needed once you apply the cost-optimized environment. Create the
 # tunnel in the Cloudflare Zero Trust dashboard (Networks > Tunnels) and

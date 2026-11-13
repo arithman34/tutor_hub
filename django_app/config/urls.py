@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/v1/sessions/", include("tutoring_sessions.urls")),
     path("api/v1/", include("billing.urls")),
     path("api/v1/calendar/", include("calendar_integration.urls")),
+    path("api/v1/zoom/", include("zoom_integration.urls")),
     path("api/v1/analytics/", include("analytics.urls")),
     path("api/v1/assistant/", include("assistant.urls")),
     path("api/v1/data/export", DataExportView.as_view(), name="data-export"),

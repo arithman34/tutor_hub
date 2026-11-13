@@ -43,6 +43,7 @@ export const handlers = [
   http.post('*/api/v1/auth/cookie/refresh', unauthorized),
   http.post('*/api/v1/auth/cookie/logout', () => new HttpResponse(null, { status: 204 })),
   http.get('*/api/v1/analytics/dashboard', () => HttpResponse.json(testDashboard)),
+  http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: false })),
 ]
 
 export const server = setupServer(...handlers)
