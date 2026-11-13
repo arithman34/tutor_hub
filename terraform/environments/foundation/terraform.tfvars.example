@@ -1,10 +1,11 @@
 # Copy to terraform.tfvars and fill in
 
-secret_key           = "your-jwt-signing-key"
-openai_api_key       = "sk-..."
-resend_api_key       = "re_..."
-google_client_secret = "GOCSPX-..."
-zoom_client_secret   = "..."
+secret_key                = "your-jwt-signing-key"
+openai_api_key            = "sk-..."
+resend_api_key            = "re_..."
+google_client_secret      = "GOCSPX-..."
+zoom_client_secret        = "..."
+zoom_webhook_secret_token = "..."
 
 # Only needed once you apply the cost-optimized environment. Create the
 # tunnel in the Cloudflare Zero Trust dashboard (Networks > Tunnels) and

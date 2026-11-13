@@ -81,6 +81,15 @@ export function useZoomParse() {
   })
 }
 
+/** Log any Zoom lessons from the last week that TutorHub missed (including no-shows). */
+export function useZoomSweep() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/zoom/sweep')),
+    onSuccess: () => invalidateAfterChange(queryClient),
+  })
+}
+
 /** Fetch a saved session's AI Companion summary from Zoom. Nothing is saved. */
 export function useZoomFetch(sessionId: string) {
   return useMutation({

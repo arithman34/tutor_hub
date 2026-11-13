@@ -32,6 +32,7 @@ data "aws_iam_policy_document" "read_secrets" {
       aws_ssm_parameter.resend_api_key.arn,
       aws_ssm_parameter.google_client_secret.arn,
       aws_ssm_parameter.zoom_client_secret.arn,
+      aws_ssm_parameter.zoom_webhook_secret_token.arn,
       aws_ssm_parameter.cloudflare_tunnel_token.arn,
     ]
   }

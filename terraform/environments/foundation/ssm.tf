@@ -43,6 +43,12 @@ resource "aws_ssm_parameter" "zoom_client_secret" {
   value = var.zoom_client_secret
 }
 
+resource "aws_ssm_parameter" "zoom_webhook_secret_token" {
+  name  = "/${local.name}/zoom-webhook-secret-token"
+  type  = "SecureString"
+  value = var.zoom_webhook_secret_token
+}
+
 # Only consumed by the cost-optimized environment's cloudflared sidecar.
 # Kept here (not per-environment) so it survives a production -> cost-optimized
 # cutover just like the other secrets.

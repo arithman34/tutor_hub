@@ -38,6 +38,7 @@ locals {
     { name = "RESEND_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.resend_api_key },
     { name = "GOOGLE_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.google_client_secret },
     { name = "ZOOM_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.zoom_client_secret },
+    { name = "ZOOM_WEBHOOK_SECRET_TOKEN", valueFrom = local.foundation.ssm_parameter_arns.zoom_webhook_secret_token },
   ]
 }
 

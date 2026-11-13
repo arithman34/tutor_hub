@@ -5,6 +5,7 @@ import logging
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from urllib.parse import quote, urlencode
 
 import httpx
@@ -24,7 +25,7 @@ _API_URL = "https://api.zoom.us/v2"
 # The scopes the Zoom app is configured with. Zoom takes them from the app's
 # settings, not the connect URL, so this list is documentation that a test
 # checks against the privacy policy. Change both together.
-SCOPES = ("meeting:read:list_past_instances", "meeting:read:summary")
+SCOPES = ("meeting:read:list_past_instances", "meeting:read:summary", "meeting:read:past_meeting")
 
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 
@@ -194,21 +195,55 @@ def encode_meeting_uuid(uuid: str) -> str:
     return encoded
 
 
-def _parse_zoom_time(value: str) -> datetime:
+def parse_zoom_time(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def to_wall_clock(moment: datetime) -> datetime:
+    """A real instant as TutorHub's wall-clock time.
+
+    Sessions store the local time the lesson was at, labelled UTC (see the SPA's
+    format.ts): a 16:00 lesson in British Summer Time is saved as 16:00Z, not
+    15:00Z. Zoom sends real UTC, so convert before comparing or saving.
+    """
+    local = moment.astimezone(ZoneInfo(settings.GOOGLE_CALENDAR_TIMEZONE))
+    return local.replace(tzinfo=timezone.utc)
+
+
 def closest_instance(instances: list[dict], start: datetime) -> dict | None:
-    """The instance that started closest to `start`, if within MATCH_TOLERANCE."""
+    """The instance that started closest to `start` (a wall-clock session time),
+    if within MATCH_TOLERANCE."""
     best, best_gap = None, None
     for instance in instances:
         try:
-            gap = abs(_parse_zoom_time(instance["start_time"]) - start)
+            gap = abs(to_wall_clock(parse_zoom_time(instance["start_time"])) - start)
         except (KeyError, ValueError):
             continue
         if gap <= MATCH_TOLERANCE and (best_gap is None or gap < best_gap):
             best, best_gap = instance, gap
     return best
+
+
+def list_past_instances(user, meeting_id: str) -> list[dict]:
+    """Past occurrences of a meeting, each {"uuid", "start_time"}."""
+    resp = _get(user, f"/past_meetings/{normalize_meeting_id(meeting_id)}/instances")
+    if resp.status_code == 404:
+        raise NotFoundError("Zoom has no past meetings for this student's meeting ID.")
+    if resp.is_error:
+        logger.error("Zoom past instances failed (%s): %s", resp.status_code, resp.text[:500])
+        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) listing past meetings.")
+    return resp.json().get("meetings", [])
+
+
+def past_meeting(user, meeting_uuid: str) -> dict:
+    """A finished meeting occurrence: start_time, end_time and participants_count among others."""
+    resp = _get(user, f"/past_meetings/{encode_meeting_uuid(meeting_uuid)}")
+    if resp.status_code == 404:
+        raise NotFoundError("Zoom has no record of this meeting yet. It may still be in progress.")
+    if resp.is_error:
+        logger.error("Zoom past meeting failed (%s): %s", resp.status_code, resp.text[:500])
+        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) reading the meeting.")
+    return resp.json()
 
 
 def find_meeting_uuid(user, meeting_id: str | None, start: datetime) -> str:
@@ -217,14 +252,7 @@ def find_meeting_uuid(user, meeting_id: str | None, start: datetime) -> str:
     if not digits:
         raise NotFoundError("This student has no Zoom meeting ID. Add it on their profile first.")
 
-    resp = _get(user, f"/past_meetings/{digits}/instances")
-    if resp.status_code == 404:
-        raise NotFoundError("Zoom has no past meetings for this student's meeting ID.")
-    if resp.is_error:
-        logger.error("Zoom past instances failed (%s): %s", resp.status_code, resp.text[:500])
-        raise ZoomAPIError(f"Zoom returned an error ({resp.status_code}) listing past meetings.")
-
-    match = closest_instance(resp.json().get("meetings", []), start)
+    match = closest_instance(list_past_instances(user, digits), start)
     if not match:
         raise NotFoundError("No Zoom meeting started within an hour of this session's start time.")
     return match["uuid"]

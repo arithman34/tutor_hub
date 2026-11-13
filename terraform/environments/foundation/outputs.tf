@@ -58,13 +58,14 @@ output "db_name_django" {
 output "ssm_parameter_arns" {
   description = "Map of secret name -> SSM parameter ARN, for use in ECS task definition `secrets` blocks."
   value = {
-    database_url            = aws_ssm_parameter.database_url.arn
-    db_password             = aws_ssm_parameter.db_password.arn
-    secret_key              = aws_ssm_parameter.secret_key.arn
-    openai_api_key          = aws_ssm_parameter.openai_api_key.arn
-    resend_api_key          = aws_ssm_parameter.resend_api_key.arn
-    google_client_secret    = aws_ssm_parameter.google_client_secret.arn
-    zoom_client_secret      = aws_ssm_parameter.zoom_client_secret.arn
-    cloudflare_tunnel_token = aws_ssm_parameter.cloudflare_tunnel_token.arn
+    database_url              = aws_ssm_parameter.database_url.arn
+    db_password               = aws_ssm_parameter.db_password.arn
+    secret_key                = aws_ssm_parameter.secret_key.arn
+    openai_api_key            = aws_ssm_parameter.openai_api_key.arn
+    resend_api_key            = aws_ssm_parameter.resend_api_key.arn
+    google_client_secret      = aws_ssm_parameter.google_client_secret.arn
+    zoom_client_secret        = aws_ssm_parameter.zoom_client_secret.arn
+    zoom_webhook_secret_token = aws_ssm_parameter.zoom_webhook_secret_token.arn
+    cloudflare_tunnel_token   = aws_ssm_parameter.cloudflare_tunnel_token.arn
   }
 }
