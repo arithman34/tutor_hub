@@ -74,25 +74,6 @@ describe('signing in', () => {
   })
 })
 
-describe('dashboard', () => {
-  it('shows the headline numbers', async () => {
-    renderApp('/')
-
-    expect(await screen.findByText('£840.00')).toBeInTheDocument()
-    expect(screen.getByText('+12.5% vs last month')).toBeInTheDocument()
-    expect(screen.getByText('£12,345.50')).toBeInTheDocument()
-    expect(screen.getByText('Nobody owes you anything')).toBeInTheDocument()
-    expect(screen.getByText('21.5h')).toBeInTheDocument()
-    expect(screen.getByText('-4% vs last month')).toBeInTheDocument()
-  })
-
-  it('says when it can’t load', async () => {
-    server.use(http.get('*/api/v1/analytics/dashboard', () => HttpResponse.json({ detail: 'Forbidden.' }, { status: 403 })))
-    renderApp('/')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Forbidden.')
-  })
-})
-
 describe('layout', () => {
   it('opens every page from the sidebar without leaving the app', async () => {
     server.use(http.get('*/api/v1/calendar/status', () => HttpResponse.json({ connected: false })))

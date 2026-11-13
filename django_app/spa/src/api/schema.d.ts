@@ -21,6 +21,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/dashboard/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Revenue for each of the last 12 months */
+        get: operations["analytics_dashboard_revenue_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/dashboard/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Revenue and hours for each student this month */
+        get: operations["analytics_dashboard_students_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/dashboard/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sessions today and over the next few days */
+        get: operations["analytics_dashboard_upcoming_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analytics/filters": {
         parameters: {
             query?: never;
@@ -990,34 +1041,83 @@ export interface components {
         CsrfToken: {
             csrf_token: string;
         };
-        /** @description Headline numbers from analytics.dashboard.get_dashboard_stats. */
+        /**
+         * @description Headline numbers from analytics.dashboard.get_dashboard_stats.
+         *
+         *     Month-on-month changes compare month-to-date with the same days of last
+         *     month (compare_from to compare_to), not with the whole of last month.
+         */
         Dashboard: {
             /** Format: double */
             revenue_alltime: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Payments received this month so far.
+             */
             revenue_this_month: number;
             /** Format: double */
             revenue_this_year: number;
             /**
              * Format: double
-             * @description Revenue percent change against last month.
+             * @description Payments received from compare_from to compare_to.
+             */
+            revenue_same_period_last_month: number;
+            /**
+             * Format: double
+             * @description This month so far plus what the rest of last month brought in. Null with no revenue last month.
+             */
+            revenue_projected: number | null;
+            /** @description Running total of this month's payments, one value per day so far. */
+            revenue_month_to_date: number[];
+            /**
+             * Format: double
+             * @description Revenue percent change against the same days last month.
              */
             mom_trend: number | null;
+            /**
+             * Format: date
+             * @description First day of last month's comparison period.
+             */
+            compare_from: string;
+            /**
+             * Format: date
+             * @description Last day (inclusive) of last month's comparison period.
+             */
+            compare_to: string;
             /**
              * Format: double
              * @description Total owed by payees in arrears.
              */
             outstanding_total: number;
             outstanding_payees: number;
+            /**
+             * Format: double
+             * @description Revenue this year divided by hours taught this year. Null before any hours.
+             */
+            average_hourly_rate: number | null;
+            /** Format: double */
+            hours_this_year: number;
             active_students: number;
+            students_taught_this_month: number;
             /** @description Sessions in the last 7 days. */
             sessions_this_week: number;
+            /**
+             * Format: double
+             * @description Against the 7 days before that.
+             */
+            sessions_week_pct_change: number | null;
             sessions_this_month: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Against the same days last month.
+             */
             sessions_pct_change: number | null;
             /** Format: double */
             hours_this_month: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Against the same days last month.
+             */
             hours_pct_change: number | null;
         };
         DataImportRequest: {
@@ -1253,6 +1353,24 @@ export interface components {
             /** @default 1 */
             interval_weeks: number;
         };
+        RevenueByMonth: {
+            /** @description The last 12 months, oldest first. */
+            months: components["schemas"]["RevenueMonth"][];
+        };
+        RevenueMonth: {
+            /**
+             * Format: date
+             * @description First day of the month.
+             */
+            month: string;
+            /**
+             * Format: double
+             * @description Payments received that month.
+             */
+            revenue: number;
+            /** @description True for the current month. */
+            in_progress: boolean;
+        };
         /**
          * @description * `user` - user
          *     * `assistant` - assistant
@@ -1345,6 +1463,25 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        StudentBreakdown: {
+            /** @description Students taught this month so far, most revenue first. */
+            students: components["schemas"]["StudentBreakdownRow"][];
+        };
+        StudentBreakdownRow: {
+            /** Format: uuid */
+            student_id: string;
+            student_name: string;
+            sessions: number;
+            /** Format: double */
+            hours: number;
+            /**
+             * Format: double
+             * @description Hours times the student's hourly rate.
+             */
+            revenue: number;
+            /** Format: double */
+            hourly_rate: number | null;
         };
         StudentRequest: {
             /** Format: uuid */
@@ -1464,6 +1601,27 @@ export interface components {
          * @enum {string}
          */
         UnitEnum: "count" | "hours" | "currency";
+        UpcomingSession: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            student_id: string;
+            student_name: string;
+            /** @description The student's level, e.g. GCSE. */
+            level: string | null;
+            topic_tags: string | null;
+            /**
+             * Format: date-time
+             * @description Wall-clock time, labelled UTC.
+             */
+            start: string;
+            /** Format: date-time */
+            end: string;
+        };
+        UpcomingSessions: {
+            /** @description Soonest first, at most 12. */
+            sessions: components["schemas"]["UpcomingSession"][];
+        };
         User: {
             /** Format: uuid */
             readonly id: string;
@@ -1532,6 +1690,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+        };
+    };
+    analytics_dashboard_revenue_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueByMonth"];
+                };
+            };
+        };
+    };
+    analytics_dashboard_students_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentBreakdown"];
+                };
+            };
+        };
+    };
+    analytics_dashboard_upcoming_retrieve: {
+        parameters: {
+            query?: {
+                /** @description How many days to cover, today being the first. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingSessions"];
                 };
             };
         };

@@ -21,6 +21,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/Dashboard'
           description: ''
+  /api/v1/analytics/dashboard/revenue:
+    get:
+      operationId: analytics_dashboard_revenue_retrieve
+      summary: Revenue for each of the last 12 months
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueByMonth'
+          description: ''
+  /api/v1/analytics/dashboard/students:
+    get:
+      operationId: analytics_dashboard_students_retrieve
+      summary: Revenue and hours for each student this month
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentBreakdown'
+          description: ''
+  /api/v1/analytics/dashboard/upcoming:
+    get:
+      operationId: analytics_dashboard_upcoming_retrieve
+      summary: Sessions today and over the next few days
+      parameters:
+      - in: query
+        name: days
+        schema:
+          type: integer
+          maximum: 14
+          minimum: 1
+          default: 4
+        description: How many days to cover, today being the first.
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpcomingSessions'
+          description: ''
   /api/v1/analytics/filters:
     get:
       operationId: analytics_filters_retrieve
@@ -1816,7 +1873,11 @@ components:
       - csrf_token
     Dashboard:
       type: object
-      description: Headline numbers from analytics.dashboard.get_dashboard_stats.
+      description: |-
+        Headline numbers from analytics.dashboard.get_dashboard_stats.
+
+        Month-on-month changes compare month-to-date with the same days of last
+        month (compare_from to compare_to), not with the whole of last month.
       properties:
         revenue_alltime:
           type: number
@@ -1824,31 +1885,74 @@ components:
         revenue_this_month:
           type: number
           format: double
+          description: Payments received this month so far.
         revenue_this_year:
           type: number
           format: double
+        revenue_same_period_last_month:
+          type: number
+          format: double
+          description: Payments received from compare_from to compare_to.
+        revenue_projected:
+          type: number
+          format: double
+          nullable: true
+          description: This month so far plus what the rest of last month brought
+            in. Null with no revenue last month.
+        revenue_month_to_date:
+          type: array
+          items:
+            type: number
+            format: double
+          description: Running total of this month's payments, one value per day so
+            far.
         mom_trend:
           type: number
           format: double
           nullable: true
-          description: Revenue percent change against last month.
+          description: Revenue percent change against the same days last month.
+        compare_from:
+          type: string
+          format: date
+          description: First day of last month's comparison period.
+        compare_to:
+          type: string
+          format: date
+          description: Last day (inclusive) of last month's comparison period.
         outstanding_total:
           type: number
           format: double
           description: Total owed by payees in arrears.
         outstanding_payees:
           type: integer
+        average_hourly_rate:
+          type: number
+          format: double
+          nullable: true
+          description: Revenue this year divided by hours taught this year. Null before
+            any hours.
+        hours_this_year:
+          type: number
+          format: double
         active_students:
+          type: integer
+        students_taught_this_month:
           type: integer
         sessions_this_week:
           type: integer
           description: Sessions in the last 7 days.
+        sessions_week_pct_change:
+          type: number
+          format: double
+          nullable: true
+          description: Against the 7 days before that.
         sessions_this_month:
           type: integer
         sessions_pct_change:
           type: number
           format: double
           nullable: true
+          description: Against the same days last month.
         hours_this_month:
           type: number
           format: double
@@ -1856,19 +1960,29 @@ components:
           type: number
           format: double
           nullable: true
+          description: Against the same days last month.
       required:
       - active_students
+      - average_hourly_rate
+      - compare_from
+      - compare_to
       - hours_pct_change
       - hours_this_month
+      - hours_this_year
       - mom_trend
       - outstanding_payees
       - outstanding_total
       - revenue_alltime
+      - revenue_month_to_date
+      - revenue_projected
+      - revenue_same_period_last_month
       - revenue_this_month
       - revenue_this_year
       - sessions_pct_change
       - sessions_this_month
       - sessions_this_week
+      - sessions_week_pct_change
+      - students_taught_this_month
     DataImportRequest:
       type: object
       properties:
@@ -2409,6 +2523,34 @@ components:
       required:
       - day_configs
       - start_date
+    RevenueByMonth:
+      type: object
+      properties:
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueMonth'
+          description: The last 12 months, oldest first.
+      required:
+      - months
+    RevenueMonth:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+          description: First day of the month.
+        revenue:
+          type: number
+          format: double
+          description: Payments received that month.
+        in_progress:
+          type: boolean
+          description: True for the current month.
+      required:
+      - in_progress
+      - month
+      - revenue
     RoleEnum:
       enum:
       - user
@@ -2659,6 +2801,44 @@ components:
       - is_active
       - last_name
       - updated_at
+    StudentBreakdown:
+      type: object
+      properties:
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentBreakdownRow'
+          description: Students taught this month so far, most revenue first.
+      required:
+      - students
+    StudentBreakdownRow:
+      type: object
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        student_name:
+          type: string
+        sessions:
+          type: integer
+        hours:
+          type: number
+          format: double
+        revenue:
+          type: number
+          format: double
+          description: Hours times the student's hourly rate.
+        hourly_rate:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - hourly_rate
+      - hours
+      - revenue
+      - sessions
+      - student_id
+      - student_name
     StudentRequest:
       type: object
       properties:
@@ -2918,6 +3098,49 @@ components:
         * `count` - count
         * `hours` - hours
         * `currency` - currency
+    UpcomingSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        student_name:
+          type: string
+        level:
+          type: string
+          nullable: true
+          description: The student's level, e.g. GCSE.
+        topic_tags:
+          type: string
+          nullable: true
+        start:
+          type: string
+          format: date-time
+          description: Wall-clock time, labelled UTC.
+        end:
+          type: string
+          format: date-time
+      required:
+      - end
+      - id
+      - level
+      - start
+      - student_id
+      - student_name
+      - topic_tags
+    UpcomingSessions:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpcomingSession'
+          description: Soonest first, at most 12.
+      required:
+      - sessions
     User:
       type: object
       properties:

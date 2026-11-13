@@ -4,7 +4,7 @@ import { Route, Routes } from 'react-router'
 import { Loading } from './components/ui'
 import { RequireAuth } from './RequireAuth'
 import { AppLayout } from './layout/AppLayout'
-import { DashboardPage } from './pages/DashboardPage'
+import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 

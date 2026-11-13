@@ -5,8 +5,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import services
-from .dashboard import get_dashboard_stats
-from .serializers import DashboardSerializer, FilterOptionsSerializer, TrendsQuerySerializer, TrendsSerializer
+from . import dashboard
+from .serializers import (
+    DashboardSerializer,
+    FilterOptionsSerializer,
+    RevenueByMonthSerializer,
+    StudentBreakdownSerializer,
+    TrendsQuerySerializer,
+    TrendsSerializer,
+    UpcomingQuerySerializer,
+    UpcomingSessionsSerializer,
+)
 
 
 class TrendsView(APIView):
@@ -46,4 +55,28 @@ class DashboardView(APIView):
 
     @extend_schema(summary="Headline numbers for the dashboard", responses=DashboardSerializer)
     def get(self, request):
-        return Response(DashboardSerializer(get_dashboard_stats(request.user)).data)
+        return Response(DashboardSerializer(dashboard.get_dashboard_stats(request.user)).data)
+
+
+class DashboardRevenueView(APIView):
+
+    @extend_schema(summary="Revenue for each of the last 12 months", responses=RevenueByMonthSerializer)
+    def get(self, request):
+        return Response(RevenueByMonthSerializer({"months": dashboard.get_revenue_by_month(request.user)}).data)
+
+
+class DashboardUpcomingView(APIView):
+
+    @extend_schema(summary="Sessions today and over the next few days", parameters=[UpcomingQuerySerializer], responses=UpcomingSessionsSerializer)
+    def get(self, request):
+        query = UpcomingQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        sessions = dashboard.get_upcoming_sessions(request.user, days=query.validated_data["days"])
+        return Response(UpcomingSessionsSerializer({"sessions": sessions}).data)
+
+
+class DashboardStudentsView(APIView):
+
+    @extend_schema(summary="Revenue and hours for each student this month", responses=StudentBreakdownSerializer)
+    def get(self, request):
+        return Response(StudentBreakdownSerializer({"students": dashboard.get_student_breakdown(request.user)}).data)

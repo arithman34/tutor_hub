@@ -3,9 +3,19 @@
 /* Dark mode follows the .dark class on <html> (see theme.ts), not the OS. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  /* Figures in tables line up in columns (cards use the tabular-nums utility). */
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 @layer components {
+  /* Raised surface: page slate-900 (#0f172a), card slate-800 (#1e293b) in dark
+     mode; white on slate-50 in light. A faint border that firms up on hover. */
   .card {
-    @apply rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800;
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300;
+    @apply dark:border-white/5 dark:bg-slate-800 dark:shadow-none dark:hover:border-white/15;
   }
 
   .input {

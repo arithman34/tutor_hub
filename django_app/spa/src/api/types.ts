@@ -5,6 +5,9 @@ type Schemas = components['schemas']
 
 export type User = Schemas['User']
 export type Dashboard = Schemas['Dashboard']
+export type RevenueMonth = Schemas['RevenueMonth']
+export type UpcomingSession = Schemas['UpcomingSession']
+export type StudentBreakdownRow = Schemas['StudentBreakdownRow']
 
 export type Student = Schemas['Student']
 export type StudentRequest = Schemas['StudentRequest']

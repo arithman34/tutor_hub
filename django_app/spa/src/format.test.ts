@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDate, toWallIso, wallDate, wallTime } from './format'
+import { formatDate, formatDayRange, formatMoneyRounded, toWallIso, wallDate, wallTime } from './format'
 
 describe('wall-clock session times', () => {
   it('reads the stored UTC fields as-is, without converting to local time', () => {
@@ -23,5 +23,21 @@ describe('wall-clock session times', () => {
 
   it('formats plain dates too', () => {
     expect(formatDate('2026-03-05')).toBe('05/03/2026')
+  })
+})
+
+describe('formatDayRange', () => {
+  it('shows a span of days in one month', () => {
+    expect(formatDayRange('2026-10-01', '2026-10-13')).toBe('1–13 Oct')
+  })
+
+  it('shows a single day once', () => {
+    expect(formatDayRange('2026-10-01', '2026-10-01')).toBe('1 Oct')
+  })
+})
+
+describe('formatMoneyRounded', () => {
+  it('drops the pence', () => {
+    expect(formatMoneyRounded(1209.6)).toBe('£1,210')
   })
 })

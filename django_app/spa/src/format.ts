@@ -1,4 +1,7 @@
 const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' })
+const gbpWhole = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 })
+const longDate = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function formatMoney(amount: number): string {
   return gbp.format(amount)
@@ -16,11 +19,29 @@ export function balanceTone(amount: number): string {
   return 'text-gray-500 dark:text-gray-400'
 }
 
-/** "+12.5% vs last month", or null when there's nothing to compare with. */
-export function formatChange(percent: number | null | undefined, period = 'last month'): string | null {
-  if (percent === null || percent === undefined) return null
-  const sign = percent > 0 ? '+' : ''
-  return `${sign}${percent}% vs ${period}`
+/** "£1,235", for whole-pound figures like a projection or a chart axis. */
+export function formatMoneyRounded(amount: number): string {
+  return gbpWhole.format(amount)
+}
+
+/** "1–13 Oct", or "1 Oct" for a single day, from two "2026-10-01" dates. */
+export function formatDayRange(from: string, to: string): string {
+  const [, , fromDay] = from.split('-')
+  const [, toMonth, toDay] = to.split('-')
+  const month = SHORT_MONTHS[Number(toMonth) - 1]
+  return fromDay === toDay ? `${Number(toDay)} ${month}` : `${Number(fromDay)}–${Number(toDay)} ${month}`
+}
+
+/** "Friday 13 November 2026" for a local Date. */
+export function formatLongDate(date: Date): string {
+  return longDate.format(date)
+}
+
+/** "2026-11-13" for a local Date: the same form as wallDate(). */
+export function localDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 /*
