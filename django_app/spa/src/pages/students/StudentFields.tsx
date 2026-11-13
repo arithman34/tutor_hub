@@ -47,6 +47,21 @@ export function StudentFields({ form, savedDocId }: { form: UseFormReturn<Studen
           ))}
         </select>
       </Field>
+      <Field
+        id="zoom_meeting_id"
+        label="Zoom meeting ID (optional)"
+        error={errors.zoom_meeting_id?.message}
+        hint="The ID of this student's recurring Zoom meeting, so their lessons are logged from Zoom automatically."
+      >
+        <input
+          {...register('zoom_meeting_id')}
+          {...describedBy('zoom_meeting_id', errors.zoom_meeting_id?.message)}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="e.g. 123 4567 8901"
+          className="input"
+        />
+      </Field>
       {savedDocId !== undefined && (
         <Field
           id="ilp_url"

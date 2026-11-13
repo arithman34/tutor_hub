@@ -9,6 +9,12 @@ import { z } from 'zod'
 import type { Student, StudentRequest } from '../../api/types'
 
 const GOOGLE_DOC_URL = /\/document\/d\/([a-zA-Z0-9_-]+)/
+// Zoom shows meeting IDs as "123 4567 8901"; accept spaces and dashes, store digits.
+const ZOOM_MEETING_ID = /^\d{9,11}$/
+
+function meetingIdDigits(value: string): string {
+  return value.replace(/[\s-]/g, '')
+}
 
 export const studentFormSchema = z.object({
   first_name: z.string().trim().min(1, 'Enter a first name').max(150, 'At most 150 characters'),
@@ -21,6 +27,12 @@ export const studentFormSchema = z.object({
       message: 'Enter an amount like 30 or 27.50',
     }),
   payee_id: z.string(),
+  zoom_meeting_id: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || ZOOM_MEETING_ID.test(meetingIdDigits(value)), {
+      message: 'Enter the 9 to 11 digit meeting ID, like 123 4567 8901',
+    }),
   ilp_url: z
     .string()
     .trim()
@@ -31,7 +43,7 @@ export const studentFormSchema = z.object({
 
 export type StudentFormValues = z.infer<typeof studentFormSchema>
 
-export const studentFormFields = ['first_name', 'last_name', 'level', 'hourly_rate', 'payee_id', 'ilp_url'] as const
+export const studentFormFields = ['first_name', 'last_name', 'level', 'hourly_rate', 'payee_id', 'zoom_meeting_id', 'ilp_url'] as const
 
 export const emptyStudentForm: StudentFormValues = {
   first_name: '',
@@ -39,6 +51,7 @@ export const emptyStudentForm: StudentFormValues = {
   level: '',
   hourly_rate: '',
   payee_id: '',
+  zoom_meeting_id: '',
   ilp_url: '',
 }
 
@@ -53,6 +66,7 @@ export function fromStudent(student: Student): StudentFormValues {
     level: student.level ?? '',
     hourly_rate: student.hourly_rate === null || student.hourly_rate === undefined ? '' : String(student.hourly_rate),
     payee_id: student.payee_id ?? '',
+    zoom_meeting_id: student.zoom_meeting_id ?? '',
     ilp_url: student.google_doc_id ? googleDocUrl(student.google_doc_id) : '',
   }
 }
@@ -65,6 +79,7 @@ export function toRequest(values: StudentFormValues): StudentRequest {
     level: parsed.level || null,
     hourly_rate: parsed.hourly_rate === '' ? null : Number(parsed.hourly_rate),
     payee_id: parsed.payee_id || null,
+    zoom_meeting_id: meetingIdDigits(parsed.zoom_meeting_id) || null,
     google_doc_id: parsed.ilp_url.match(GOOGLE_DOC_URL)?.[1] ?? null,
   }
 }

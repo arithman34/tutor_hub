@@ -51,6 +51,25 @@ class StudentCreateTests(APITestCase):
         self.assertEqual(response.data["first_name"], "New")
         self.assertEqual(Student.objects.get(id=response.data["id"]).user, self.tutor)
 
+    def test_zoom_meeting_id_is_stored_as_digits(self):
+        self.client.force_authenticate(self.tutor)
+        response = self.client.post(self.url, {"first_name": "a", "last_name": "b", "zoom_meeting_id": "123 4567-8901"})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["zoom_meeting_id"], "12345678901")
+
+    def test_blank_zoom_meeting_id_is_stored_as_null(self):
+        self.client.force_authenticate(self.tutor)
+        response = self.client.post(self.url, {"first_name": "a", "last_name": "b", "zoom_meeting_id": "  "})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["zoom_meeting_id"])
+
+    def test_rejects_a_zoom_meeting_id_that_isnt_one(self):
+        self.client.force_authenticate(self.tutor)
+        for bad in ("https://zoom.us/j/123", "12345", "123456789012"):
+            response = self.client.post(self.url, {"first_name": "a", "last_name": "b", "zoom_meeting_id": bad})
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, bad)
+            self.assertIn("zoom_meeting_id", response.data)
+
     def test_owner_field_in_payload_is_ignored(self):
         self.client.force_authenticate(self.tutor)
         response = self.client.post(self.url, {"first_name": "new", "last_name": "student", "user": str(self.other.id)})
