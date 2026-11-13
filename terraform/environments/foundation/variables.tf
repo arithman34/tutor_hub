@@ -76,6 +76,12 @@ variable "google_client_secret" {
   sensitive   = true
 }
 
+variable "zoom_client_secret" {
+  description = "Zoom OAuth client secret (meeting summaries)."
+  type        = string
+  sensitive   = true
+}
+
 variable "cloudflare_tunnel_token" {
   description = "Token for the Cloudflare Tunnel used by the cost-optimized environment's cloudflared sidecar. Not used by production. Create the tunnel in the Cloudflare Zero Trust dashboard (Networks > Tunnels) and paste its token here."
   type        = string

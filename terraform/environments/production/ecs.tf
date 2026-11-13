@@ -24,6 +24,8 @@ locals {
     { name = "REDIS_URL", value = "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0" },
     { name = "GOOGLE_CLIENT_ID", value = var.google_client_id },
     { name = "GOOGLE_REDIRECT_URI", value = "https://${var.domain_name}/calendar/callback" },
+    { name = "ZOOM_CLIENT_ID", value = var.zoom_client_id },
+    { name = "ZOOM_REDIRECT_URI", value = "https://${var.domain_name}/api/v1/zoom/callback" },
     { name = "FROM_EMAIL", value = var.from_email },
     { name = "BACKUP_BUCKET", value = local.foundation.backup_bucket },
     { name = "AWS_REGION", value = var.aws_region },
@@ -35,6 +37,7 @@ locals {
     { name = "OPENAI_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.openai_api_key },
     { name = "RESEND_API_KEY", valueFrom = local.foundation.ssm_parameter_arns.resend_api_key },
     { name = "GOOGLE_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.google_client_secret },
+    { name = "ZOOM_CLIENT_SECRET", valueFrom = local.foundation.ssm_parameter_arns.zoom_client_secret },
   ]
 }
 

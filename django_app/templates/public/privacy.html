@@ -6,7 +6,7 @@
 <article class="max-w-2xl space-y-8 text-gray-700 dark:text-gray-300 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 dark:[&_h2]:text-white [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5 [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400">
     <header>
         <h1 class="th-page-title">Privacy policy</h1>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last updated 11 November 2026</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last updated 13 November 2026</p>
     </header>
 
     <section class="space-y-3">
@@ -24,6 +24,7 @@
             <li>Records you enter: students, payees, lesson sessions and their notes, and payments.</li>
             <li>A daily count of TutorHub AI questions, used to enforce a usage limit.</li>
             <li>If you connect Google: the OAuth tokens needed to reach your calendar, and the ID of the calendar TutorHub created.</li>
+            <li>If you connect Zoom: the OAuth tokens needed to fetch your meeting summaries.</li>
         </ul>
         <p>
             Data is stored in an encrypted database on Amazon Web Services in London (eu-west-2), with encrypted backups.
@@ -53,11 +54,27 @@
     </section>
 
     <section class="space-y-3">
+        <h2>Zoom account data</h2>
+        <p>
+            If you connect a Zoom account, TutorHub asks for two permissions: <strong>view a past meeting's instances
+            (<code>meeting:read:list_past_instances</code>)</strong> and <strong>view a meeting's summary
+            (<code>meeting:read:summary</code>)</strong>. TutorHub cannot start, change or delete meetings, and does not access
+            recordings, transcripts, chat or contacts.
+        </p>
+        <p>
+            Zoom is only contacted when you choose Fetch from Zoom on a lesson. TutorHub then looks up the past occurrences of
+            that student's meeting, picks the one that started closest to the lesson, and reads its AI Companion summary.
+            The summary is sent to OpenAI to fill in the lesson notes (see below), and is stored with the lesson only if you
+            save it. The ID of that meeting occurrence is stored with it.
+        </p>
+    </section>
+
+    <section class="space-y-3">
         <h2>AI features</h2>
         <p>
             TutorHub AI and Zoom summary parsing use the OpenAI API. When you use them, your question,
             the relevant TutorHub records it looks up (such as student names, sessions and payments), or
-            the Zoom summary you paste are sent to OpenAI to generate a response. Google account data is never sent.
+            the Zoom summary you paste or fetch are sent to OpenAI to generate a response. Google account data is never sent.
             Under OpenAI's API terms, data sent through the API is not used to train their models.
         </p>
     </section>
@@ -79,6 +96,10 @@
                 <strong>Disconnect Google:</strong> use the Connections page to delete TutorHub's Google tokens. You can also remove
                 TutorHub's access at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.
                 The "Tutoring" calendar stays in your Google account until you delete it.
+            </li>
+            <li>
+                <strong>Disconnect Zoom:</strong> use the Connections page. TutorHub revokes its access with Zoom and deletes its
+                Zoom tokens. You can also remove TutorHub from the Manage Apps page of the Zoom App Marketplace.
             </li>
             <li><strong>Delete your account:</strong> ask using the contact below, and your account and all its records will be deleted.</li>
         </ul>

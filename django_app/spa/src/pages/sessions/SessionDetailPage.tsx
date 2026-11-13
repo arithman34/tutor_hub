@@ -59,8 +59,9 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
   const noteValues = useWatch({ control: notes.control })
   const hasNotes = Object.values(noteValues).some((value) => value?.trim())
   const [zoomOpen, setZoomOpen] = useState(false)
-  // A summary parsed on this page, to save along with the notes it produced.
-  const [parsedSummary, setParsedSummary] = useState<string | null>(null)
+  // A summary parsed on this page (and the Zoom meeting it was fetched from,
+  // if it was), to save along with the notes it produced.
+  const [parsedSummary, setParsedSummary] = useState<{ summary: string; meetingUuid: string | null } | null>(null)
 
   // Empties the form only; nothing changes until "Save notes".
   function clearNotes() {
@@ -70,11 +71,11 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
     setSavedPart(null)
   }
 
-  function fillFromZoom(parsed: ZoomNotes, summary: string) {
+  function fillFromZoom(parsed: ZoomNotes, summary: string, meetingUuid: string | null) {
     for (const [field, value] of Object.entries(parsed) as [keyof NotesValues, string][]) {
       notes.setValue(field, value, { shouldDirty: true })
     }
-    setParsedSummary(summary)
+    setParsedSummary({ summary, meetingUuid })
     setSavedPart(null)
   }
 
@@ -93,7 +94,11 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
 
   const saveNotes = notes.handleSubmit((values) => {
     setNotesError(null)
-    update.mutate({ ...notesToRequest(values), ...(parsedSummary !== null && { zoom_summary_raw: parsedSummary }) }, {
+    const zoomFields = parsedSummary && {
+      zoom_summary_raw: parsedSummary.summary,
+      ...(parsedSummary.meetingUuid !== null && { zoom_meeting_uuid: parsedSummary.meetingUuid }),
+    }
+    update.mutate({ ...notesToRequest(values), ...zoomFields }, {
       onSuccess: (saved) => {
         notes.reset(notesFromSession(saved))
         setParsedSummary(null)
@@ -178,7 +183,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
                   Clear notes
                 </button>
               </div>
-              {zoomOpen && <ZoomSummaryPanel initialSummary={session.zoom_summary_raw ?? ''} onParsed={fillFromZoom} />}
+              {zoomOpen && <ZoomSummaryPanel sessionId={session.id} initialSummary={session.zoom_summary_raw ?? ''} onParsed={fillFromZoom} />}
               <NotesFields form={notes} />
               <div className="flex flex-wrap items-center gap-3">
                 <button type="submit" disabled={update.isPending || !notes.formState.isDirty} className={buttonPrimary}>

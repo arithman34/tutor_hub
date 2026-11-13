@@ -59,6 +59,13 @@ class PrivacyPageTests(TestCase):
         self.assertContains(response, "https://developers.google.com/terms/api-services-user-data-policy")
         self.assertContains(response, "Limited Use")
 
+    def test_describes_every_zoom_scope(self):
+        from zoom_integration.services import SCOPES
+
+        response = self.client.get("/privacy")
+        for scope in SCOPES:
+            self.assertContains(response, scope)
+
     @override_settings(CONTACT_EMAIL="")
     def test_falls_back_to_github_contact(self):
         response = self.client.get("/privacy")

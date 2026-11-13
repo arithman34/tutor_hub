@@ -428,6 +428,61 @@ describe('session page', () => {
     await waitFor(() => expect(screen.queryByLabelText('Paste your Zoom AI summary')).not.toBeInTheDocument())
   })
 
+  it('fetches the summary from Zoom and saves it with its meeting', async () => {
+    let parsedText: unknown = null
+    let body: Record<string, unknown> | null = null
+    server.use(
+      http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
+      http.get('*/api/v1/sessions/:id/zoom-summary/', () =>
+        HttpResponse.json({ summary: 'Zoom says: fractions.', meeting_uuid: '/abc==' }),
+      ),
+      http.post('*/api/v1/sessions/zoom-parse/', async ({ request }) => {
+        parsedText = ((await request.json()) as { summary: string }).summary
+        return HttpResponse.json({ work_covered: 'Fractions again', student_actions: '', tutor_actions: '', next_lesson_focus: '', topic_tags: '' })
+      }),
+      http.patch('*/api/v1/sessions/:id/', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(session(body as Partial<Session>))
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp(`/sessions/${SESSION_ID}`)
+
+    await user.click(await screen.findByRole('button', { name: 'Fill from Zoom summary' }))
+    await user.click(await screen.findByRole('button', { name: 'Fetch from Zoom' }))
+
+    expect(await screen.findByDisplayValue('Fractions again')).toBeInTheDocument()
+    expect(screen.getByLabelText('Fetch or paste your Zoom AI summary')).toHaveValue('Zoom says: fractions.')
+    expect(parsedText).toBe('Zoom says: fractions.')
+
+    await user.click(screen.getByRole('button', { name: 'Save notes' }))
+    await waitFor(() => expect(body).not.toBeNull())
+    expect(body).toMatchObject({ zoom_summary_raw: 'Zoom says: fractions.', zoom_meeting_uuid: '/abc==' })
+  })
+
+  it('explains why Zoom had no summary', async () => {
+    server.use(
+      http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
+      http.get('*/api/v1/sessions/:id/zoom-summary/', () =>
+        HttpResponse.json({ detail: 'No Zoom meeting started within an hour of this session.' }, { status: 404 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(`/sessions/${SESSION_ID}`)
+
+    await user.click(await screen.findByRole('button', { name: 'Fill from Zoom summary' }))
+    await user.click(await screen.findByRole('button', { name: 'Fetch from Zoom' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No Zoom meeting started within an hour')
+  })
+
+  it('offers only pasting when Zoom isn’t connected', async () => {
+    const user = userEvent.setup()
+    renderApp(`/sessions/${SESSION_ID}`)
+    await user.click(await screen.findByRole('button', { name: 'Fill from Zoom summary' }))
+    expect(screen.getByLabelText('Paste your Zoom AI summary')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Fetch from Zoom' })).not.toBeInTheDocument()
+  })
+
   it('saves a newly pasted summary with the notes it produced', async () => {
     let body: Record<string, unknown> | null = null
     server.use(

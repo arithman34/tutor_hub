@@ -1198,6 +1198,39 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/sessions/{id}/zoom-summary/:
+    get:
+      operationId: sessions_zoom_summary_retrieve
+      description: Finds the occurrence of the student's Zoom meeting that started
+        closest to this session (within an hour) and returns its AI Companion summary.
+        Nothing is saved.
+      summary: Fetch this session's Zoom AI summary
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this session.
+        required: true
+      tags:
+      - sessions
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoomFetchedSummary'
+          description: ''
+        '404':
+          description: No matching meeting, or no summary for it yet.
+        '409':
+          description: Zoom isn't connected, or the connection expired.
+        '502':
+          description: Zoom couldn't be reached or returned an error.
   /api/v1/sessions/zoom-parse/:
     post:
       operationId: sessions_zoom_parse_create
@@ -1484,6 +1517,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Student'
+          description: ''
+  /api/v1/zoom/callback:
+    get:
+      operationId: zoom_callback_retrieve
+      description: Not called directly. Zoom sends the browser here, and it redirects
+        on to the frontend.
+      summary: Zoom's OAuth redirect target
+      tags:
+      - zoom
+      security:
+      - {}
+      responses:
+        '302':
+          description: No response body
+  /api/v1/zoom/connect:
+    get:
+      operationId: zoom_connect_retrieve
+      description: |-
+        Returns Zoom's OAuth URL for the frontend to send the browser to.
+        See calendar_integration.views.ConnectView for why `state` is signed.
+      summary: Start connecting Zoom
+      tags:
+      - zoom
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoomConnectUrl'
+          description: ''
+  /api/v1/zoom/disconnect:
+    post:
+      operationId: zoom_disconnect_create
+      summary: Disconnect Zoom
+      tags:
+      - zoom
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/zoom/status:
+    get:
+      operationId: zoom_status_retrieve
+      summary: Whether Zoom is connected
+      tags:
+      - zoom
+      security:
+      - jwtAuth: []
+        cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatus'
           description: ''
 components:
   schemas:
@@ -2760,6 +2853,27 @@ components:
       - is_demo
       - last_name
       - updated_at
+    ZoomConnectUrl:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Zoom's consent page. Send the browser here.
+      required:
+      - url
+    ZoomFetchedSummary:
+      type: object
+      properties:
+        summary:
+          type: string
+          description: The meeting's AI Companion summary, as plain text.
+        meeting_uuid:
+          type: string
+          description: The Zoom meeting occurrence the summary came from.
+      required:
+      - meeting_uuid
+      - summary
     ZoomParse:
       type: object
       properties:

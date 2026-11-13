@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "tutoring_sessions",
     "billing",
     "calendar_integration",
+    "zoom_integration",
     "analytics",
     "assistant",
     "web",
@@ -242,7 +243,11 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/calendar/callback")
 GOOGLE_CALENDAR_TIMEZONE = os.environ.get("GOOGLE_CALENDAR_TIMEZONE", "Europe/London")
-# Where Google's OAuth callback sends the browser afterwards. The React app is
+# Zoom integration (fetching AI Companion meeting summaries)
+ZOOM_CLIENT_ID = os.environ.get("ZOOM_CLIENT_ID", "")
+ZOOM_CLIENT_SECRET = os.environ.get("ZOOM_CLIENT_SECRET", "")
+ZOOM_REDIRECT_URI = os.environ.get("ZOOM_REDIRECT_URI", "http://localhost:8000/api/v1/zoom/callback")
+# Where Google's and Zoom's OAuth callbacks send the browser afterwards. The React app is
 # served by Django under /app, so a same-site path works in every environment.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "/app")
 

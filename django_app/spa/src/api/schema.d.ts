@@ -659,6 +659,26 @@ export interface paths {
         patch: operations["sessions_partial_update"];
         trace?: never;
     };
+    "/api/v1/sessions/{id}/zoom-summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch this session's Zoom AI summary
+         * @description Finds the occurrence of the student's Zoom meeting that started closest to this session (within an hour) and returns its AI Companion summary. Nothing is saved.
+         */
+        get: operations["sessions_zoom_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/zoom-parse/": {
         parameters: {
             query?: never;
@@ -774,6 +794,81 @@ export interface paths {
          *     new rows with them.
          */
         post: operations["students_toggle_active_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zoom/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Zoom's OAuth redirect target
+         * @description Not called directly. Zoom sends the browser here, and it redirects on to the frontend.
+         */
+        get: operations["zoom_callback_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zoom/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Start connecting Zoom
+         * @description Returns Zoom's OAuth URL for the frontend to send the browser to.
+         *     See calendar_integration.views.ConnectView for why `state` is signed.
+         */
+        get: operations["zoom_connect_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zoom/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disconnect Zoom */
+        post: operations["zoom_disconnect_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zoom/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether Zoom is connected */
+        get: operations["zoom_status_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1326,6 +1421,19 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        ZoomConnectUrl: {
+            /**
+             * Format: uri
+             * @description Zoom's consent page. Send the browser here.
+             */
+            url: string;
+        };
+        ZoomFetchedSummary: {
+            /** @description The meeting's AI Companion summary, as plain text. */
+            summary: string;
+            /** @description The Zoom meeting occurrence the summary came from. */
+            meeting_uuid: string;
         };
         ZoomParse: {
             work_covered: string;
@@ -2442,6 +2550,49 @@ export interface operations {
             };
         };
     };
+    sessions_zoom_summary_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this session. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoomFetchedSummary"];
+                };
+            };
+            /** @description No matching meeting, or no summary for it yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Zoom isn't connected, or the connection expired. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Zoom couldn't be reached or returned an error. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     sessions_zoom_parse_create: {
         parameters: {
             query?: never;
@@ -2691,6 +2842,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Student"];
+                };
+            };
+        };
+    };
+    zoom_callback_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    zoom_connect_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoomConnectUrl"];
+                };
+            };
+        };
+    };
+    zoom_disconnect_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    zoom_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionStatus"];
                 };
             };
         };

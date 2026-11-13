@@ -2,4 +2,5 @@
 
 domain_name       = "tutorhub.arithman.dev"
 google_client_id  = "....apps.googleusercontent.com"
+zoom_client_id    = "..."
 from_email        = "TutorHub <noreply@arithman.dev>"

@@ -81,6 +81,13 @@ export function useZoomParse() {
   })
 }
 
+/** Fetch a saved session's AI Companion summary from Zoom. Nothing is saved. */
+export function useZoomFetch(sessionId: string) {
+  return useMutation({
+    mutationFn: async () => unwrap(await api.GET('/api/v1/sessions/{id}/zoom-summary/', { params: { path: { id: sessionId } } })),
+  })
+}
+
 /**
  * Book lessons on Google Calendar: one event, or one weekly event per chosen
  * day. Resolves to how many events were asked for and how many Google made

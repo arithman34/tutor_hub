@@ -37,6 +37,12 @@ resource "aws_ssm_parameter" "google_client_secret" {
   value = var.google_client_secret
 }
 
+resource "aws_ssm_parameter" "zoom_client_secret" {
+  name  = "/${local.name}/zoom-client-secret"
+  type  = "SecureString"
+  value = var.zoom_client_secret
+}
+
 # Only consumed by the cost-optimized environment's cloudflared sidecar.
 # Kept here (not per-environment) so it survives a production -> cost-optimized
 # cutover just like the other secrets.
