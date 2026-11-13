@@ -1,8 +1,10 @@
+import json
 import logging
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core import signing
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
@@ -14,9 +16,9 @@ from accounts.models import User
 from accounts.permissions import DEMO_READ_ONLY
 from calendar_integration.serializers import ConnectionStatusSerializer
 
-from . import services
+from . import autolog, services, webhook
 from .models import ZoomToken
-from .serializers import ZoomConnectUrlSerializer
+from .serializers import SweepResultSerializer, ZoomConnectUrlSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -78,3 +80,51 @@ class DisconnectView(APIView):
     def post(self, request):
         services.disconnect(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class WebhookView(APIView):
+    """Zoom's event notifications. Signed with the app's Secret Token, which is
+    the only proof a request came from Zoom, so anything unsigned is refused."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(exclude=True)
+    def post(self, request):
+        body = request.body
+        if not webhook.is_valid_signature(body, request.headers.get("x-zm-request-timestamp"), request.headers.get("x-zm-signature")):
+            return HttpResponse(status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            payload = json.loads(body)
+        except ValueError:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST)
+
+        event_type = payload.get("event")
+        if event_type == "endpoint.url_validation":
+            plain_token = (payload.get("payload") or {}).get("plainToken", "")
+            return JsonResponse(webhook.url_validation_response(plain_token))
+        if event_type == "meeting.summary_completed":
+            event = webhook.record_summary_event(payload)
+            if event:
+                autolog.dispatch(event.id)
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+
+class SweepView(APIView):
+    @extend_schema(
+        summary="Log missed Zoom lessons",
+        description=(
+            "Finds lessons from the last week that Zoom held but TutorHub hasn't logged (including no-shows), "
+            "logs them, and retries any still waiting for Zoom."
+        ),
+        request=None,
+        responses={200: SweepResultSerializer, 409: None, 502: None},
+    )
+    def post(self, request):
+        try:
+            counts = autolog.sweep(request.user)
+        except services.NotConnectedError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except services.ZoomAPIError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response(counts)

@@ -24,7 +24,7 @@
             <li>Records you enter: students, payees, lesson sessions and their notes, and payments.</li>
             <li>A daily count of TutorHub AI questions, used to enforce a usage limit.</li>
             <li>If you connect Google: the OAuth tokens needed to reach your calendar, and the ID of the calendar TutorHub created.</li>
-            <li>If you connect Zoom: the OAuth tokens needed to fetch your meeting summaries.</li>
+            <li>If you connect Zoom: the OAuth tokens needed to read your meetings and their summaries, and a record of each lesson meeting TutorHub has logged.</li>
         </ul>
         <p>
             Data is stored in an encrypted database on Amazon Web Services in London (eu-west-2), with encrypted backups.
@@ -56,16 +56,19 @@
     <section class="space-y-3">
         <h2>Zoom account data</h2>
         <p>
-            If you connect a Zoom account, TutorHub asks for two permissions: <strong>view a past meeting's instances
-            (<code>meeting:read:list_past_instances</code>)</strong> and <strong>view a meeting's summary
+            If you connect a Zoom account, TutorHub asks for three read-only permissions: <strong>view a past meeting's instances
+            (<code>meeting:read:list_past_instances</code>)</strong>, <strong>view a past meeting
+            (<code>meeting:read:past_meeting</code>)</strong> and <strong>view a meeting's summary
             (<code>meeting:read:summary</code>)</strong>. TutorHub cannot start, change or delete meetings, and does not access
             recordings, transcripts, chat or contacts.
         </p>
         <p>
-            Zoom is only contacted when you choose Fetch from Zoom on a lesson. TutorHub then looks up the past occurrences of
-            that student's meeting, picks the one that started closest to the lesson, and reads its AI Companion summary.
-            The summary is sent to OpenAI to fill in the lesson notes (see below), and is stored with the lesson only if you
-            save it. The ID of that meeting occurrence is stored with it.
+            When one of your students' meetings ends and its AI Companion summary is ready, Zoom notifies TutorHub. TutorHub
+            then reads that meeting's start and end times, how many people attended (to tell a lesson from a no-show) and its
+            summary, and logs the lesson: the summary is sent to OpenAI to fill in the lesson notes (see below), and the summary,
+            notes and meeting ID are stored with the lesson. TutorHub also checks your students' past meetings from the last week
+            when it starts up or when you ask it to, to catch any lessons it missed. Only meetings whose ID matches one of your
+            students are read. You can also fetch a lesson's summary yourself with Fetch from Zoom.
         </p>
     </section>
 
@@ -74,7 +77,7 @@
         <p>
             TutorHub AI and Zoom summary parsing use the OpenAI API. When you use them, your question,
             the relevant TutorHub records it looks up (such as student names, sessions and payments), or
-            the Zoom summary you paste or fetch are sent to OpenAI to generate a response. Google account data is never sent.
+            the Zoom summary you paste, fetch or TutorHub receives from Zoom are sent to OpenAI to generate a response. Google account data is never sent.
             Under OpenAI's API terms, data sent through the API is not used to train their models.
         </p>
     </section>

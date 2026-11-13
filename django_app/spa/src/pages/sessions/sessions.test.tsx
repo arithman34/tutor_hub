@@ -173,6 +173,58 @@ describe('sessions list', () => {
   })
 })
 
+describe('catching up with Zoom', () => {
+  it('is only offered when Zoom is connected', async () => {
+    serveCalendar([])
+    renderApp('/sessions')
+    expect(await screen.findByRole('link', { name: 'Schedule session' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check Zoom for missed lessons' })).not.toBeInTheDocument()
+  })
+
+  it('logs missed lessons and refreshes the list', async () => {
+    const seen = serveCalendar([])
+    let sweeps = 0
+    server.use(
+      http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
+      http.post('*/api/v1/zoom/sweep', () => {
+        sweeps += 1
+        return HttpResponse.json({ logged: 2, updated: 1, waiting: 0, failed: 0 })
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp('/sessions')
+
+    await user.click(await screen.findByRole('button', { name: 'Check Zoom for missed lessons' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Zoom: logged 2 lessons, added notes to 1 session.')
+    expect(sweeps).toBe(1)
+    await waitFor(() => expect(seen.length).toBe(2))
+  })
+
+  it('says when there was nothing to log', async () => {
+    serveCalendar([])
+    server.use(
+      http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
+      http.post('*/api/v1/zoom/sweep', () => HttpResponse.json({ logged: 0, updated: 0, waiting: 0, failed: 0 })),
+    )
+    const user = userEvent.setup()
+    renderApp('/sessions')
+    await user.click(await screen.findByRole('button', { name: 'Check Zoom for missed lessons' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Zoom: nothing new to log.')
+  })
+
+  it('shows Zoom’s error', async () => {
+    serveCalendar([])
+    server.use(
+      http.get('*/api/v1/zoom/status', () => HttpResponse.json({ connected: true })),
+      http.post('*/api/v1/zoom/sweep', () => HttpResponse.json({ detail: 'Your Zoom connection has expired.' }, { status: 409 })),
+    )
+    const user = userEvent.setup()
+    renderApp('/sessions')
+    await user.click(await screen.findByRole('button', { name: 'Check Zoom for missed lessons' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your Zoom connection has expired.')
+  })
+})
+
 describe('logging a session', () => {
   it('pre-fills from the calendar event and saves wall-clock times', async () => {
     let body: Record<string, unknown> | null = null

@@ -9,6 +9,7 @@ import { formatDate } from '../../format'
 import { useIsDemo } from '../../auth'
 import { useConnectGoogle } from '../connections/queries'
 import { useCalendarSessions, type SessionPeriod, type SessionStatus } from './queries'
+import { ZoomCatchUp } from './ZoomCatchUp'
 
 const PAGE_SIZE = 50
 
@@ -89,6 +90,7 @@ export function SessionsPage() {
   return (
     <div>
       <PageHeader title="Sessions">
+        <ZoomCatchUp />
         <Link to="/sessions/schedule" className={buttonPrimary}>
           Schedule session
         </Link>

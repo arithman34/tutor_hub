@@ -247,6 +247,10 @@ GOOGLE_CALENDAR_TIMEZONE = os.environ.get("GOOGLE_CALENDAR_TIMEZONE", "Europe/Lo
 ZOOM_CLIENT_ID = os.environ.get("ZOOM_CLIENT_ID", "")
 ZOOM_CLIENT_SECRET = os.environ.get("ZOOM_CLIENT_SECRET", "")
 ZOOM_REDIRECT_URI = os.environ.get("ZOOM_REDIRECT_URI", "http://localhost:8000/api/v1/zoom/callback")
+# Signs Zoom's webhook requests (the "Secret Token" in the Zoom app's Access section).
+ZOOM_WEBHOOK_SECRET_TOKEN = os.environ.get("ZOOM_WEBHOOK_SECRET_TOKEN", "")
+# Process webhook events in the request instead of a background thread (tests).
+ZOOM_PROCESS_INLINE = False
 # Where Google's and Zoom's OAuth callbacks send the browser afterwards. The React app is
 # served by Django under /app, so a same-site path works in every environment.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "/app")
