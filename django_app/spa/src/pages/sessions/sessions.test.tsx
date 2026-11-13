@@ -454,40 +454,39 @@ describe('session page', () => {
     expect(deleted).toBe(true)
   })
 
-  it('clears the notes, but only saves when asked', async () => {
-    let body: Record<string, unknown> | null = null
+  it('clears the session after confirming, un-logging it', async () => {
+    let deleted = false
+    let patched = false
     server.use(
-      http.patch('*/api/v1/sessions/:id/', async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(session(body as Partial<Session>))
-      }),
+      http.delete('*/api/v1/sessions/:id/', () => ((deleted = true), new HttpResponse(null, { status: 204 }))),
+      http.patch('*/api/v1/sessions/:id/', () => ((patched = true), HttpResponse.json(session()))),
     )
+    serveCalendar([item({ logged: false })])
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
     renderApp(`/sessions/${SESSION_ID}`)
 
     await user.click(await screen.findByRole('button', { name: 'Clear notes' }))
 
-    expect(screen.getByLabelText('Work covered')).toHaveValue('')
-    expect(screen.getByLabelText('Next lesson focus')).toHaveValue('')
-    expect(screen.getByRole('button', { name: 'Clear notes' })).toBeDisabled()
-    expect(body).toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Save notes' }))
-
-    await waitFor(() => expect(body).not.toBeNull())
-    expect(body).toEqual({ work_covered: null, student_actions: null, tutor_actions: null, next_lesson_focus: null, topic_tags: null })
-    expect(await screen.findByRole('status')).toHaveTextContent('Saved')
+    expect(confirm.mock.calls[0]?.[0]).toMatch(/goes back to Not logged/)
+    expect(await screen.findByRole('heading', { name: 'Sessions' })).toBeInTheDocument()
+    expect(await screen.findByText('Session cleared. Its calendar event is back to Not logged.')).toBeInTheDocument()
+    expect(deleted).toBe(true)
+    // The whole record goes, not just the note fields.
+    expect(patched).toBe(false)
   })
 
-  it('can discard a clear before saving', async () => {
+  it('keeps the session when the clear is cancelled', async () => {
+    let deleted = false
+    server.use(http.delete('*/api/v1/sessions/:id/', () => ((deleted = true), new HttpResponse(null, { status: 204 }))))
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
     const user = userEvent.setup()
     renderApp(`/sessions/${SESSION_ID}`)
 
     await user.click(await screen.findByRole('button', { name: 'Clear notes' }))
-    await user.click(screen.getByRole('button', { name: 'Discard changes' }))
 
     expect(screen.getByLabelText('Work covered')).toHaveValue('Fractions')
-    expect(screen.getByRole('button', { name: 'Save notes' })).toBeDisabled()
+    expect(deleted).toBe(false)
   })
 
   it('redoes the notes from the saved Zoom summary', async () => {
@@ -509,8 +508,7 @@ describe('session page', () => {
     const user = userEvent.setup()
     renderApp(`/sessions/${SESSION_ID}`)
 
-    await user.click(await screen.findByRole('button', { name: 'Clear notes' }))
-    await user.click(screen.getByRole('button', { name: 'Fill from Zoom summary' }))
+    await user.click(await screen.findByRole('button', { name: 'Fill from Zoom summary' }))
     expect(screen.getByLabelText('Paste your Zoom AI summary')).toHaveValue('Original Zoom summary.')
 
     await user.click(screen.getByRole('button', { name: 'Parse with AI' }))

@@ -433,6 +433,24 @@ class SweepTests(APITestCase):
         )
         self.assertEqual(Session.objects.count(), 1)
 
+    def test_a_cleared_session_stays_cleared(self, mock_instances, mock_meeting, *_):
+        # Clearing a session on its page deletes it. Neither the sweep nor a
+        # repeated webhook should then log the same Zoom meeting again.
+        mock_instances.return_value = [{"uuid": "recent", "start_time": iso(self.recent)}]
+        mock_meeting.return_value = meeting(self.recent)
+        self.client.post("/api/v1/zoom/sweep")
+        session = Session.objects.get()
+
+        self.assertEqual(self.client.delete(f"/api/v1/sessions/{session.id}/").status_code, status.HTTP_204_NO_CONTENT)
+        event = ZoomMeetingEvent.objects.get()
+        self.assertIsNone(event.session)
+        self.assertEqual(event.status, "done")
+
+        resp = self.client.post("/api/v1/zoom/sweep")
+        self.assertEqual(resp.json()["sessions"], [])
+        self.assertFalse(Session.objects.exists())
+        self.assertIsNone(webhook.record_summary_event({"payload": {"object": {"meeting_id": "12345678901", "meeting_uuid": "recent"}}}))
+
     def test_lists_every_session_it_touched_newest_first(self, mock_instances, mock_meeting, *_):
         older = self.recent - timedelta(days=1)
         mock_instances.return_value = [{"uuid": "a", "start_time": iso(older)}, {"uuid": "b", "start_time": iso(self.recent)}]
