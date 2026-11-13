@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -21,7 +21,6 @@ import {
   notesFields,
   notesFromSession,
   notesSchema,
-  emptyNotes,
   notesToRequest,
   type DetailsValues,
   type NotesValues,
@@ -58,19 +57,24 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
   const student = students.find((candidate) => candidate.id === session.student)
   const details = useForm<DetailsValues>({ resolver: zodResolver(detailsSchema), defaultValues: detailsFromSession(session) })
   const notes = useForm<NotesValues>({ resolver: zodResolver(notesSchema), defaultValues: notesFromSession(session) })
-  const noteValues = useWatch({ control: notes.control })
-  const hasNotes = Object.values(noteValues).some((value) => value?.trim())
   const [zoomOpen, setZoomOpen] = useState(false)
   // A summary parsed on this page (and the Zoom meeting it was fetched from,
   // if it was), to save along with the notes it produced.
   const [parsedSummary, setParsedSummary] = useState<{ summary: string; meetingUuid: string | null } | null>(null)
 
-  // Empties the form only; nothing changes until "Save notes".
-  function clearNotes() {
-    for (const field of Object.keys(emptyNotes) as (keyof NotesValues)[]) {
-      notes.setValue(field, '', { shouldDirty: true })
-    }
-    setSavedPart(null)
+  // Clearing un-logs the lesson: the session (its notes, Zoom summary and
+  // billing) is removed, and its calendar event shows as Not logged again.
+  function clearSession() {
+    if (
+      !window.confirm(
+        'Clear this session? Its notes and Zoom summary are deleted, it stops being billed, and its calendar event goes back to Not logged. This cannot be undone.',
+      )
+    )
+      return
+    remove.mutate(undefined, {
+      onSuccess: () =>
+        navigate('/sessions', { replace: true, state: { notice: 'Session cleared. Its calendar event is back to Not logged.' } }),
+    })
   }
 
   function fillFromZoom(parsed: ZoomNotes, summary: string, meetingUuid: string | null) {
@@ -187,7 +191,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
                 <button type="button" onClick={() => setZoomOpen((open) => !open)} aria-expanded={zoomOpen} className={buttonSecondary}>
                   {zoomOpen ? 'Hide Zoom summary' : 'Fill from Zoom summary'}
                 </button>
-                <button type="button" onClick={clearNotes} disabled={!hasNotes} className={buttonSecondary}>
+                <button type="button" onClick={clearSession} disabled={remove.isPending} className={buttonSecondary}>
                   Clear notes
                 </button>
               </div>
