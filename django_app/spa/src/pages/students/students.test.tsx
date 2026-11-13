@@ -154,6 +154,7 @@ describe('adding a student', () => {
       level: null,
       hourly_rate: 27.5,
       payee_id: payee.id,
+      zoom_meeting_id: null,
       google_doc_id: null,
     })
   })
@@ -224,6 +225,33 @@ describe('student page', () => {
     expect(body).toMatchObject({ level: 'A-Level', google_doc_id: 'abc_123-XYZ', hourly_rate: 30 })
     expect(screen.getByRole('link', { name: 'Open ILP' })).toHaveAttribute('href', 'https://docs.google.com/document/d/abc_123-XYZ/')
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+  })
+
+  it('saves the Zoom meeting ID as digits', async () => {
+    let body: Record<string, unknown> | null = null
+    server.use(
+      http.patch('*/api/v1/students/:id/', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(makeStudent({ zoom_meeting_id: '12345678901' }))
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp(`/students/${sam.id}`)
+
+    await user.type(await screen.findByLabelText('Zoom meeting ID (optional)'), '123 4567 8901')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved')
+    expect(body).toMatchObject({ zoom_meeting_id: '12345678901' })
+    expect(screen.getByLabelText('Zoom meeting ID (optional)')).toHaveValue('12345678901')
+  })
+
+  it('rejects a Zoom meeting ID that isn’t one', async () => {
+    const user = userEvent.setup()
+    renderApp(`/students/${sam.id}`)
+    await user.type(await screen.findByLabelText('Zoom meeting ID (optional)'), 'zoom.us/j/123')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(await screen.findByText('Enter the 9 to 11 digit meeting ID, like 123 4567 8901')).toBeInTheDocument()
   })
 
   it('rejects a link that isn’t a Google Doc', async () => {
