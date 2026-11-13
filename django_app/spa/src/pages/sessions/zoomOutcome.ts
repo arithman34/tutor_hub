@@ -26,6 +26,15 @@ const SHORT: Record<ZoomOutcome, string> = {
   '': 'Matched',
 }
 
+/**
+ * Whether a logged session was logged by hand rather than created by the Zoom
+ * integration. Zoom filling or linking a session doesn't change who logged it.
+ * A blank outcome predates outcomes being recorded, so it's unknown: not manual.
+ */
+export function isManualLog(outcome: string | null): boolean {
+  return outcome === null || outcome === 'notes_filled' || outcome === 'linked'
+}
+
 /** A few words for the sweep result list. */
 export function zoomOutcomeShort(outcome: string): string {
   return SHORT[outcome as ZoomOutcome] ?? SHORT['']

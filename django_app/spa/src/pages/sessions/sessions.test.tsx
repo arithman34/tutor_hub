@@ -261,6 +261,23 @@ describe('Zoom history', () => {
     expect(within(plainRow as HTMLElement).queryByText('Zoom')).not.toBeInTheDocument()
   })
 
+  it('marks sessions logged by hand as manual, but not ones Zoom logged', async () => {
+    serveCalendar([
+      item({ event_id: 'a', logged: true, session_id: 'a1', zoom_outcome: null }),
+      item({ event_id: 'b', logged: true, session_id: 'b1', zoom_outcome: 'linked' }),
+      item({ event_id: 'c', logged: true, session_id: 'c1', zoom_outcome: 'logged' }),
+      item({ event_id: 'd', logged: true, session_id: 'd1', zoom_outcome: 'no_show' }),
+      item({ event_id: 'e', logged: false }),
+    ])
+    renderApp('/sessions')
+    const [, handRow, linkedRow, zoomRow, noShowRow, unloggedRow] = (await screen.findAllByRole('row')) as HTMLElement[]
+    expect(within(handRow as HTMLElement).getByText('Manual')).toBeInTheDocument()
+    expect(within(linkedRow as HTMLElement).getByText('Manual')).toBeInTheDocument()
+    expect(within(zoomRow as HTMLElement).queryByText('Manual')).not.toBeInTheDocument()
+    expect(within(noShowRow as HTMLElement).queryByText('Manual')).not.toBeInTheDocument()
+    expect(within(unloggedRow as HTMLElement).queryByText('Manual')).not.toBeInTheDocument()
+  })
+
   it('says on the session page what Zoom did', async () => {
     server.use(
       http.get('*/api/v1/sessions/:id/', () =>

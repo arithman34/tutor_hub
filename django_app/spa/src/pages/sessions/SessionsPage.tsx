@@ -10,7 +10,7 @@ import { useIsDemo } from '../../auth'
 import { useConnectGoogle } from '../connections/queries'
 import { useCalendarSessions, useZoomSweep, type SessionPeriod, type SessionStatus } from './queries'
 import { ZoomCatchUpButton, ZoomSweepResult } from './ZoomCatchUp'
-import { zoomOutcomeLabel } from './zoomOutcome'
+import { isManualLog, zoomOutcomeLabel } from './zoomOutcome'
 
 const PAGE_SIZE = 50
 
@@ -209,6 +209,14 @@ export function SessionsPage() {
                       {item.logged ? (
                         <span className="inline-flex flex-wrap items-center gap-1.5">
                           <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Logged</span>
+                          {isManualLog(item.zoom_outcome) && (
+                            <span
+                              title="Logged manually"
+                              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                            >
+                              Manual
+                            </span>
+                          )}
                           {item.zoom_outcome !== null && (
                             <span
                               title={zoomOutcomeLabel(item.zoom_outcome)}
