@@ -45,7 +45,7 @@ export function ZoomCatchUpButton({ sweep }: { sweep: Sweep }) {
 export function ZoomSweepResult({ sweep }: { sweep: Sweep }) {
   if (sweep.isError) {
     return (
-      <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+      <p role="alert" className="alert alert-error mb-4">
         {sweep.error.message}
       </p>
     )
@@ -53,7 +53,7 @@ export function ZoomSweepResult({ sweep }: { sweep: Sweep }) {
   if (!sweep.data) return null
 
   return (
-    <div role="status" className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+    <div role="status" className="alert alert-blue mb-4">
       <p>{describeSweep(sweep.data)}</p>
       {sweep.data.sessions.length > 0 && (
         <ul className="mt-2 space-y-1">
@@ -62,7 +62,7 @@ export function ZoomSweepResult({ sweep }: { sweep: Sweep }) {
               <Link to={`/sessions/${item.session_id}`} className="text-blue-700 hover:underline dark:text-blue-300">
                 {item.student_name}, {formatDate(item.start)} {wallTime(item.start)}
               </Link>
-              <span className="text-gray-600 dark:text-gray-400"> · {zoomOutcomeShort(item.outcome)}</span>
+              <span className="text-slate-600 dark:text-slate-400"> · {zoomOutcomeShort(item.outcome)}</span>
             </li>
           ))}
         </ul>

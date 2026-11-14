@@ -1,35 +1,9 @@
 @import "tailwindcss";
 
 /* The public pages (homepage and privacy policy) Django still renders. The
-   React app in spa/ has its own Tailwind build. */
-
-/* Dark mode follows a .dark class on <html> (see base.html), not the OS
-   preference, so it matches the React app's toggle. */
-@custom-variant dark (&:where(.dark, .dark *));
+   React app in spa/ has its own Tailwind build, and both import theme.css,
+   so cards, buttons and type look the same on every page. */
+@import "./theme.css";
 
 /* Tailwind only emits classes it finds in these files. */
 @source "../templates";
-
-/* Tailwind v4 changed some defaults from v3, which the templates were
-   written against. Keep the v3 behaviour. */
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
-}
-
-@layer components {
-  .th-card {
-    @apply rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800;
-  }
-  .th-section-title {
-    @apply font-semibold text-gray-900 dark:text-white;
-  }
-  .th-page-title {
-    @apply text-2xl font-bold text-gray-900 dark:text-white;
-  }
-}

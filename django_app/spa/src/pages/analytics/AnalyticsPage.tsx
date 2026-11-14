@@ -44,9 +44,9 @@ export function AnalyticsPage() {
 
   return (
     <div>
-      <PageHeader title="Analytics">
+      <PageHeader title="Analytics" description="Revenue, hours and students over time.">
         {data && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm muted">
             {ukDay.format(new Date(data.start))} – {ukDay.format(new Date(data.end))}
           </p>
         )}
@@ -55,7 +55,7 @@ export function AnalyticsPage() {
       <div className="card mb-5 p-5">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Period</span>
+            <span className="field-label">Period</span>
             {/* A preset and explicit dates are mutually exclusive; picking a preset clears the dates. */}
             <Tabs
               label="Period"
@@ -112,7 +112,7 @@ export function AnalyticsPage() {
           <button
             type="button"
             onClick={() => setSearchParams({}, { replace: true })}
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+            className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
             Reset
           </button>
@@ -129,7 +129,7 @@ export function AnalyticsPage() {
 
       {data && (
         <div className={`space-y-5 transition-opacity ${trends.isPlaceholderData ? 'opacity-60' : ''}`} aria-busy={trends.isFetching}>
-          {empty && <p className="card p-8 text-center text-sm text-gray-400">No data in this period.</p>}
+          {empty && <p className="card p-8 text-center text-sm text-slate-400">No data in this period.</p>}
           {data.charts.map((chart) => (
             <TrendChartCard
               key={chart.key}

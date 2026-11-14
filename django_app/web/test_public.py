@@ -50,7 +50,8 @@ class HomePageTests(TestCase):
 class PrivacyPageTests(TestCase):
     def test_is_public(self):
         response = self.client.get("/privacy")
-        self.assertContains(response, "<h1 class=\"th-page-title\">Privacy policy</h1>", html=False)
+        # The heading's text, not its classes, so restyling doesn't break this.
+        self.assertContains(response, ">Privacy policy</h1>")
 
     def test_describes_google_scopes_and_limited_use(self):
         response = self.client.get("/privacy")

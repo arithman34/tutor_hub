@@ -64,11 +64,14 @@ function DetailsForm({ user }: { user: User }) {
   })
 
   return (
-    <section aria-labelledby="details-heading" className="card p-6">
-      <h2 id="details-heading" className="font-semibold">
-        Personal info
-      </h2>
-      <p className="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">Your name, sign-in email and tutoring address.</p>
+    <section aria-labelledby="details-heading" className="card">
+      <div className="card-header">
+        <div className="min-w-0">
+          <h2 id="details-heading" className="section-title">Personal info</h2>
+          <p className="muted mt-0.5 text-sm">Your name, sign-in email and tutoring address.</p>
+        </div>
+      </div>
+      <div className="p-5">
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {formError && <ErrorMessage>{formError}</ErrorMessage>}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -92,6 +95,7 @@ function DetailsForm({ user }: { user: User }) {
           {save.isSuccess && !formState.isDirty && <Saved>Profile updated.</Saved>}
         </div>
       </form>
+      </div>
     </section>
   )
 }
@@ -117,13 +121,14 @@ function PasswordForm() {
   })
 
   return (
-    <section aria-labelledby="password-heading" className="card p-6">
-      <h2 id="password-heading" className="font-semibold">
-        Change password
-      </h2>
-      <p className="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">
-        Choose a strong password you don't use elsewhere. Changing it signs you out on every other device.
-      </p>
+    <section aria-labelledby="password-heading" className="card">
+      <div className="card-header">
+        <div className="min-w-0">
+          <h2 id="password-heading" className="section-title">Change password</h2>
+          <p className="muted mt-0.5 text-sm">Choose a strong password you don't use elsewhere. Changing it signs you out on every other device.</p>
+        </div>
+      </div>
+      <div className="p-5">
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {formError && <ErrorMessage>{formError}</ErrorMessage>}
         <Field id="current_password" label="Current password" error={errors.current_password?.message}>
@@ -160,6 +165,7 @@ function PasswordForm() {
           {change.isSuccess && !formState.isDirty && <Saved>Password changed.</Saved>}
         </div>
       </form>
+      </div>
     </section>
   )
 }
@@ -169,7 +175,7 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <PageHeader title="My profile" />
+      <PageHeader title="My profile" description="Your name, contact details and password." />
       {/* RequireAuth has already loaded you, so this is only ever briefly empty. */}
       {me.data ? <DetailsForm user={me.data} /> : <Loading />}
       <PasswordForm />

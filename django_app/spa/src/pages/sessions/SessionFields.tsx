@@ -46,8 +46,8 @@ export function DetailsFields({
           <input type="time" {...register('end_time')} {...describedBy('end_time', errors.end_time?.message)} className="input" />
         </Field>
       </div>
-      <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-        <input type="checkbox" {...register('is_no_show')} className="h-4 w-4 rounded-sm border-gray-300 text-red-600 focus:ring-red-500" />
+      <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <input type="checkbox" {...register('is_no_show')} className="h-4 w-4 rounded-sm border-slate-300 text-red-600 focus:ring-red-500" />
         Student did not show up
       </label>
     </>

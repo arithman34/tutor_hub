@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from 'react-router'
 import { z } from 'zod'
 
 import { useLogin } from '../../auth'
+import { AuthLayout } from '../../components/AuthLayout'
 import { Field } from '../../components/form'
 import { applyServerErrors, describedBy } from '../../components/formHelpers'
 import { ErrorMessage, Loading, buttonPrimary } from '../../components/ui'
@@ -58,10 +59,7 @@ export function SetupPage() {
   const busy = create.isPending || login.isPending
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm dark:bg-gray-800">
-        <h1 className="text-center text-2xl font-bold">Welcome to TutorHub</h1>
-        <p className="mt-1 mb-6 text-center text-sm text-gray-500 dark:text-gray-400">Create your account to get started.</p>
+    <AuthLayout title="Welcome to TutorHub" description="Create your account to get started.">
 
         <form onSubmit={onSubmit} noValidate className="space-y-4">
           {formError && <ErrorMessage>{formError}</ErrorMessage>}
@@ -92,7 +90,6 @@ export function SetupPage() {
             {busy ? 'Creating your account…' : 'Create account'}
           </button>
         </form>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }

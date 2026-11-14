@@ -1,11 +1,11 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-/** Small uppercase label shared by cards and panels. */
-export const labelClass = 'text-xs font-medium tracking-[0.04em] text-slate-500 uppercase dark:text-slate-400'
+/** Small uppercase label (see .eyebrow in frontend/theme.css). */
+export const labelClass = 'eyebrow'
 
-/** Secondary-line text colour. */
-export const noteClass = 'text-xs text-slate-500 dark:text-slate-400'
+/** A card's secondary line. */
+export const noteClass = 'muted text-xs'
 
 /**
  * "▲ 25% vs 1–13 Oct". Up is green and down is amber rather than red: a

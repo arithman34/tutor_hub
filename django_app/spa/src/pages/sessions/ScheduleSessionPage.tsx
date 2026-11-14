@@ -83,7 +83,7 @@ export function ScheduleSessionPage() {
         {formError && <ErrorMessage>{formError}</ErrorMessage>}
 
         <div>
-          <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Session type</span>
+          <span className="field-label">Session type</span>
           <Tabs label="Session type" options={KINDS} value={kind} onChange={(value) => setValue('kind', value)} />
         </div>
 
@@ -147,13 +147,13 @@ export function ScheduleSessionPage() {
                 />
               </Field>
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input type="checkbox" {...register('repeats_forever')} className="rounded" />
               No end date (repeats until you delete it)
             </label>
 
             <fieldset aria-describedby={errors.days?.root ? 'days-error' : undefined}>
-              <legend className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Days and times</legend>
+              <legend className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Days and times</legend>
               <div className="space-y-2">
                 {WEEKDAYS.map((weekday, index) => {
                   const enabled = days[index]?.enabled ?? false
@@ -172,7 +172,7 @@ export function ScheduleSessionPage() {
                           {...register(`days.${index}.start`)}
                           className="input !w-32 disabled:opacity-50"
                         />
-                        <span aria-hidden="true" className="text-gray-400">
+                        <span aria-hidden="true" className="text-slate-400">
                           –
                         </span>
                         <input

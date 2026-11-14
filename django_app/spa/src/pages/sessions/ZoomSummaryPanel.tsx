@@ -47,7 +47,7 @@ export function ZoomSummaryPanel({
   const busy = zoom.isPending || fetchSummary.isPending
 
   return (
-    <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+    <div className="alert alert-blue space-y-3 rounded-xl p-4">
       <label htmlFor="zoom-summary" className="block text-sm font-medium text-blue-900 dark:text-blue-200">
         {canFetch ? 'Fetch or paste your Zoom AI summary' : 'Paste your Zoom AI summary'}
       </label>
@@ -73,7 +73,7 @@ export function ZoomSummaryPanel({
           {zoom.isPending ? 'Parsing…' : 'Parse with AI'}
         </button>
         {zoom.isSuccess && (
-          <span role="status" className="text-xs text-gray-600 dark:text-gray-300">
+          <span role="status" className="text-xs text-slate-600 dark:text-slate-300">
             Done. Review and edit the notes below.
           </span>
         )}

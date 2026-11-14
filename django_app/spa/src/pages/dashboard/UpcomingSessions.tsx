@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 
 import type { UpcomingSession } from '../../api/types'
 import { localDate, wallDate, wallTime } from '../../format'
-import { labelClass, noteClass } from './StatCard'
+import { labelClass, noteClass } from '../../components/stats'
 
 const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 

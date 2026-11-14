@@ -69,7 +69,7 @@ export function NewPaymentPage() {
     <div>
       <PageHeader title="Add payment" backTo={backTo} />
       {payees.data.length === 0 ? (
-        <p className="text-sm text-gray-600 dark:text-gray-300">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           Payments are recorded against a payee.{' '}
           <Link to="/payees/new" className="text-blue-600 underline dark:text-blue-400">
             Add a payee

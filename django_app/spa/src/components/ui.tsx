@@ -1,50 +1,129 @@
+/**
+ * Building blocks every page shares. The classes they use (.card, .btn,
+ * .badge…) live in frontend/theme.css, which the public pages use too.
+ */
+import { ChevronLeft, Inbox, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
-/** The page title row, with an optional back arrow and actions on the right. */
-export function PageHeader({ title, backTo, children }: { title: ReactNode; backTo?: string; children?: ReactNode }) {
+/** The page title row: optional back arrow, title and description, actions on the right. */
+export function PageHeader({
+  title,
+  description,
+  backTo,
+  children,
+}: {
+  title: ReactNode
+  description?: ReactNode
+  backTo?: string
+  children?: ReactNode
+}) {
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3">
+    <header className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
       {backTo && (
-        <Link to={backTo} aria-label="Back" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+        <Link
+          to={backTo}
+          aria-label="Back"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-xs hover:text-slate-900 dark:border-white/10 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white"
+        >
+          <ChevronLeft aria-hidden="true" className="h-4 w-4" />
         </Link>
       )}
-      <h1 className="text-2xl font-bold">{title}</h1>
-      {children && <div className="ml-auto flex flex-wrap items-center gap-3">{children}</div>}
+      <div className="min-w-0">
+        <h1 className="page-title">{title}</h1>
+        {description && <p className="muted mt-0.5 text-sm">{description}</p>}
+      </div>
+      {children && <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>}
+    </header>
+  )
+}
+
+/** A card with a title row, for a section of a page. */
+export function Section({
+  title,
+  description,
+  action,
+  children,
+  className = '',
+  bodyClassName = 'p-5',
+}: {
+  title: ReactNode
+  description?: ReactNode
+  action?: ReactNode
+  children: ReactNode
+  className?: string
+  bodyClassName?: string
+}) {
+  return (
+    <section className={`card ${className}`}>
+      <div className="card-header">
+        <div className="min-w-0">
+          <h2 className="section-title">{title}</h2>
+          {description && <p className="muted mt-0.5 text-xs">{description}</p>}
+        </div>
+        {action}
+      </div>
+      <div className={bodyClassName}>{children}</div>
+    </section>
+  )
+}
+
+/** What to show where a list would be when there's nothing in it. */
+export function EmptyState({
+  icon: Icon = Inbox,
+  title,
+  titleAs: Title = 'p',
+  children,
+}: {
+  icon?: LucideIcon
+  title: string
+  titleAs?: 'p' | 'h1' | 'h2'
+  children?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500">
+        <Icon aria-hidden="true" className="h-5 w-5" />
+      </span>
+      <Title className="font-medium text-slate-700 dark:text-slate-200">{title}</Title>
+      {children && <div className="muted max-w-sm text-sm">{children}</div>}
     </div>
   )
 }
 
 export function StatusBadge({ active }: { active: boolean }) {
-  return active ? (
-    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">
-      Active
-    </span>
-  ) : (
-    <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300">
-      Inactive
-    </span>
-  )
+  return active ? <span className="badge badge-green">Active</span> : <span className="badge badge-slate">Inactive</span>
 }
 
 export function ErrorMessage({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+    <p role="alert" className="alert alert-error">
       {children}
     </p>
   )
 }
 
 export function Loading({ children = 'Loading…' }: { children?: ReactNode }) {
-  return <p className="text-sm text-gray-500 dark:text-gray-400">{children}</p>
+  return (
+    <p className="muted flex items-center gap-2 text-sm">
+      <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      {children}
+    </p>
+  )
 }
 
-export const buttonPrimary =
-  'rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
-export const buttonSecondary =
-  'rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
-export const buttonDanger =
-  'rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 dark:hover:bg-red-900/20'
+/** The TutorHub logo: a blue tile and the name. */
+export function Brand({ className = '' }: { className?: string }) {
+  return (
+    <span className={`brand ${className}`}>
+      <span aria-hidden="true" className="brand-mark">
+        T
+      </span>
+      TutorHub
+    </span>
+  )
+}
+
+export const buttonPrimary = 'btn btn-primary'
+export const buttonSecondary = 'btn btn-secondary'
+export const buttonDanger = 'btn btn-danger'

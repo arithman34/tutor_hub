@@ -8,7 +8,7 @@ import { buttonPrimary, ErrorMessage, Loading } from '../../components/ui'
 import { formatDayRange, formatLongDate, formatMoney, formatMoneyRounded } from '../../format'
 import { useDashboardStats, useRevenueByMonth, useStudentBreakdown, useUpcomingSessions } from './queries'
 import { Sparkline } from './Sparkline'
-import { Delta, labelClass, noteClass, StatCard } from './StatCard'
+import { Delta, labelClass, noteClass, StatCard } from '../../components/stats'
 import { StudentBreakdown } from './StudentBreakdown'
 import { UpcomingSessions } from './UpcomingSessions'
 

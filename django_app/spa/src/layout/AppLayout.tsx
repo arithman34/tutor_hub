@@ -19,7 +19,7 @@ import { Suspense, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
 import { useLogout, useMe } from '../auth'
-import { Loading } from '../components/ui'
+import { Brand, Loading } from '../components/ui'
 import { useTheme } from '../theme'
 
 type NavItem = { label: string; to: string; icon: LucideIcon }
@@ -108,7 +108,7 @@ export function AppLayout() {
         }`}
       >
         <div className="flex items-center justify-between px-5 py-5">
-          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">TutorHub</span>
+          <Brand />
           <button type="button" onClick={() => setMenuOpen(false)} className={`${iconButton} sm:hidden`} aria-label="Close menu">
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -166,7 +166,7 @@ export function AppLayout() {
       <main className="min-w-0 flex-1 px-4 pt-16 pb-8 sm:px-8 sm:pt-8">
         <div className="mx-auto w-full max-w-[1500px]">
           {me.data?.is_demo && (
-            <p role="status" className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            <p role="status" className="alert alert-warning mb-6">
               You're looking round the demo. Every student, lesson and payment is made up, and it's read-only, so nothing you
               change will be saved.
             </p>

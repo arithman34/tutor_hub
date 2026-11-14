@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 import type { StudentBreakdownRow } from '../../api/types'
 import { formatMoney } from '../../format'
-import { noteClass } from './StatCard'
+import { noteClass } from '../../components/stats'
 
 const headClass = 'px-3 py-2 text-xs font-medium tracking-[0.04em] text-slate-500 uppercase dark:text-slate-400'
 

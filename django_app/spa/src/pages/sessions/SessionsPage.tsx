@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client'
 import type { CalendarSessionItem } from '../../api/types'
 import { Tabs } from '../../components/Tabs'
 import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } from '../../components/ui'
+import { SearchForm } from '../../components/SearchForm'
 import { formatDate } from '../../format'
 import { useIsDemo } from '../../auth'
 import { useConnectGoogle } from '../connections/queries'
@@ -91,7 +92,7 @@ export function SessionsPage() {
 
   return (
     <div>
-      <PageHeader title="Sessions">
+      <PageHeader title="Sessions" description="Lessons from your Tutoring calendar, and the notes you’ve logged for them.">
         <ZoomCatchUpButton sweep={sweep} />
         <Link to="/sessions/schedule" className={buttonPrimary}>
           Schedule session
@@ -101,39 +102,24 @@ export function SessionsPage() {
       <ZoomSweepResult sweep={sweep} />
 
       {notice && (
-        <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+        <p role="status" className="alert alert-success mb-4">
           {notice}
         </p>
       )}
 
-      <form role="search" onSubmit={handleSearch} className="mb-4 flex flex-wrap gap-2">
-        <label htmlFor="session-search" className="sr-only">
-          Search sessions
-        </label>
-        <input
-          id="session-search"
-          type="search"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Search sessions…"
-          className="input sm:!w-64"
-        />
-        <button type="submit" className={buttonPrimary}>
-          Search
-        </button>
-        {q && (
-          <button
-            type="button"
-            onClick={() => {
+      <SearchForm
+        id="session-search"
+        label="Search sessions"
+        placeholder="Search sessions…"
+        value={draft}
+        onChange={setDraft}
+        onSubmit={handleSearch}
+        onClear={q ? () => {
               setDraft('')
               update({ q: '' })
-            }}
-            className={buttonSecondary}
-          >
-            Clear
-          </button>
-        )}
-      </form>
+            } : undefined}
+        className="mb-4"
+      />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Tabs label="Logged status" options={STATUS_OPTIONS} value={status} onChange={(value) => update({ status: value })} />
@@ -143,7 +129,7 @@ export function SessionsPage() {
       {sessions.isPending && <Loading>Loading your calendar…</Loading>}
 
       {notConnected && isDemo && (
-        <p className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        <p className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/5 dark:bg-slate-800 dark:text-slate-300">
           This list comes from the tutor's Google Calendar, which the demo isn't linked to. Open a student from the{' '}
           <Link to="/students" className="font-medium underline">
             Students
@@ -180,39 +166,39 @@ export function SessionsPage() {
       {sessions.data && (
         <>
           {q && (
-            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mb-3 text-sm muted">
               {items.length} result{items.length === 1 ? '' : 's'} for “{q}”
             </p>
           )}
           <div className="card overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 text-xs tracking-wider text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Session</th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Time</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">
+                  <th>Session</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                  <th>
                     <span className="sr-only">Action</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((item) => (
-                  <tr key={item.event_id} className="border-b border-gray-200 last:border-0 dark:border-gray-700">
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{item.summary || '(No title)'}</td>
-                    <td className="px-6 py-4">{formatDate(item.date)}</td>
-                    <td className="px-6 py-4">
-                      {item.start_time ? `${item.start_time}${item.end_time ? ` – ${item.end_time}` : ''}` : <span className="text-gray-400">All day</span>}
+                  <tr key={item.event_id}>
+                    <td className="font-medium text-slate-900 dark:text-white">{item.summary || '(No title)'}</td>
+                    <td>{formatDate(item.date)}</td>
+                    <td>
+                      {item.start_time ? `${item.start_time}${item.end_time ? ` – ${item.end_time}` : ''}` : <span className="text-slate-400">All day</span>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td>
                       {item.logged ? (
                         <span className="inline-flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Logged</span>
+                          <span className="badge badge-green">Logged</span>
                           {isManualLog(item.zoom_outcome) && (
                             <span
                               title="Logged manually"
-                              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                              className="badge badge-slate"
                             >
                               Manual
                             </span>
@@ -220,17 +206,17 @@ export function SessionsPage() {
                           {item.zoom_outcome !== null && (
                             <span
                               title={zoomOutcomeLabel(item.zoom_outcome)}
-                              className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                              className="badge badge-blue"
                             >
                               Zoom<span className="sr-only">: {zoomOutcomeLabel(item.zoom_outcome)}</span>
                             </span>
                           )}
                         </span>
                       ) : (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">Not logged</span>
+                        <span className="badge badge-amber">Not logged</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="text-right">
                       {item.logged && item.session_id ? (
                         <Link to={`/sessions/${item.session_id}`} className="text-xs text-blue-600 hover:underline dark:text-blue-400">
                           View
@@ -245,7 +231,7 @@ export function SessionsPage() {
                 ))}
                 {items.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={5} className="empty">
                       {emptyMessage(status, period)}
                     </td>
                   </tr>
@@ -256,7 +242,7 @@ export function SessionsPage() {
 
           {items.length > 0 && (
             <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm muted">
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–{(currentPage - 1) * PAGE_SIZE + pageItems.length} of {items.length}
               </p>
               {totalPages > 1 && (
@@ -264,7 +250,7 @@ export function SessionsPage() {
                   <button type="button" disabled={currentPage <= 1} onClick={() => update({ page: String(currentPage - 1) })} className={buttonSecondary}>
                     Previous
                   </button>
-                  <span className="px-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="px-2 text-sm muted">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button type="button" disabled={currentPage >= totalPages} onClick={() => update({ page: String(currentPage + 1) })} className={buttonSecondary}>

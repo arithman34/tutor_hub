@@ -129,7 +129,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
               'Unknown student'
             )}
             {session.is_no_show && (
-              <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300">No show</span>
+              <span className="badge badge-red">No show</span>
             )}
           </span>
         }
@@ -138,12 +138,17 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-1">
-          <section className="card p-6">
-            <h2 className="mb-4 font-semibold">Details</h2>
+          <section className="card">
+            <div className="card-header">
+              <div className="min-w-0">
+                <h2 className="section-title">Details</h2>
+              </div>
+            </div>
+            <div className="p-5">
             <form onSubmit={saveDetails} noValidate className="space-y-4">
               {detailsError && <ErrorMessage>{detailsError}</ErrorMessage>}
               <DetailsFields form={details} students={students} compact />
-              <p className="text-xs text-gray-400">Duration: {session.minutes} min</p>
+              <p className="text-xs text-slate-400">Duration: {session.minutes} min</p>
               <button type="submit" disabled={update.isPending || !details.formState.isDirty} className={`${buttonPrimary} w-full`}>
                 Save changes
               </button>
@@ -158,11 +163,17 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
                 Open in Google Calendar
               </a>
             )}
+            </div>
           </section>
         </div>
 
-        <section className="card p-6 lg:col-span-2">
-          <h2 className="mb-4 font-semibold">Session notes</h2>
+        <section className="card lg:col-span-2">
+          <div className="card-header">
+            <div className="min-w-0">
+              <h2 className="section-title">Session notes</h2>
+            </div>
+          </div>
+          <div className="p-5">
           {session.zoom_outcome !== null && (
             <p className="-mt-2 mb-4 text-xs text-blue-700 dark:text-blue-300">
               {zoomOutcomeLabel(session.zoom_outcome)}
@@ -172,7 +183,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
           {remove.isError && <ErrorMessage>Couldn't clear the session. Please try again.</ErrorMessage>}
           {session.is_no_show ? (
             <div className="space-y-4">
-              <p className="text-sm text-gray-400 italic">No notes recorded. The student did not attend.</p>
+              <p className="text-sm text-slate-400 italic">No notes recorded. The student did not attend.</p>
               <button type="button" onClick={clearSession} disabled={remove.isPending} className={buttonSecondary}>
                 Clear session
               </button>
@@ -201,7 +212,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
                       notes.reset()
                       setParsedSummary(null)
                     }}
-                    className="text-sm text-gray-500 hover:underline dark:text-gray-400"
+                    className="text-sm text-slate-500 hover:underline dark:text-slate-400"
                   >
                     Discard changes
                   </button>
@@ -214,6 +225,7 @@ function SessionDetail({ session, students }: { session: Session; students: Stud
               )}
             </form>
           )}
+          </div>
         </section>
       </div>
     </div>

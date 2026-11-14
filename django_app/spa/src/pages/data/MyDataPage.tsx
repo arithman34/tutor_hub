@@ -64,16 +64,17 @@ export function MyDataPage() {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <PageHeader title="My Data" />
+      <PageHeader title="My Data" description="Export everything as one file, or import it back." />
 
-      <section aria-labelledby="export-heading" className="card p-6">
-        <h2 id="export-heading" className="font-semibold">
-          Export
-        </h2>
-        <p className="mt-1 mb-4 text-sm text-gray-500 dark:text-gray-400">
-          Downloads your students, payees, sessions and payments as a single JSON file. Your account details and password aren't
-          included.
-        </p>
+      <section aria-labelledby="export-heading" className="card">
+        <div className="card-header">
+          <div className="min-w-0">
+            <h2 id="export-heading" className="section-title">Export</h2>
+            <p className="muted mt-0.5 text-sm">Downloads your students, payees, sessions and payments as a single JSON file. Your account details and password aren't
+          included.</p>
+          </div>
+        </div>
+        <div className="p-5">
         {exportData.isError && (
           <div className="mb-4">
             <ErrorMessage>Couldn't export: {exportData.error.message}</ErrorMessage>
@@ -82,24 +83,26 @@ export function MyDataPage() {
         <button type="button" onClick={() => exportData.mutate()} disabled={exportData.isPending} className={buttonPrimary}>
           {exportData.isPending ? 'Preparing…' : 'Download export'}
         </button>
+        </div>
       </section>
 
-      <section aria-labelledby="import-heading" className="card p-6">
-        <h2 id="import-heading" className="font-semibold">
-          Import
-        </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Upload a file exported from TutorHub.{' '}
+      <section aria-labelledby="import-heading" className="card">
+        <div className="card-header">
+          <div className="min-w-0">
+            <h2 id="import-heading" className="section-title">Import</h2>
+            <p className="muted mt-0.5 text-sm">Upload a file exported from TutorHub.{' '}
           <strong className="font-semibold text-red-600 dark:text-red-400">
             This permanently deletes your existing students, payees, sessions and payments
           </strong>{' '}
-          and replaces them with the file's contents. If anything in the file is wrong, nothing changes.
-        </p>
+          and replaces them with the file's contents. If anything in the file is wrong, nothing changes.</p>
+          </div>
+        </div>
+        <div className="p-5">
 
         <div className="my-4 space-y-3">
           {importData.isError && <ErrorMessage>{importData.error.message}</ErrorMessage>}
           {counts && (
-            <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+            <p role="status" className="alert alert-success">
               Import complete: {count(counts.students, 'student')}, {count(counts.payees, 'payee')}, {count(counts.sessions, 'session')}{' '}
               and {count(counts.payments, 'payment')}.
             </p>
@@ -115,12 +118,13 @@ export function MyDataPage() {
             type="file"
             accept=".json,application/json"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm dark:text-gray-300 dark:file:bg-gray-700 dark:file:text-gray-200"
+            className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:text-slate-300 dark:file:bg-slate-700 dark:file:text-slate-200"
           />
           <button type="submit" disabled={!file || importData.isPending} className={buttonDanger}>
             {importData.isPending ? 'Importing…' : 'Import'}
           </button>
         </form>
+        </div>
       </section>
     </div>
   )

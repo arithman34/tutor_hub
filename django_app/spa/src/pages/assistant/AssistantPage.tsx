@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 
 import { ApiError } from '../../api/client'
 import type { Allowance, ChatMessage } from '../../api/types'
+import { PageHeader, buttonSecondary } from '../../components/ui'
 import { askErrorMessage, useAsk, useConversation, useNewChat } from './useAssistant'
 
 function allowanceText(allowance: Allowance): string {
@@ -20,7 +21,7 @@ function Bubble({ message }: { message: ChatMessage }) {
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
           mine
             ? 'rounded-br-sm bg-blue-600 text-white'
-            : 'rounded-bl-sm border border-gray-200 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200'
+            : 'rounded-bl-sm border border-slate-200 bg-white text-slate-800 dark:border-white/5 dark:bg-slate-800 dark:text-slate-200'
         }`}
       >
         {message.content}
@@ -45,7 +46,7 @@ export function AssistantPage() {
   }, [history.length, ask.isPending])
 
   if (conversation.isPending) {
-    return <p className="text-sm text-gray-500 dark:text-gray-400">Loading TutorHub AI…</p>
+    return <p className="text-sm muted">Loading TutorHub AI…</p>
   }
   if (conversation.isError) {
     return (
@@ -89,30 +90,24 @@ export function AssistantPage() {
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">TutorHub AI</h1>
+      <PageHeader
+        title="TutorHub AI"
+        description="Ask about your students, sessions, payees and payments. TutorHub AI can read your data but never changes it."
+      >
         {history.length > 0 && (
-          <button
-            type="button"
-            onClick={() => newChat.mutate()}
-            disabled={newChat.isPending || ask.isPending}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
+          <button type="button" onClick={() => newChat.mutate()} disabled={newChat.isPending || ask.isPending} className={buttonSecondary}>
             New chat
           </button>
         )}
-      </div>
-      <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-        Ask about your students, sessions, payees and payments. TutorHub AI can read your data but never changes it.
-      </p>
+      </PageHeader>
 
       {ask.isError && (
         <p
           role="alert"
-          className={`mb-6 rounded-lg border p-4 text-sm ${
+          className={`alert mb-6 ${
             ask.error instanceof ApiError && ask.error.status === 429
-              ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400'
-              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
+              ? 'alert-warning'
+              : 'alert-error'
           }`}
         >
           {askErrorMessage(ask.error, maxLength)}
@@ -131,7 +126,7 @@ export function AssistantPage() {
           ))}
           {ask.isPending && (
             <div className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-sm border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+              <div className="rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 dark:border-white/5 dark:bg-slate-800 dark:text-slate-400">
                 Thinking…
               </div>
             </div>
@@ -140,7 +135,7 @@ export function AssistantPage() {
         </div>
       ) : (
         <div className="card mb-6 p-6">
-          <p className="mb-3 text-sm font-semibold">Try asking</p>
+          <p className="eyebrow mb-3">Try asking</p>
           <div className="flex flex-wrap gap-2">
             {examples.map((example) => (
               <button
@@ -148,7 +143,7 @@ export function AssistantPage() {
                 type="button"
                 onClick={() => pickExample(example)}
                 disabled={blocked}
-                className="rounded-full bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-blue-300 dark:hover:bg-gray-600"
+                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
               >
                 {example}
               </button>
@@ -176,11 +171,11 @@ export function AssistantPage() {
           className="input resize-none"
         />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">{allowanceText(allowance)}</p>
+          <p className="text-xs muted">{allowanceText(allowance)}</p>
           <button
             type="submit"
             disabled={blocked || ask.isPending || !question.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn btn-primary"
           >
             {ask.isPending ? 'Thinking…' : 'Ask'}
           </button>

@@ -8,7 +8,7 @@ export function RequireAuth() {
   const location = useLocation()
 
   if (me.isPending) {
-    return <p className="p-8 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+    return <p className="p-8 text-sm muted">Loading…</p>
   }
   if (me.isError) {
     return (

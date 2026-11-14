@@ -55,23 +55,28 @@ function PayeeDetail({ payee }: { payee: Payee }) {
     })
   })
 
-  const borderTone = payee.balance < 0 ? 'border-red-200 dark:border-red-900' : payee.balance > 0 ? 'border-green-200 dark:border-green-900' : 'border-gray-200 dark:border-gray-700'
+  const borderTone = payee.balance < 0 ? 'border-red-200 dark:border-red-900' : payee.balance > 0 ? 'border-green-200 dark:border-green-900' : 'border-slate-200 dark:border-white/5'
 
   return (
     <div>
       <PageHeader title={`${payee.first_name} ${payee.last_name}`} backTo="/payees" />
 
-      <section aria-label="Balance" className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-5 dark:bg-gray-800 ${borderTone}`}>
+      <section aria-label="Balance" className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-5 dark:bg-slate-800 ${borderTone}`}>
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Current balance</p>
+          <p className="text-sm muted">Current balance</p>
           <p className={`mt-0.5 text-3xl font-bold ${balanceTone(payee.balance)}`}>{formatBalance(payee.balance)}</p>
         </div>
-        <p className="max-w-xs text-sm text-gray-500 dark:text-gray-400 sm:text-right">{balanceExplanation(payee.balance)}</p>
+        <p className="max-w-xs text-sm muted sm:text-right">{balanceExplanation(payee.balance)}</p>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card p-6 lg:col-span-1">
-          <h2 className="mb-4 font-semibold">Payee info</h2>
+        <section className="card lg:col-span-1">
+          <div className="card-header">
+            <div className="min-w-0">
+              <h2 className="section-title">Payee info</h2>
+            </div>
+          </div>
+          <div className="p-5">
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             {formError && <ErrorMessage>{formError}</ErrorMessage>}
             <PayeeFields form={form} />
@@ -84,40 +89,43 @@ function PayeeDetail({ payee }: { payee: Payee }) {
               </p>
             )}
           </form>
+          </div>
         </section>
 
         <section className="card lg:col-span-2">
-          <h2 className="border-b border-gray-200 px-6 py-4 font-semibold dark:border-gray-700">Linked students</h2>
+          <div className="card-header">
+            <h2 className="section-title">Linked students</h2>
+          </div>
           {students.isPending && <div className="p-6"><Loading>Loading students…</Loading></div>}
           {students.isError && <div className="p-6"><ErrorMessage>Couldn't load students.</ErrorMessage></div>}
           {students.data && (
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 text-xs tracking-wider text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">Level</th>
-                  <th className="px-6 py-3">Hourly rate</th>
-                  <th className="px-6 py-3">Status</th>
+                  <th>Name</th>
+                  <th>Level</th>
+                  <th>Hourly rate</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {students.data.map((student) => (
-                  <tr key={student.id} className="border-b border-gray-200 last:border-0 dark:border-gray-700">
-                    <td className="px-6 py-4">
-                      <Link to={`/students/${student.id}`} className="font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
+                  <tr key={student.id}>
+                    <td>
+                      <Link to={`/students/${student.id}`} className="font-medium text-slate-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
                         {student.first_name} {student.last_name}
                       </Link>
                     </td>
-                    <td className="px-6 py-4">{student.level || '—'}</td>
-                    <td className="px-6 py-4">{student.hourly_rate ? formatMoney(student.hourly_rate) : '—'}</td>
-                    <td className="px-6 py-4">
+                    <td>{student.level || '—'}</td>
+                    <td>{student.hourly_rate ? formatMoney(student.hourly_rate) : '—'}</td>
+                    <td>
                       <StatusBadge active={student.is_active} />
                     </td>
                   </tr>
                 ))}
                 {students.data.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={4} className="empty">
                       No students linked
                     </td>
                   </tr>
@@ -129,8 +137,8 @@ function PayeeDetail({ payee }: { payee: Payee }) {
       </div>
 
       <section className="card mt-6">
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-          <h2 className="font-semibold">Payment history</h2>
+        <div className="card-header">
+          <h2 className="section-title">Payment history</h2>
           <Link to={`/payments/new?payee_id=${payee.id}`} className={`${buttonPrimary} py-1.5`}>
             Add payment
           </Link>
@@ -139,25 +147,25 @@ function PayeeDetail({ payee }: { payee: Payee }) {
         {payments.isError && <div className="p-6"><ErrorMessage>Couldn't load payments.</ErrorMessage></div>}
         {payments.data && (
           <>
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 text-xs tracking-wider text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Reference</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th>Date</th>
+                  <th>Reference</th>
+                  <th className="text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.data.results.map((payment) => (
-                  <tr key={payment.id} className="border-b border-gray-200 last:border-0 dark:border-gray-700">
-                    <td className="px-6 py-4">{formatDate(payment.payment_date)}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-gray-400">{payment.payment_reference || '—'}</td>
-                    <td className="px-6 py-4 text-right font-medium text-green-600 dark:text-green-400">+{formatMoney(Number(payment.amount))}</td>
+                  <tr key={payment.id}>
+                    <td>{formatDate(payment.payment_date)}</td>
+                    <td className="font-mono text-xs text-slate-400">{payment.payment_reference || '—'}</td>
+                    <td className="text-right font-medium text-green-600 dark:text-green-400">+{formatMoney(Number(payment.amount))}</td>
                   </tr>
                 ))}
                 {payments.data.results.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={3} className="empty">
                       No payments recorded
                     </td>
                   </tr>
@@ -165,7 +173,7 @@ function PayeeDetail({ payee }: { payee: Payee }) {
               </tbody>
             </table>
             {payments.data.count > payments.data.results.length && (
-              <p className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+              <p className="px-6 py-3 text-xs muted">
                 Showing the latest {payments.data.results.length} of {payments.data.count} payments.
               </p>
             )}

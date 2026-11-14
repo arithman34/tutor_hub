@@ -1,26 +1,5 @@
 @import "tailwindcss";
 
-/* Dark mode follows the .dark class on <html> (see theme.ts), not the OS. */
-@custom-variant dark (&:where(.dark, .dark *));
-
-@layer base {
-  /* Figures in tables line up in columns (cards use the tabular-nums utility). */
-  td {
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-@layer components {
-  /* Raised surface: page slate-900 (#0f172a), card slate-800 (#1e293b) in dark
-     mode; white on slate-50 in light. A faint border that firms up on hover. */
-  .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300;
-    @apply dark:border-white/5 dark:bg-slate-800 dark:shadow-none dark:hover:border-white/15;
-  }
-
-  .input {
-    @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden;
-    @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40;
-    @apply dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400;
-  }
-}
+/* Cards, buttons, tables, badges and the rest, shared with the public pages
+   Django renders so the two can't drift apart. */
+@import "../../frontend/theme.css";

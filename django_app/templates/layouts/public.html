@@ -1,24 +1,53 @@
 {% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col">
-    <header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-            <a href="/" class="text-lg font-bold text-blue-600 dark:text-blue-400">TutorHub</a>
-            <a href="/app/login"
-                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Log in</a>
+<div class="flex min-h-screen flex-col">
+    <header class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+        <div class="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
+            <a href="/" class="brand mr-auto">
+                <span class="brand-mark" aria-hidden="true">T</span>
+                TutorHub
+            </a>
+            <a href="/privacy" class="hidden rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 sm:inline-flex dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">Privacy</a>
+            {# Same toggle and storage key as the app's sidebar. #}
+            <button type="button" id="theme-toggle" aria-label="Dark mode" title="Dark mode"
+                class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+                <span class="dark:hidden">{{ icon("moon", "h-4 w-4") }}</span>
+                <span class="hidden dark:inline">{{ icon("sun", "h-4 w-4") }}</span>
+            </button>
+            <a href="/app/login" class="btn btn-primary">Log in</a>
         </div>
     </header>
 
-    <main class="mx-auto w-full max-w-4xl flex-1 px-4 py-12">
+    <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:py-16">
         {% block page %}{% endblock %}
     </main>
 
-    <footer class="border-t border-gray-200 dark:border-gray-800">
-        <div class="mx-auto flex max-w-4xl flex-wrap gap-x-6 gap-y-2 px-4 py-6 text-sm text-gray-500 dark:text-gray-400">
-            <span>TutorHub</span>
-            <a href="/privacy" class="hover:text-gray-900 dark:hover:text-white">Privacy policy</a>
+    <footer class="border-t border-slate-200 dark:border-slate-800">
+        <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
+            <span class="brand text-sm">
+                <span class="brand-mark h-5 w-5 rounded-md text-[0.65rem]" aria-hidden="true">T</span>
+                TutorHub
+            </span>
+            <a href="/privacy" class="hover:text-slate-900 dark:hover:text-white">Privacy policy</a>
         </div>
     </footer>
 </div>
+<script>
+    (function () {
+        var button = document.getElementById('theme-toggle');
+        function label() {
+            var text = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+            button.setAttribute('aria-label', text);
+            button.setAttribute('title', text);
+        }
+        label();
+        button.addEventListener('click', function () {
+            var dark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            label();
+        });
+    })();
+</script>
 {% endblock %}

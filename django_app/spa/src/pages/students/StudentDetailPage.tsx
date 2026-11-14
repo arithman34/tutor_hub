@@ -72,8 +72,13 @@ function StudentDetail({ student }: { student: Student }) {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card p-6 lg:col-span-1">
-          <h2 className="mb-4 font-semibold">Student info</h2>
+        <section className="card lg:col-span-1">
+          <div className="card-header">
+            <div className="min-w-0">
+              <h2 className="section-title">Student info</h2>
+            </div>
+          </div>
+          <div className="p-5">
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             {formError && <ErrorMessage>{formError}</ErrorMessage>}
             <StudentFields form={form} savedDocId={student.google_doc_id ?? null} />
@@ -87,7 +92,7 @@ function StudentDetail({ student }: { student: Student }) {
             )}
           </form>
 
-          <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <div className="mt-4 space-y-2 border-t border-slate-200 pt-4 dark:border-white/5">
             {(toggle.isError || remove.isError) && <ErrorMessage>That didn't work. Please try again.</ErrorMessage>}
             <button type="button" onClick={() => toggle.mutate()} disabled={toggle.isPending} className={`${buttonSecondary} w-full`}>
               {student.is_active ? 'Deactivate' : 'Activate'}
@@ -96,11 +101,12 @@ function StudentDetail({ student }: { student: Student }) {
               Delete student
             </button>
           </div>
+          </div>
         </section>
 
         <section className="card lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-            <h2 className="font-semibold">Recent sessions</h2>
+          <div className="card-header">
+            <h2 className="section-title">Recent sessions</h2>
             <Link to={`/sessions/new?student_id=${student.id}`} className={`${buttonPrimary} py-1.5`}>
               Log session
             </Link>
@@ -108,22 +114,22 @@ function StudentDetail({ student }: { student: Student }) {
           {sessions.isPending && <div className="p-6"><Loading>Loading sessions…</Loading></div>}
           {sessions.isError && <div className="p-6"><ErrorMessage>Couldn't load sessions.</ErrorMessage></div>}
           {sessions.data && (
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 text-xs tracking-wider text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Duration</th>
-                  <th className="px-6 py-3">
+                  <th>Date</th>
+                  <th>Duration</th>
+                  <th>
                     <span className="sr-only">Open</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {sessions.data.results.map((session) => (
-                  <tr key={session.id} className="border-b border-gray-200 last:border-0 dark:border-gray-700">
-                    <td className="px-6 py-4">{formatDate(session.session_date)}</td>
-                    <td className="px-6 py-4">{session.is_no_show ? 'No-show' : `${session.minutes} min`}</td>
-                    <td className="px-6 py-4 text-right">
+                  <tr key={session.id}>
+                    <td>{formatDate(session.session_date)}</td>
+                    <td>{session.is_no_show ? 'No-show' : `${session.minutes} min`}</td>
+                    <td className="text-right">
                       <Link to={`/sessions/${session.id}`} className="text-xs text-blue-600 hover:underline dark:text-blue-400">
                         View
                       </Link>
@@ -132,7 +138,7 @@ function StudentDetail({ student }: { student: Student }) {
                 ))}
                 {sessions.data.results.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={3} className="empty">
                       No sessions yet
                     </td>
                   </tr>

@@ -1,4 +1,5 @@
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
+import { CalendarDays, Plug, Video } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 
 import { useIsDemo } from '../../auth'
@@ -47,12 +48,12 @@ export function ConnectionsPage() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Connections" />
+      <PageHeader title="Connections" description="Link Google Calendar and Zoom to TutorHub." />
 
       <div className="mb-4 space-y-3">
         {callbackError && <ErrorMessage>{callbackError}</ErrorMessage>}
         {justConnected && (
-          <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+          <p role="status" className="alert alert-success">
             {name} connected successfully.
           </p>
         )}
@@ -86,6 +87,8 @@ export function ConnectionsPage() {
   )
 }
 
+const ICONS: Record<string, typeof Plug> = { google: CalendarDays, zoom: Video }
+
 function ConnectionCard({
   id,
   title,
@@ -115,19 +118,27 @@ function ConnectionCard({
     disconnect.mutate(undefined, { onSuccess: onDisconnected })
   }
 
+  const Icon = ICONS[id] ?? Plug
+
   return (
-    <section aria-labelledby={`${id}-heading`} className="card flex flex-wrap items-start gap-4 p-6">
+    <section aria-labelledby={`${id}-heading`} className="card flex flex-wrap items-start gap-4 p-5">
+      <span
+        aria-hidden="true"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+      >
+        <Icon className="h-5 w-5" />
+      </span>
       <div className="min-w-0 flex-1">
-        <h2 id={`${id}-heading`} className="font-semibold">
+        <h2 id={`${id}-heading`} className="section-title">
           {title}
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        <p className="mt-1 text-sm muted">{description}</p>
         <div className="mt-3 space-y-2 text-sm">
           {status.isPending && <Loading>Checking…</Loading>}
           {status.isError && <ErrorMessage>Couldn't check the connection: {status.error.message}</ErrorMessage>}
           {status.data && (
-            <span className="inline-flex items-center gap-2">
-              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <span className={`badge ${connected ? 'badge-green' : 'badge-slate'}`}>
+              <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-slate-400'}`} />
               {connected ? 'Connected' : 'Not connected'}
             </span>
           )}
@@ -141,7 +152,7 @@ function ConnectionCard({
             {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
           </button>
         ) : isDemo ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Not available in the demo.</p>
+          <p className="text-sm muted">Not available in the demo.</p>
         ) : (
           // Stays "Opening …" after success too, while the browser leaves for the provider.
           <button type="button" onClick={() => connect.mutate()} disabled={connect.isPending || connect.isSuccess} className={buttonPrimary}>

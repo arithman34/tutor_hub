@@ -1,13 +1,17 @@
+import { Compass } from 'lucide-react'
 import { Link } from 'react-router'
+
+import { EmptyState, buttonPrimary } from '../components/ui'
 
 export function NotFoundPage() {
   return (
-    <div className="space-y-3">
-      <h1 className="text-2xl font-bold">Page not found</h1>
-      <p className="text-sm text-gray-600 dark:text-gray-300">This page doesn't exist in the new app yet.</p>
-      <Link to="/" className="text-sm text-blue-600 underline dark:text-blue-400">
-        Back to the dashboard
-      </Link>
+    <div className="card mx-auto mt-10 max-w-lg">
+      <EmptyState icon={Compass} title="Page not found" titleAs="h1">
+        <p>This page doesn't exist in the app.</p>
+        <Link to="/" className={`${buttonPrimary} mt-4`}>
+          Back to the dashboard
+        </Link>
+      </EmptyState>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import { ErrorMessage, Loading, PageHeader, buttonPrimary, buttonSecondary } from '../../components/ui'
+import { SearchForm } from '../../components/SearchForm'
 import { formatDate, formatMoney } from '../../format'
 import { PAYMENTS_PAGE_SIZE, usePayments } from '../payees/queries'
 
@@ -38,40 +39,25 @@ export function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="Payments">
+      <PageHeader title="Payments" description="Money received from payees, newest first.">
         <Link to="/payments/new" className={buttonPrimary}>
           Add payment
         </Link>
       </PageHeader>
 
-      <form role="search" onSubmit={handleSearch} className="mb-6 flex flex-wrap gap-2">
-        <label htmlFor="payment-search" className="sr-only">
-          Search payments
-        </label>
-        <input
-          id="payment-search"
-          type="search"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Search by payee name…"
-          className="input sm:!w-64"
-        />
-        <button type="submit" className={buttonPrimary}>
-          Search
-        </button>
-        {q && (
-          <button
-            type="button"
-            onClick={() => {
+      <SearchForm
+        id="payment-search"
+        label="Search payments"
+        placeholder="Search by payee name…"
+        value={draft}
+        onChange={setDraft}
+        onSubmit={handleSearch}
+        onClear={q ? () => {
               setDraft('')
               go({ q: '' })
-            }}
-            className={buttonSecondary}
-          >
-            Clear
-          </button>
-        )}
-      </form>
+            } : undefined}
+        className="mb-6"
+      />
 
       {payments.isPending && <Loading>Loading payments…</Loading>}
       {payments.isError && <ErrorMessage>Couldn't load payments: {payments.error.message}</ErrorMessage>}
@@ -79,31 +65,31 @@ export function PaymentsPage() {
       {payments.data && (
         <>
           <div className="card overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-              <thead className="bg-gray-50 text-xs tracking-wider text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Payee</th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
-                  <th className="px-6 py-3">Reference</th>
+                  <th>Payee</th>
+                  <th>Date</th>
+                  <th className="text-right">Amount</th>
+                  <th>Reference</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((payment) => (
-                  <tr key={payment.id} className="border-b border-gray-200 last:border-0 dark:border-gray-700">
-                    <td className="px-6 py-4">
-                      <Link to={`/payees/${payment.payee}`} className="font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
+                  <tr key={payment.id}>
+                    <td>
+                      <Link to={`/payees/${payment.payee}`} className="font-medium text-slate-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
                         {payment.payee_name}
                       </Link>
                     </td>
-                    <td className="px-6 py-4">{formatDate(payment.payment_date)}</td>
-                    <td className="px-6 py-4 text-right font-medium text-green-600 dark:text-green-400">+{formatMoney(Number(payment.amount))}</td>
-                    <td className="px-6 py-4">{payment.payment_reference || '—'}</td>
+                    <td>{formatDate(payment.payment_date)}</td>
+                    <td className="text-right font-medium text-green-600 dark:text-green-400">+{formatMoney(Number(payment.amount))}</td>
+                    <td>{payment.payment_reference || '—'}</td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={4} className="empty">
                       {q ? 'No payments match that search' : 'No payments yet'}
                     </td>
                   </tr>
@@ -114,7 +100,7 @@ export function PaymentsPage() {
 
           {count > 0 && (
             <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm muted">
                 Showing {first}–{first + rows.length - 1} of {count}
               </p>
               {totalPages > 1 && (
@@ -122,7 +108,7 @@ export function PaymentsPage() {
                   <button type="button" disabled={page <= 1} onClick={() => go({ page: page - 1 })} className={buttonSecondary}>
                     Previous
                   </button>
-                  <span className="px-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="px-2 text-sm muted">
                     Page {page} of {totalPages}
                   </span>
                   <button type="button" disabled={page >= totalPages} onClick={() => go({ page: page + 1 })} className={buttonSecondary}>

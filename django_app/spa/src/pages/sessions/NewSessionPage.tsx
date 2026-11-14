@@ -94,7 +94,7 @@ export function NewSessionPage() {
 
       <form onSubmit={onSubmit} noValidate className="max-w-2xl space-y-5">
         {eventId && (
-          <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+          <p className="alert alert-blue">
             Pre-filled from your Google Calendar event.
           </p>
         )}

@@ -76,13 +76,13 @@ describe('analytics page', () => {
 
     const sessions = await screen.findByRole('region', { name: 'Sessions' })
     expect(within(sessions).getByText('9')).toBeInTheDocument()
-    expect(within(sessions).getByText('▲ 12.5% vs prior period')).toBeInTheDocument()
+    expect(within(sessions).getByText('12.5%', { exact: false }).closest('span')).toHaveTextContent('Up12.5%')
     expect(within(sessions).getByText('9.5h')).toBeInTheDocument()
-    expect(within(sessions).getByText('▼ 10% vs prior period')).toBeInTheDocument()
+    expect(within(sessions).getByText('10%', { exact: false }).closest('span')).toHaveTextContent('Down10%')
 
     const payments = screen.getByRole('region', { name: 'Payments' })
     expect(within(payments).getByText('£350.00')).toBeInTheDocument()
-    expect(within(payments).getByText('No prior data')).toBeInTheDocument()
+    expect(within(payments).getByText('Nothing to compare with prior period')).toBeInTheDocument()
 
     expect(screen.getByText('01 Jan 2026 – 31 Mar 2026')).toBeInTheDocument()
   })
