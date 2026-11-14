@@ -20,6 +20,7 @@ from .tools import (
     get_payments,
     get_sessions,
     list_payee_balances,
+    list_students,
     run_tool,
 )
 
@@ -104,6 +105,73 @@ class FindStudentsTests(AssistantTestCase):
     def test_blank_name_is_rejected(self):
         with self.assertRaises(ToolError):
             find_students(self.owner, "  ")
+
+
+class ListStudentsTests(AssistantTestCase):
+    def setUp(self):
+        super().setUp()
+        self.ada = Student.objects.create(user=self.owner, first_name="Ada", last_name="Smith", level="KS3")
+        self.old = Student.objects.create(user=self.owner, first_name="Old", last_name="Pupil", is_active=False)
+        make_session(self.owner, self.lok, utc(2026, 10, 30, 16))
+        make_session(self.owner, self.lok, utc(2026, 11, 2, 16))
+        make_session(self.owner, self.lok, utc(2026, 11, 9, 16), is_no_show=True)
+        make_session(self.owner, self.kit, utc(2026, 10, 6, 17))
+        make_session(self.owner, self.old, utc(2026, 11, 3, 17))
+        make_session(self.other, self.other_lok, utc(2026, 11, 2, 16))
+
+    def by_name(self, result):
+        return {student["name"]: student for student in result["students"]}
+
+    def test_lists_active_students_by_name_with_period_counts(self):
+        result = list_students(self.owner, start="2026-11-01", end="2026-11-30")
+        self.assertEqual(result["period"], {"start": "2026-11-01", "end": "2026-11-30"})
+        self.assertEqual([s["name"] for s in result["students"]], ["Ada Smith", "Kit Chan", "Lok Chan"])
+        counts = {name: s["sessions_in_period"] for name, s in self.by_name(result).items()}
+        self.assertEqual(counts, {"Ada Smith": 0, "Kit Chan": 0, "Lok Chan": 2})
+
+    def test_last_session_ignores_the_period(self):
+        students = self.by_name(list_students(self.owner, start="2026-11-01", end="2026-11-30"))
+        self.assertEqual(students["Kit Chan"]["last_session"], "2026-10-06T18:00+01:00")
+        self.assertEqual(students["Lok Chan"]["last_session"], "2026-11-09T16:00+00:00")
+        self.assertIsNone(students["Ada Smith"]["last_session"])
+
+    def test_without_range_counts_all_sessions(self):
+        result = list_students(self.owner)
+        students = self.by_name(result)
+        self.assertEqual(result["period"], {"start": None, "end": None})
+        self.assertEqual(students["Lok Chan"]["sessions_in_period"], 3)
+        self.assertEqual(students["Kit Chan"]["sessions_in_period"], 1)
+
+    def test_include_inactive(self):
+        students = self.by_name(list_students(self.owner, include_inactive=True, start="2026-11-01"))
+        self.assertFalse(students["Old Pupil"]["is_active"])
+        self.assertEqual(students["Old Pupil"]["sessions_in_period"], 1)
+
+    def test_includes_payee_and_level(self):
+        students = self.by_name(list_students(self.owner))
+        self.assertEqual(students["Lok Chan"]["payee"], {"id": str(self.payee.id), "name": "Mei Chan"})
+        self.assertEqual(students["Lok Chan"]["level"], "GCSE")
+        self.assertIsNone(students["Ada Smith"]["payee"])
+
+    def test_never_returns_another_accounts_students_or_sessions(self):
+        result = list_students(self.owner, include_inactive=True)
+        self.assertNotIn(str(self.other_lok.id), json.dumps(result))
+        self.assertEqual(self.by_name(result)["Lok Chan"]["sessions_in_period"], 3)
+
+    def test_never_includes_rates_or_external_ids(self):
+        self.lok.zoom_meeting_id = "123456789"
+        self.lok.save()
+        text = json.dumps(list_students(self.owner))
+        self.assertNotIn("hourly_rate", text)
+        self.assertNotIn("123456789", text)
+
+    def test_no_students(self):
+        self.assertEqual(list_students(make_user("new@example.com"))["students"], [])
+
+    def test_bad_arguments_are_rejected(self):
+        for kwargs in ({"include_inactive": "yes"}, {"start": "November"}, {"start": "2026-11-30", "end": "2026-11-01"}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ToolError):
+                list_students(self.owner, **kwargs)
 
 
 class CountSessionsTests(AssistantTestCase):

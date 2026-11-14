@@ -17,7 +17,7 @@ import uuid
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from django.db.models import Q
+from django.db.models import Count, Max, Q
 
 from billing.models import Payee, Payment
 from billing.services import payee_balances
@@ -153,6 +153,47 @@ def find_students(user, name: str) -> dict:
     }
 
 
+def list_students(user, include_inactive: bool = False, start: str | None = None, end: str | None = None) -> dict:
+    """Every student, with how many sessions each had in a date range and when they were last taught."""
+    if not isinstance(include_inactive, bool):
+        raise ToolError("include_inactive must be true or false.")
+    start_date, end_date, lower, upper = _date_range(start, end)
+
+    in_period = Q()
+    if lower is not None:
+        in_period &= Q(sessions__session_date__gte=lower)
+    if upper is not None:
+        in_period &= Q(sessions__session_date__lt=upper)
+
+    students = (
+        Student.objects.filter(user=user)
+        .select_related("payee")
+        .annotate(
+            sessions_in_period=Count("sessions", filter=in_period),
+            last_session=Max("sessions__session_start_time"),
+        )
+        .order_by("first_name", "last_name")
+    )
+    if not include_inactive:
+        students = students.filter(is_active=True)
+
+    return {
+        "period": _period(start_date, end_date),
+        "students": [
+            {
+                "id": str(student.id),
+                "name": _name(student),
+                "level": student.level,
+                "is_active": student.is_active,
+                "payee": {"id": str(student.payee.id), "name": _name(student.payee)} if student.payee else None,
+                "sessions_in_period": student.sessions_in_period,
+                "last_session": _local(student.last_session) if student.last_session else None,
+            }
+            for student in students
+        ],
+    }
+
+
 def count_sessions(user, student_id: str | None = None, start: str | None = None, end: str | None = None) -> dict:
     """Session counts and hours, for one student or all students."""
     sessions, student_info, period = _sessions_in_range(user, student_id, start, end)
@@ -273,13 +314,14 @@ def get_payments(user, payee_id: str | None = None, start: str | None = None, en
 
 TOOLS = {
     "find_students": find_students,
+    "list_students": list_students,
     "count_sessions": count_sessions,
     "get_sessions": get_sessions,
     "list_payee_balances": list_payee_balances,
     "get_payments": get_payments,
 }
 
-_STUDENT_ID = {"type": "string", "description": "A student id from find_students. Leave out to cover all students."}
+_STUDENT_ID = {"type": "string", "description": "A student id from find_students or list_students. Leave out to cover all students."}
 _START = {"type": "string", "format": "date", "description": "First day to include, YYYY-MM-DD (UK time). Leave out for no lower bound."}
 _END = {"type": "string", "format": "date", "description": "Last day to include, YYYY-MM-DD (UK time). Leave out for no upper bound."}
 
@@ -295,6 +337,25 @@ TOOL_SPECS = [
             "type": "object",
             "properties": {"name": {"type": "string", "description": "Full or partial first and/or last name."}},
             "required": ["name"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "list_students",
+        "description": (
+            "List all of the tutor's students (active only, unless include_inactive is true), with level, payee, "
+            "the number of sessions each had in the date range, and the start of their most recent session ever. "
+            "Use for questions about all students, such as who has not been taught yet this month, "
+            "who was taught most, or how many students the tutor has."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "include_inactive": {"type": "boolean", "description": "Also include students marked inactive (default false)."},
+                "start": _START,
+                "end": _END,
+            },
+            "required": [],
             "additionalProperties": False,
         },
     },
